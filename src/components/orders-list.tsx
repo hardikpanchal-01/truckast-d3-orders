@@ -49,7 +49,7 @@ export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
 
   return (
     <div className="space-y-3">
-      <SearchBox value={filter} onChange={setFilter} placeholder="Search" className="sm:max-w-xs" />
+      <SearchBox value={filter} onChange={setFilter} placeholder="Search" />
 
       {visible.length === 0 ? (
         <p className="py-10 text-center text-sm text-slate-400">No orders for this day.</p>
@@ -78,11 +78,11 @@ export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
                 lines={[
                   {
                     text: `${o.order_code}-${md(o.order_date)}: ${o.ordered_cy.toFixed(2)} CY (${STATUS_LABEL[o.status]})`,
-                    size: 11,
+                    size: 14,
                     dim: true,
                   },
-                  { text: boldLine, bold: true },
-                  { text: o.customer_name || "—", size: 10, dim: true },
+                  { text: boldLine, bold: true, size: 16 },
+                  { text: o.customer_name || "—", size: 12, dim: true },
                 ]}
               />
             );

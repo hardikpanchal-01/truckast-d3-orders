@@ -53,8 +53,17 @@ export interface DoleseOrderDetail {
   ordered_cy: number;
   ticketed_cy: number;
   on_job_cy: number;
+  poured_cy: number;
   loads: number;
   trucks: number;
+  /** % of loads delivered within tolerance of their expected slot (best-effort). */
+  on_time_pct: number;
+  /** Poured CY per hour over the pour window. */
+  pour_rate: number;
+  /** Delivery (plant-side) lateness, minutes — green "DOLESE" tile (best-effort). */
+  dolese_delay_min: number;
+  /** Job-site truck wait before unloading, minutes — red status tile. */
+  job_delay_min: number;
   next_truck: string | null;
   pour_finish: string | null;
   weather: {
@@ -64,8 +73,16 @@ export interface DoleseOrderDetail {
     humidity?: string;
     pressure?: string;
     wind?: string;
+    direction?: string;
     updated?: string;
     icon?: string;
+  } | null;
+  /** ACI 305 / Menzel surface-evaporation estimate from the weather. */
+  evaporation: {
+    rate: number; // lb/ft^2/hr
+    concreteTempF: number;
+    risk: string; // "Normal" | "Take Precautions" | "Cracking Likely"
+    ticketNo: string | null;
   } | null;
   charts: {
     // x values are minutes-of-day (CST clock); y as noted.
@@ -77,6 +94,77 @@ export interface DoleseOrderDetail {
     trucks: { t: number; waiting: number; pouring: number }[];
   };
   activity: { text: string; time: string }[];
+}
+
+export interface DoleseLoad {
+  ticket_id: number;
+  load_no: number;
+  ticket_code: string | null;
+  truck_code: string | null;
+  plant_name: string | null;
+  load_cy: number;
+  cumulative_cy: number;
+  total_cy: number;
+  status: string;
+  status_time: string | null;
+}
+
+export interface DoleseTicketSummary {
+  order_id: number;
+  order_code: string;
+  subtitle: string | null;
+  customer_name: string | null;
+  status: OrderStatus;
+  loads: DoleseLoad[];
+}
+
+export interface DoleseDelayLoad {
+  ticket_id: number;
+  ticket_code: string | null;
+  plan_min: number;
+  delay_min: number;
+  actual_min: number;
+}
+
+export interface DoleseCustomerDelay {
+  order_id: number;
+  order_code: string;
+  customer_name: string | null;
+  order_line: string | null;
+  address_line: string | null;
+  loads: DoleseDelayLoad[];
+}
+
+export interface TicketProductCard {
+  item_code: string;
+  description: string;
+  qty: number;
+  unit: string;
+  slump: number | null;
+  is_mix: boolean;
+}
+
+export interface TicketEventCard {
+  /** icon slug — maps to a glyph in the UI (mixer, ticketed, loading, verifi …). */
+  icon: string;
+  title: string;
+  value: string;
+  sub?: string;
+  badge: string;
+  /** dark Verifi sensor card vs. blue truck-status card. */
+  dark: boolean;
+}
+
+export interface DoleseTicketDetail {
+  ticket_id: number;
+  ticket_code: string;
+  subtitle: string | null;
+  status: string;
+  plant_name: string | null;
+  truck_code: string | null;
+  printed_stamp: string | null;
+  products: TicketProductCard[];
+  events: TicketEventCard[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -199,6 +287,29 @@ function isValidTicket(t: TicketRow): boolean {
   return !t.remove_reason_code || t.remove_reason_code.trim() === "";
 }
 
+/** Ticket lifecycle stages, oldest → newest; the latest with a timestamp is the load's status. */
+const TICKET_STAGES: { field: keyof TicketRow; label: string }[] = [
+  { field: "printed_time", label: "PRINTED" },
+  { field: "load_time", label: "LOADING" },
+  { field: "loaded_time", label: "LOADED" },
+  { field: "to_job_time", label: "TO JOB" },
+  { field: "on_job_time", label: "ON JOB" },
+  { field: "unload_time", label: "POURING" },
+  { field: "end_unload", label: "POURED" },
+  { field: "wash_time", label: "WASHING" },
+  { field: "to_plant_time", label: "TO PLANT" },
+  { field: "at_plant_time", label: "AT PLANT" },
+];
+
+function ticketStage(t: TicketRow): { label: string; time: string | null } {
+  let stage = { label: "ORDERED", time: null as string | null };
+  for (const s of TICKET_STAGES) {
+    const ts = t[s.field] as string | null;
+    if (has(ts)) stage = { label: s.label, time: ts };
+  }
+  return stage;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Date / time formatting                                           */
 /* ------------------------------------------------------------------ */
@@ -236,8 +347,78 @@ function fmtStamp(ts: string | null): string | null {
   return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()} @ ${h}:${String(m).padStart(2, "0")}${ap} CST`;
 }
 
+/** "JUN 29 2026 2:32PM" (UTC parts = CST clock value). */
+function fmtDateTimeUpper(ts: string | null): string | null {
+  if (!ts) return null;
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return null;
+  let h = d.getUTCHours();
+  const m = d.getUTCMinutes();
+  const ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${MONTHS[d.getUTCMonth()].toUpperCase()} ${d.getUTCDate()} ${d.getUTCFullYear()} ${h}:${String(m).padStart(2, "0")}${ap}`;
+}
+
+/** Whole-minute difference a − b (epoch based, robust across the hour). */
+function diffMin(a: string | null, b: string | null): number | null {
+  if (!has(a) || !has(b)) return null;
+  const ta = new Date(a!).getTime();
+  const tb = new Date(b!).getTime();
+  if (Number.isNaN(ta) || Number.isNaN(tb)) return null;
+  return Math.round((ta - tb) / 60000);
+}
+
+/** Verifi clock value "04:03:43" -> "4:03AM". */
+function fmtClock(s: string | null | undefined): string | null {
+  if (!s) return null;
+  const m = String(s).match(/^(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  let h = parseInt(m[1]);
+  const ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${m[2]}${ap}`;
+}
+
 export async function getToday(): Promise<string> {
   return new Date().toISOString().slice(0, 10);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Weather / evaporation helpers                                     */
+/* ------------------------------------------------------------------ */
+
+const COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+function compassDir(deg: number): string {
+  return COMPASS[Math.round(deg / 22.5) % 16];
+}
+
+function median(nums: number[]): number {
+  if (nums.length === 0) return 0;
+  const s = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+/**
+ * ACI 305 (Menzel) surface-evaporation rate in lb/ft²/hr.
+ * Validated against the live app (air 92.55°F, RH 62%, wind 7, concrete 85°F → ≈0.057).
+ */
+function evaporationRate(airF: number, humidityPct: number, windMph: number, concreteF: number): number {
+  const toC = (f: number) => ((f - 32) * 5) / 9;
+  const Tc = toC(concreteF);
+  const Ta = toC(airF);
+  const r = Math.max(0, Math.min(1, humidityPct / 100));
+  const V = Math.max(0, windMph) * 1.609; // km/h
+  const eKg = 5 * (Math.pow(Tc + 18, 2.5) - r * Math.pow(Ta + 18, 2.5)) * (V + 4) * 1e-6; // kg/m²/h
+  const eLb = Math.max(0, eKg) * 0.2048; // → lb/ft²/h
+  return Math.round(eLb * 1000) / 1000;
+}
+
+/** ACI 305 shrinkage-cracking risk bands for the evaporation rate. */
+function crackingRisk(rate: number): string {
+  if (rate >= 0.2) return "Cracking Likely";
+  if (rate >= 0.1) return "Take Precautions";
+  return "Normal";
 }
 
 /* ------------------------------------------------------------------ */
@@ -455,6 +636,47 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
     trucks: trucks_series,
   };
 
+  // --- Production stat tiles ---------------------------------------
+  // Poured = cumulative CY that has finished unloading (falls back to delivered).
+  const pouredCY = poured.length ? poured[poured.length - 1].v : r2(ticketed);
+
+  // Pour rate (CY/HR) over the pour window (first unload → last pour-out).
+  const pourStarts = tickets.map((t) => tsMin(t.unload_time)).filter((x): x is number => x != null);
+  const pourEnds = tickets.map((t) => tsMin(pourOutTime(t))).filter((x): x is number => x != null);
+  let pourRate = 0;
+  if (pourStarts.length && pourEnds.length) {
+    const durMin = Math.max(...pourEnds) - Math.min(...pourStarts);
+    if (durMin > 0) pourRate = pouredCY / (durMin / 60);
+  }
+
+  // Arrivals (sorted) drive on-time % and Dolese (delivery) delay.
+  const arrivals = deliveredTickets
+    .map((t) => tsMin(t.on_job_time))
+    .filter((x): x is number => x != null)
+    .sort((a, b) => a - b);
+  const gaps: number[] = [];
+  for (let i = 1; i < arrivals.length; i++) gaps.push(arrivals[i] - arrivals[i - 1]);
+  const targetGap = median(gaps);
+  const TOL = 5; // minutes of slack before a load counts as late
+  let onTimeLoads = 0;
+  let doleseDelay = 0;
+  for (let i = 0; i < arrivals.length; i++) {
+    const expected = arrivals[0] + i * targetGap;
+    if (arrivals[i] <= expected + TOL) onTimeLoads++;
+    doleseDelay += Math.max(0, arrivals[i] - expected);
+  }
+  const onTimePct = arrivals.length ? Math.round((100 * onTimeLoads) / arrivals.length) : 0;
+  doleseDelay = Math.round(doleseDelay);
+
+  // Job-site delay = total truck wait on site before unloading begins.
+  let jobDelay = 0;
+  for (const t of tickets) {
+    const arr = tsMin(t.on_job_time);
+    const start = tsMin(t.unload_time);
+    if (arr != null && start != null && start > arr) jobDelay += start - arr;
+  }
+  jobDelay = Math.round(jobDelay);
+
   // Activity feed: truck-movement messages derived from ticket timestamps
   // (newest first). Status/product-change history isn't available in the data.
   const addrLabel = order.delivery_addr1 || order.project_name || "the job";
@@ -491,6 +713,7 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
 
   // Weather (JSONB shape varies; best-effort)
   let weather: DoleseOrderDetail["weather"] = null;
+  let evaporation: DoleseOrderDetail["evaporation"] = null;
   const w = order.weather_data as Record<string, unknown> | null;
   if (w && typeof w === "object") {
     const temp =
@@ -505,18 +728,21 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
     const humidity = (w.humidity ?? main.humidity) as number | undefined;
     const pressure = (w.pressure ?? main.pressure) as number | undefined;
     const windSpeed = (w.wind_speed ?? wind.speed) as number | undefined;
+    const windDeg = (w.wind_deg ?? wind.deg) as number | undefined;
     const dt = (w.dt ?? w.last_update ?? w.updated) as number | string | undefined;
     const icon =
       (w.icon as string | undefined) ??
       (Array.isArray(w.weather) ? ((w.weather[0] as Record<string, unknown>)?.icon as string) : undefined);
     if (temp != null || desc) {
+      const windVal = windSpeed != null ? Math.round(Number(windSpeed) * 100) / 100 : null;
       weather = {
-        temp: temp != null ? `${typeof temp === "number" ? Math.round(temp) : temp}°F` : undefined,
+        temp: temp != null ? `${temp}°F` : undefined,
         description: desc,
         place: order.pricing_plant_code || undefined,
         humidity: humidity != null ? `${humidity}%` : undefined,
         pressure: pressure != null ? String(pressure) : undefined,
-        wind: windSpeed != null ? String(Math.round(Number(windSpeed) * 100) / 100) : undefined,
+        wind: windVal != null ? String(windVal) : undefined,
+        direction: windDeg != null ? compassDir(Number(windDeg)) : undefined,
         updated:
           typeof dt === "number"
             ? new Date(dt * 1000).toLocaleTimeString("en-US", {
@@ -528,6 +754,19 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
               : undefined,
         icon: typeof icon === "string" ? icon : undefined,
       };
+
+      // Surface-evaporation estimate (assumes concrete placed at 85°F, as the live app does).
+      const airF = typeof temp === "number" ? temp : Number(temp);
+      if (Number.isFinite(airF) && humidity != null && windVal != null) {
+        const CONCRETE_F = 85;
+        const rate = evaporationRate(airF, Number(humidity), windVal, CONCRETE_F);
+        evaporation = {
+          rate,
+          concreteTempF: CONCRETE_F,
+          risk: crackingRisk(rate),
+          ticketNo: lastTicket?.ticket_code ?? null,
+        };
+      }
     }
   }
 
@@ -546,12 +785,606 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
     ordered_cy: Math.round(ordered * 100) / 100,
     ticketed_cy: Math.round(ticketed * 100) / 100,
     on_job_cy: Math.round(onJobCY * 100) / 100,
+    poured_cy: pouredCY,
     loads,
     trucks,
+    on_time_pct: onTimePct,
+    pour_rate: Math.round(pourRate * 100) / 100,
+    dolese_delay_min: doleseDelay,
+    job_delay_min: jobDelay,
     next_truck: nextTruck,
     pour_finish: pourFinish,
     weather,
+    evaporation,
     charts,
     activity,
   };
+}
+
+/* ------------------------------------------------------------------ */
+/*  4. Ticket (load) summary — one card per delivered load           */
+/* ------------------------------------------------------------------ */
+
+export async function getDoleseTicketSummary(orderId: number): Promise<DoleseTicketSummary | null> {
+  const { data: order, error } = await supabaseServer
+    .from("orders")
+    .select(
+      "order_id, order_code, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products(order_qty, order_qty_unit, delv_qty, is_mix)",
+    )
+    .eq("order_id", orderId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !order) {
+    if (error) console.error("[ERROR] getDoleseTicketSummary:", error.message);
+    return null;
+  }
+
+  const products = (order.order_products || []) as OrderProductRow[];
+  const { ordered, ticketed } = sumCY(products);
+  const totalCY = Math.round(ordered * 100) / 100;
+
+  const { data: tix } = await supabaseServer
+    .from("tickets")
+    .select(`${TICKET_FIELDS}, plant_name`)
+    .eq("order_id", orderId)
+    .limit(500);
+  const tickets = ((tix || []) as (TicketRow & { plant_name: string | null })[]).filter(isValidTicket);
+
+  // Delivered CY per ticket = sum of mix ticket_products.load_qty (CY).
+  const cyByTicket = new Map<number, number>();
+  if (tickets.length > 0) {
+    const { data: tp } = await supabaseServer
+      .from("ticket_products")
+      .select("ticket_id, is_mix, load_qty, order_qty_unit")
+      .in("ticket_id", tickets.map((t) => t.ticket_id))
+      .limit(2000);
+    for (const p of tp || []) {
+      if (p.is_mix === true && p.order_qty_unit === "CY") {
+        cyByTicket.set(p.ticket_id, (cyByTicket.get(p.ticket_id) || 0) + Number(p.load_qty || 0));
+      }
+    }
+  }
+
+  // Order loads by their creation/print sequence (fallback: ticket_code).
+  const sorted = [...tickets].sort((a, b) =>
+    (a.printed_time || "").localeCompare(b.printed_time || "") ||
+    (a.ticket_code || "").localeCompare(b.ticket_code || ""),
+  );
+
+  let cumulative = 0;
+  const loads: DoleseLoad[] = sorted.map((t, i) => {
+    const cy = Math.round((cyByTicket.get(t.ticket_id) || 0) * 100) / 100;
+    cumulative = Math.round((cumulative + cy) * 100) / 100;
+    const stage = ticketStage(t);
+    return {
+      ticket_id: t.ticket_id,
+      load_no: i + 1,
+      ticket_code: t.ticket_code,
+      truck_code: t.truck_code,
+      plant_name: t.plant_name,
+      load_cy: cy,
+      cumulative_cy: cumulative,
+      total_cy: totalCY,
+      status: stage.label,
+      status_time: stage.time ? (fmtTime(stage.time, true) || "").replace(/\s+/g, "") : null,
+    };
+  });
+
+  const status = deriveStatus(order, ordered, ticketed, false);
+
+  return {
+    order_id: order.order_id,
+    order_code: order.order_code,
+    subtitle: order.delivery_addr1 || order.project_name || null,
+    customer_name: order.customer_name,
+    status,
+    loads,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  5. Ticket detail — full ticket / Verifi breakdown                 */
+/* ------------------------------------------------------------------ */
+
+/** Read a Verifi nested measurement, e.g. { slump, slumpUnits } or { volumeValue }. */
+function vVal(obj: unknown, key: string): string | null {
+  if (!obj || typeof obj !== "object") return null;
+  const o = obj as Record<string, unknown>;
+  const v = o[key];
+  return v == null || v === "" ? null : String(v);
+}
+
+export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTicketDetail | null> {
+  const { data: t, error } = await supabaseServer
+    .from("tickets")
+    .select(
+      `${TICKET_FIELDS}, plant_name, plant_code, delivery_addr1, project_name, current_status, order_current_status, verifi_json`,
+    )
+    .eq("ticket_id", ticketId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !t) {
+    if (error) console.error("[ERROR] getDoleseTicketDetail:", error.message);
+    return null;
+  }
+
+  const { data: tp } = await supabaseServer
+    .from("ticket_products")
+    .select("item_code, description, short_description, is_mix, load_qty, delv_qty, order_qty_unit, delv_qty_unit, slump")
+    .eq("ticket_id", ticketId)
+    .limit(50);
+
+  // ORDER product cards (mix shown green in the UI).
+  const products: TicketProductCard[] = (tp || []).map((p) => {
+    const unitRaw = (p.order_qty_unit || p.delv_qty_unit || "ea").toLowerCase();
+    return {
+      item_code: p.item_code || "—",
+      description: p.description || p.short_description || "",
+      qty: Number(p.load_qty ?? p.delv_qty ?? 0),
+      unit: unitRaw === "ea" ? "EACH" : (p.order_qty_unit || p.delv_qty_unit || "").toUpperCase(),
+      slump: p.slump != null ? Number(p.slump) : null,
+      is_mix: p.is_mix === true,
+    };
+  });
+
+  const v = (t.verifi_json as Record<string, unknown> | null) || null;
+  const mix = (v?.mixCodeName as string) || products.find((p) => p.is_mix)?.item_code || "—";
+  const truck = t.truck_code || "";
+  const events: TicketEventCard[] = [];
+
+  // --- Blue truck-status timeline (from ticket timestamps) ---------
+  const stage = (
+    icon: string,
+    label: string,
+    badge: string,
+    ts: string | null,
+    verifiClock: string | null,
+  ) => {
+    if (!has(ts)) return;
+    events.push({
+      icon,
+      title: `TRUCK ${truck} ${label}:`,
+      value: (fmtTime(ts, true) || "").replace(/\s+/g, ""),
+      sub: verifiClock ? `VERIFI: ${verifiClock}` : undefined,
+      badge,
+      dark: false,
+    });
+  };
+  stage("ticketed", "Ticketed", "TICKETED", t.printed_time, fmtClock(v?.ticketSent as string));
+  stage("loading", "Loading", "LOADING", t.load_time, fmtClock(v?.loading as string));
+  stage("loaded", "Loaded", "LOADED", t.loaded_time, fmtClock(v?.loaded as string));
+  stage("to_job", "To Job", "TO JOB", t.to_job_time, fmtClock(v?.leavePlant as string));
+  stage("at_job", "At Job", "AT JOB", t.on_job_time, fmtClock((v?.arriveSite as string) || (v?.calculatedArriveSite as string)));
+  stage("pouring", "Pouring", "POURING", t.unload_time, fmtClock(v?.beginPour as string));
+  stage("poured", "End Pour", "POURED", t.end_unload, fmtClock(v?.endPour as string));
+  stage("washing", "Washing", "WASHING", t.wash_time, null);
+  stage("to_plant", "To Plant", "TO PLANT", t.to_plant_time, fmtClock(v?.leaveSite as string));
+  stage("at_plant", "At Plant", "AT PLANT", t.at_plant_time, fmtClock(v?.returnPlant as string));
+
+  // --- Dark Verifi sensor cards (per delivery stage) ---------------
+  if (v) {
+    // suffix matches the Verifi JSON key tail, e.g. slump + "AtArrival" = slumpAtArrival.
+    const STAGES: { badge: string; suffix: string }[] = [
+      { badge: "TO JOB", suffix: "AtLeavePlant" },
+      { badge: "AT JOB", suffix: "AtArrival" },
+      { badge: "AT JOB", suffix: "AtDischarge" },
+    ];
+    for (const s of STAGES) {
+      const slump = vVal(v[`slump${s.suffix}`], "slump");
+      const temp = vVal(v[`temperature${s.suffix}`], "temperatureUnitsValue");
+      const age = vVal(v[`age${s.suffix}Minutes`], "age");
+      const revsRaw = v[`totalRevs${s.suffix}`];
+      const revs = revsRaw == null || revsRaw === "" ? null : String(revsRaw);
+      const water = vVal(v[`verifiWater${s.suffix}`], "volumeValue");
+      const admix = vVal(v[`admix${s.suffix}`], "volumeValue");
+
+      const metric = (label: string, value: string | null, unit: string, sub: string) =>
+        events.push({
+          icon: "verifi",
+          title: mix,
+          value: `${label}: ${value != null ? `${value}${unit}` : label === "SLUMP" ? "NM" : "NA"}`,
+          sub,
+          badge: s.badge,
+          dark: true,
+        });
+
+      metric("AGE", age, " min", s.badge);
+      metric("SLUMP", slump, " IN", s.badge);
+      metric("TEMP", temp, "°F", s.badge);
+      metric("REVS", revs, "", s.badge);
+      metric("WATER", water ?? "0.0", " GAL/CY", `${s.badge} - VERIFI WATER ADD`);
+      metric("ADMIX", admix ?? "0.0", " OZ/CY", s.badge);
+    }
+  }
+
+  const statusLabel =
+    t.current_status === 4 || t.order_current_status === 4
+      ? "COMPLETE"
+      : has(t.at_plant_time)
+        ? "COMPLETE"
+        : "IN PROCESS";
+
+  return {
+    ticket_id: t.ticket_id,
+    ticket_code: t.ticket_code || String(ticketId),
+    subtitle: t.delivery_addr1 || t.project_name || null,
+    status: statusLabel,
+    plant_name: t.plant_name,
+    truck_code: t.truck_code,
+    printed_stamp: fmtDateTimeUpper(t.printed_time),
+    products,
+    events,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  6. Customer (job-site) delay breakdown — one card per load        */
+/* ------------------------------------------------------------------ */
+
+export async function getDoleseCustomerDelay(orderId: number): Promise<DoleseCustomerDelay | null> {
+  const { data: order, error } = await supabaseServer
+    .from("orders")
+    .select("order_id, order_code, order_date, customer_name, delivery_addr1, project_name")
+    .eq("order_id", orderId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !order) {
+    if (error) console.error("[ERROR] getDoleseCustomerDelay:", error.message);
+    return null;
+  }
+
+  const { data: tix } = await supabaseServer
+    .from("tickets")
+    .select(TICKET_FIELDS)
+    .eq("order_id", orderId)
+    .limit(500);
+  const tickets = ((tix || []) as TicketRow[]).filter(isValidTicket);
+
+  // Standard allowed on-site time per load (the live app shows a flat 30 min plan).
+  const PLAN = 30;
+
+  const loads: DoleseDelayLoad[] = tickets
+    .filter((t) => has(t.on_job_time))
+    .map((t) => {
+      const leave = t.wash_time || t.to_plant_time || t.end_unload || t.at_plant_time;
+      // delay = customer wait before pouring starts; actual = total time on site.
+      const delay = diffMin(t.unload_time, t.on_job_time);
+      const actual = diffMin(leave, t.on_job_time);
+      return {
+        ticket_id: t.ticket_id,
+        ticket_code: t.ticket_code,
+        plan_min: PLAN,
+        delay_min: Math.max(0, delay ?? 0),
+        actual_min: Math.max(0, actual ?? 0),
+      };
+    })
+    .sort((a, b) => (a.ticket_code || "").localeCompare(b.ticket_code || ""));
+
+  const d = new Date(order.order_date);
+  const md = Number.isNaN(d.getTime()) ? "" : `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+
+  return {
+    order_id: order.order_id,
+    order_code: order.order_code,
+    customer_name: order.customer_name,
+    order_line: `ORDER ${order.order_code}${md ? `-${md}` : ""}`,
+    address_line: order.delivery_addr1 || order.project_name || null,
+    loads,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  7. Rollout — customer invite search + customer user list          */
+/* ------------------------------------------------------------------ */
+
+export interface RolloutCustomerItem {
+  id: number;
+  code: string | null;
+  name: string | null;
+  user_count: number;
+}
+
+export interface RolloutUser {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  last_login: string | null;
+}
+
+export interface RolloutCustomerDetail {
+  id: number;
+  code: string | null;
+  name: string | null;
+  users: RolloutUser[];
+}
+
+/** Customer search for the Rollout invite flow (by company name or code). */
+export async function searchRolloutCustomers(q: string): Promise<RolloutCustomerItem[]> {
+  const term = q.trim().replace(/[,%()*]/g, " ").trim();
+  if (!term) return [];
+
+  const { data: custs, error } = await supabaseServer
+    .from("customers")
+    .select("id, code, name")
+    .or(`name.ilike.%${term}%,code.ilike.%${term}%`)
+    .order("name", { ascending: true })
+    .limit(60);
+  if (error) {
+    console.error("[ERROR] searchRolloutCustomers:", error.message);
+    return [];
+  }
+
+  const ids = (custs || []).map((c) => c.id);
+  const counts = new Map<number, number>();
+  if (ids.length) {
+    const { data: links } = await supabaseServer
+      .from("user_customers")
+      .select("customer_id")
+      .in("customer_id", ids)
+      .limit(5000);
+    for (const l of links || []) counts.set(l.customer_id, (counts.get(l.customer_id) || 0) + 1);
+  }
+
+  return (custs || []).map((c) => ({
+    id: c.id,
+    code: c.code,
+    name: c.name,
+    user_count: counts.get(c.id) || 0,
+  }));
+}
+
+/** A customer with its invited app users (for the Rollout customer-detail page). */
+export async function getRolloutCustomer(customerId: number): Promise<RolloutCustomerDetail | null> {
+  const { data: c, error } = await supabaseServer
+    .from("customers")
+    .select("id, code, name")
+    .eq("id", customerId)
+    .limit(1)
+    .maybeSingle();
+  if (error || !c) {
+    if (error) console.error("[ERROR] getRolloutCustomer:", error.message);
+    return null;
+  }
+
+  const { data: links } = await supabaseServer
+    .from("user_customers")
+    .select("user_id")
+    .eq("customer_id", customerId)
+    .limit(2000);
+  const ids = (links || []).map((l) => l.user_id);
+
+  let users: RolloutUser[] = [];
+  if (ids.length) {
+    const { data: us } = await supabaseServer
+      .from("users")
+      .select("id, full_name, email, last_login_at")
+      .in("id", ids)
+      .limit(2000);
+    users = (us || []).map((u) => ({
+      id: u.id,
+      full_name: u.full_name,
+      email: u.email,
+      last_login: u.last_login_at,
+    }));
+    users.sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+  }
+
+  return { id: c.id, code: c.code, name: c.name, users };
+}
+
+/* ------------------------------------------------------------------ */
+/*  8. Rollout — single user detail (action grid)                     */
+/* ------------------------------------------------------------------ */
+
+export interface RolloutUserDetail {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  customer_name: string | null;
+  reinvited_date: string | null;
+  forced_logout: boolean;
+}
+
+export async function getRolloutUser(userId: string): Promise<RolloutUserDetail | null> {
+  const { data: u, error } = await supabaseServer
+    .from("users")
+    .select("id, full_name, email, phone_number, invitation_sent_at")
+    .eq("id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (error || !u) {
+    if (error) console.error("[ERROR] getRolloutUser:", error.message);
+    return null;
+  }
+
+  // Primary customer (first assignment) for the "INVITE MORE FROM …" tile.
+  let customer_name: string | null = null;
+  const { data: link } = await supabaseServer
+    .from("user_customers")
+    .select("customer_id")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (link?.customer_id) {
+    const { data: c } = await supabaseServer
+      .from("customers")
+      .select("name")
+      .eq("id", link.customer_id)
+      .maybeSingle();
+    customer_name = c?.name ?? null;
+  }
+
+  const d = u.invitation_sent_at ? new Date(u.invitation_sent_at) : null;
+  const reinvited_date =
+    d && !Number.isNaN(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}` : null;
+
+  return {
+    id: u.id,
+    full_name: u.full_name,
+    email: u.email,
+    phone: u.phone_number,
+    customer_name,
+    reinvited_date,
+    forced_logout: false,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  9. Rollout — user's project assignment table                      */
+/* ------------------------------------------------------------------ */
+
+export interface RolloutProjectRow {
+  id: number;
+  name: string;
+  code: string | null;
+  owner: string | null;
+  customer: string | null;
+  assigned: boolean;
+}
+
+export interface RolloutUserProjects {
+  user_name: string | null;
+  customer_name: string | null;
+  projects: RolloutProjectRow[];
+}
+
+export async function getRolloutUserProjects(userId: string): Promise<RolloutUserProjects | null> {
+  const { data: u, error } = await supabaseServer
+    .from("users")
+    .select("full_name")
+    .eq("id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (error || !u) {
+    if (error) console.error("[ERROR] getRolloutUserProjects:", error.message);
+    return null;
+  }
+
+  const { data: link } = await supabaseServer
+    .from("user_customers")
+    .select("customer_id")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  const customerId = link?.customer_id;
+
+  let customer_name: string | null = null;
+  let projects: RolloutProjectRow[] = [];
+
+  if (customerId) {
+    const { data: c } = await supabaseServer
+      .from("customers")
+      .select("name")
+      .eq("id", customerId)
+      .maybeSingle();
+    customer_name = c?.name ?? null;
+
+    const [{ data: projs }, { data: assigned }] = await Promise.all([
+      supabaseServer
+        .from("projects")
+        .select("id, code, name, customer_name")
+        .eq("customer_id", customerId)
+        .order("name", { ascending: true })
+        .limit(1000),
+      supabaseServer.from("user_projects").select("project_id").eq("user_id", userId).limit(2000),
+    ]);
+
+    const assignedSet = new Set((assigned || []).map((a) => a.project_id));
+    projects = (projs || []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      code: p.code,
+      owner: p.customer_name,
+      customer: p.customer_name,
+      assigned: assignedSet.has(p.id),
+    }));
+  }
+
+  return { user_name: u.full_name, customer_name, projects };
+}
+
+/* ------------------------------------------------------------------ */
+/*  10. Order Request — project search (order by project)             */
+/* ------------------------------------------------------------------ */
+
+export interface OrderProjectCard {
+  project_id: number;
+  project_name: string;
+  project_code: string | null;
+  customer_name: string | null;
+  customer_code: string | null;
+  recent_orders: number;
+}
+
+export interface OrderProjectSearch {
+  customers: { id: number; name: string | null; code: string | null }[];
+  projects: OrderProjectCard[];
+}
+
+export async function searchOrderProjects(q: string): Promise<OrderProjectSearch> {
+  const term = q.trim().replace(/[,%()*]/g, " ").trim();
+  if (!term) return { customers: [], projects: [] };
+
+  const { data: custs, error } = await supabaseServer
+    .from("customers")
+    .select("id, code, name")
+    .or(`name.ilike.%${term}%,code.ilike.%${term}%`)
+    .order("name", { ascending: true })
+    .limit(20);
+  if (error) {
+    console.error("[ERROR] searchOrderProjects:", error.message);
+    return { customers: [], projects: [] };
+  }
+  const custIds = (custs || []).map((c) => c.id);
+  if (!custIds.length) return { customers: [], projects: [] };
+
+  const { data: projs } = await supabaseServer
+    .from("projects")
+    .select("id, code, name, customer_name, customer_code")
+    .in("customer_id", custIds)
+    .order("name", { ascending: true })
+    .limit(500);
+
+  const projIds = (projs || []).map((p) => p.id);
+  const counts = new Map<number, number>();
+  if (projIds.length) {
+    const { data: ords } = await supabaseServer
+      .from("orders")
+      .select("project_id")
+      .in("project_id", projIds)
+      .limit(20000);
+    for (const o of ords || []) {
+      if (o.project_id != null) counts.set(o.project_id, (counts.get(o.project_id) || 0) + 1);
+    }
+  }
+
+  const projects: OrderProjectCard[] = (projs || []).map((p) => ({
+    project_id: p.id,
+    project_name: p.name,
+    project_code: p.code,
+    customer_name: p.customer_name,
+    customer_code: p.customer_code,
+    recent_orders: counts.get(p.id) || 0,
+  }));
+
+  return {
+    customers: (custs || []).map((c) => ({ id: c.id, name: c.name, code: c.code })),
+    projects,
+  };
+}
+
+/** Minimal project lookup to prefill the Order Request Form. */
+export async function getProjectBasic(
+  projectId: number,
+): Promise<{ name: string; customer_name: string | null } | null> {
+  const { data } = await supabaseServer
+    .from("projects")
+    .select("name, customer_name")
+    .eq("id", projectId)
+    .maybeSingle();
+  return data ? { name: data.name, customer_name: data.customer_name } : null;
 }

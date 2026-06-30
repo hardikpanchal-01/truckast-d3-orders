@@ -9,6 +9,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { type LucideIcon } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -31,7 +32,7 @@ export type ToneName = keyof typeof TONES;
 /*  Top nav — dark "TRUCKAST" bar                                      */
 /* ------------------------------------------------------------------ */
 
-const NAV_TABS = [
+const MARKETS_TABS = [
   "MARKETS",
   "SETTINGS",
   "PUBLISH",
@@ -43,27 +44,62 @@ const NAV_TABS = [
   "LOGOUT",
 ] as const;
 
+// The Rollout (customer-invite) section uses its own brand + tab set.
+const ROLLOUT_TABS = [
+  "DASHBOARD",
+  "INVITE",
+  "PUBLISH",
+  "ADMIN",
+  "TRUCKAST",
+  "ORDER",
+  "PROJECTS",
+  "HELP",
+  "LOGOUT",
+] as const;
+
+// The Order Request (order concrete) section uses its own brand + tab set.
+const ORDER_TABS = ["DASHBOARD", "ORDER FORM", "SETTINGS", "PUBLISH", "ADMIN", "TRUCKAST", "LOGOUT"] as const;
+
+// Routes wired so far; tabs without an entry render as inert labels.
+const TAB_HREF: Record<string, string> = {
+  MARKETS: "/",
+  TRUCKAST: "/",
+  SETTINGS: "/settings",
+  ROLLOUT: "/rollout/search",
+  ORDER: "/order-request/project",
+};
+
 export function TopNav() {
-  // First tab is shown as the active/highlighted tab (design matches the live app).
-  const active = NAV_TABS[0];
+  const pathname = usePathname();
+  const isRollout = pathname?.startsWith("/rollout") ?? false;
+  const isOrder = pathname?.startsWith("/order-request") ?? false;
+  const brand = isRollout ? "ROLLOUT" : isOrder ? "ORDER REQUEST" : "TRUCKAST";
+  const tabs: readonly string[] = isRollout ? ROLLOUT_TABS : isOrder ? ORDER_TABS : MARKETS_TABS;
+  // First tab is the active/highlighted tab in the markets nav; the others have none.
+  const active = isRollout || isOrder ? "" : MARKETS_TABS[0];
   return (
     <header className="bg-[#1c1c1c] text-[#cfcfcf]">
-      <div className="mx-auto flex w-full max-w-[1170px] items-center gap-4 px-3 py-2 sm:px-0">
-        <Link href="/" className="text-lg font-light tracking-wide text-[#9a9a9a]">
-          TRUCKAST
+      <div className="mx-auto flex min-h-[50px] w-full max-w-[1170px] flex-wrap items-center gap-x-6 px-3 sm:px-0">
+        <Link href="/" className="text-[20px] font-light tracking-wide text-[#9a9a9a]">
+          {brand}
         </Link>
-        <nav className="flex flex-wrap items-center gap-1 text-xs font-semibold tracking-wide">
-          {NAV_TABS.map((tab) => (
-            <span
-              key={tab}
-              className={[
-                "cursor-pointer rounded px-3 py-1.5 hover:text-white",
-                tab === active ? "font-bold text-white" : "text-[#8a8a8a]",
-              ].join(" ")}
-            >
-              {tab}
-            </span>
-          ))}
+        <nav className="flex flex-wrap items-center text-[14px] font-normal tracking-wide">
+          {tabs.map((tab) => {
+            const href = TAB_HREF[tab];
+            const cls = [
+              "cursor-pointer px-3 py-[14px] hover:text-white",
+              tab === active ? "text-white" : "text-[#8a8a8a]",
+            ].join(" ");
+            return href ? (
+              <Link key={tab} href={href} className={cls}>
+                {tab}
+              </Link>
+            ) : (
+              <span key={tab} className={cls}>
+                {tab}
+              </span>
+            );
+          })}
         </nav>
       </div>
     </header>
@@ -79,14 +115,22 @@ export function SubHeader({
   subtitle,
   backHref,
   onRefresh,
+  heightClass = "h-[46px]",
 }: {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   backHref?: string;
   onRefresh?: () => void;
+  /** Override the bar height (e.g. "h-[76px]" for multi-line subtitles). */
+  heightClass?: string;
 }) {
   return (
-    <div className="flex h-[46px] items-center justify-between gap-3 rounded-md border border-[#c9c9c9] bg-[#FAFAFA] px-5 text-[14px] text-[#333] shadow-sm">
+    <div
+      className={[
+        "flex items-center justify-between gap-3 rounded-md border border-[#c9c9c9] bg-[#FAFAFA] px-5 text-[14px] text-[#333] shadow-sm",
+        heightClass,
+      ].join(" ")}
+    >
       <Link
         href={backHref ?? "/"}
         aria-label="Back"
@@ -99,7 +143,7 @@ export function SubHeader({
         <strong className="block truncate text-[16px] font-bold leading-[19px] text-[#333]">
           {title}
         </strong>
-        {subtitle ? <p className="truncate text-xs text-[#555]">{subtitle}</p> : null}
+        {subtitle ? <div className="text-xs leading-tight text-[#555]">{subtitle}</div> : null}
       </div>
       <button
         type="button"
@@ -123,11 +167,14 @@ export function FoldCard({
   className,
   style,
   children,
+  noFold = false,
 }: {
   tone?: ToneName;
   className?: string;
   style?: React.CSSProperties;
   children: React.ReactNode;
+  /** Hide the folded-corner (dogear) accent. */
+  noFold?: boolean;
 }) {
   const t = TONES[tone];
   return (
@@ -136,13 +183,15 @@ export function FoldCard({
       style={{ backgroundColor: t.bg, ...style }}
     >
       {children}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/icons/dogear.png"
-        alt=""
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 right-0 h-[19px] w-[19px]"
-      />
+      {noFold ? null : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="/icons/dogear.png"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 right-0 h-[19px] w-[19px]"
+        />
+      )}
     </div>
   );
 }
@@ -289,20 +338,94 @@ export function StatTile({
   value,
   sub,
   tone = "blue",
+  href,
+  newTab,
 }: {
   label: string;
   value: string;
   sub?: string;
   tone?: ToneName;
+  href?: string;
+  newTab?: boolean;
 }) {
-  return (
-    <FoldCard tone={tone} className="mb-[5px] mr-[5px] h-[90px] w-[88px] text-white">
+  const card = (
+    <FoldCard
+      tone={tone}
+      noFold={!href}
+      className={["mb-[5px] mr-[5px] h-[90px] w-[88px] text-white", href ? "cursor-pointer" : ""].join(" ")}
+    >
       <div className="p-[5px]">
         <div className="text-center text-[12px] font-bold uppercase">{label}</div>
         <div className="h-[40px] w-full text-center text-[24px] font-bold leading-[40px]">{value}</div>
         {sub ? <div className="text-center text-[12px] uppercase">{sub}</div> : null}
       </div>
     </FoldCard>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        className="block"
+      >
+        {card}
+      </Link>
+    );
+  }
+  return card;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Load-status icon (target ring + dispatch arrow)                    */
+/* ------------------------------------------------------------------ */
+
+export function LoadStatusIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      fill="none"
+      className={className}
+      aria-hidden
+      stroke="#fff"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="21" cy="27" r="13" />
+      <circle cx="21" cy="27" r="3.5" fill="#fff" stroke="none" />
+      <line x1="30" y1="18" x2="42" y2="6" />
+      <polyline points="33 6 42 6 42 15" />
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Evaporation-rate icon (water surface + rising vapor arrows)        */
+/* ------------------------------------------------------------------ */
+
+export function EvapIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
+      {/* three rising vapor arrows */}
+      {[12, 24, 36].map((x, i) => (
+        <g key={x} stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <line x1={x} y1={i === 1 ? 6 : 12} x2={x} y2={24} />
+          <polyline points={`${x - 4},${i === 1 ? 11 : 17} ${x},${i === 1 ? 6 : 12} ${x + 4},${i === 1 ? 11 : 17}`} />
+        </g>
+      ))}
+      {/* two water-surface waves */}
+      {[33, 41].map((y) => (
+        <path
+          key={y}
+          d={`M4 ${y} q5 -4 10 0 t10 0 t10 0 t10 0`}
+          stroke="#fff"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          fill="none"
+        />
+      ))}
+    </svg>
   );
 }
 
@@ -328,7 +451,7 @@ export function SearchBox({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       className={[
-        "w-full rounded-[4px] border border-[#cccccc] border-t-[#bbbbbb] bg-white px-3 py-2 text-sm text-[#555] outline-none transition placeholder:text-[#999] focus:border-[#66afe9] focus:shadow-[0_0_8px_rgba(102,175,233,0.6)]",
+        "h-[30px] w-[274px] max-w-full rounded-[4px] border border-[#cccccc] border-t-[#bbbbbb] bg-white px-3 py-1 text-sm text-[#555] outline-none transition placeholder:text-[#999] focus:border-[#66afe9] focus:shadow-[0_0_8px_rgba(102,175,233,0.6)]",
         className || "",
       ].join(" ")}
     />
