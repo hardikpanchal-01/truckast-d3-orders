@@ -178,10 +178,29 @@ export default async function OrderDetailPage({
         summary={
           <>
             <p>Order Number: {detail.order_code}</p>
-            <p>Order Status: {STATUS_LABEL[detail.status]}</p>
-            {detail.plant_code ? <p>Plant: {detail.plant_code}</p> : null}
-            <p>Ordered: {detail.ordered_cy.toFixed(2)} CY</p>
-            <p>Ticketed: {detail.ticketed_cy.toFixed(2)} CY</p>
+            <p>Order Status: {detail.dispatch_status}</p>
+            {detail.plant_name ? <p>Plant: {detail.plant_name}</p> : null}
+            {detail.scheduled_time ? <p>Scheduled Time on Job: {detail.scheduled_time}</p> : null}
+            {detail.spacing_minutes != null ? <p>Spacing: {detail.spacing_minutes} minutes</p> : null}
+            <p>Purchase Order: {detail.purchase_order || "n/a"}</p>
+            <p>Instructions: {detail.instructions || "n/a"}</p>
+            <p>Ordered By: {detail.ordered_by || "n/a"}</p>
+
+            {/* Products section - matching D3 production format */}
+            {detail.products && detail.products.length > 0 && (
+              <>
+                <p className="mt-3 font-bold">PRODUCTS</p>
+                {detail.products.map((product, idx) => (
+                  <div key={idx} className={idx > 0 ? "mt-3" : ""}>
+                    <p>Product Name: {product.item_code}</p>
+                    <p>Product Description: {product.description || ""}</p>
+                    <p>Quantity: {product.qty.toFixed(2)} {product.unit === "CY" ? "Cubic Yards" : product.unit.toLowerCase()}</p>
+                    {product.slump != null && <p>Slump: {product.slump}</p>}
+                    <p>Usage: {product.usage || ""}</p>
+                  </div>
+                ))}
+              </>
+            )}
           </>
         }
       />
