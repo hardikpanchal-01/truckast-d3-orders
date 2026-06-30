@@ -34,9 +34,9 @@ export default async function MarketSummaryPage({
           }
           tone="blue"
           lines={[
-            { text: "EASY", size: 11, dim: true },
-            { text: "CUSTOMER", bold: true },
-            { text: "INVITE", size: 11, dim: true },
+            { text: "EASY", size: 14, dim: true },
+            { text: "CUSTOMER", bold: true, size: 16 },
+            { text: "INVITE", size: 12, dim: true },
           ]}
         />
         <IconTile
@@ -46,9 +46,9 @@ export default async function MarketSummaryPage({
           }
           tone="blue"
           lines={[
-            { text: "Click Here", size: 11, dim: true },
-            { text: "ORDER CONCRETE", bold: true },
-            { text: "Its Easy", size: 11, dim: true },
+            { text: "Click Here", size: 14, dim: true },
+            { text: "ORDER CONCRETE", bold: true, size: 16 },
+            { text: "Its Easy", size: 12, dim: true },
           ]}
         />
       </div>
@@ -67,10 +67,10 @@ export default async function MarketSummaryPage({
             <div className="ml-2 grid h-12 w-12 shrink-0 place-items-center rounded bg-white text-[10px] font-black italic text-[#0a5a2a]">
               DOLESE
             </div>
-            <div className="min-w-0">
-              <p className="text-[11px] opacity-90">June 22nd thru 26th, 2026</p>
-              <p className="text-sm font-bold">Current Fuel Surcharge</p>
-              <p className="text-[11px] opacity-90">$30.00 per load *Click for Details</p>
+            <div className="min-w-0 leading-tight">
+              <p className="text-[14px] opacity-90">June 22nd thru 26th, 2026</p>
+              <p className="text-[16px] font-bold">Current Fuel Surcharge</p>
+              <p className="text-[12px] opacity-90">$30.00 per load *Click for Details</p>
             </div>
           </div>
         </FoldCard>
@@ -81,11 +81,11 @@ export default async function MarketSummaryPage({
           href={`/orders?date=${dateStr}`}
           left={<PieGauge pct={pct} size={52} />}
           lines={[
-            { text: summary.name, bold: true },
-            { text: `${fmt(summary.usedCY)} OF ${fmt(summary.totalCY)} CY`, size: 12 },
+            { text: summary.name, bold: true, size: 16 },
+            { text: `${fmt(summary.usedCY)} OF ${fmt(summary.totalCY)} CY`, size: 14 },
             {
               text: `Tot ${summary.totalOrders}, Act ${summary.activeOrders}, Can ${summary.cancelledOrders}`,
-              size: 11,
+              size: 12,
               dim: true,
             },
           ]}

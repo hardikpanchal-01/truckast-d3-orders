@@ -48,17 +48,17 @@ export function TopNav() {
   const active = NAV_TABS[0];
   return (
     <header className="bg-[#1c1c1c] text-[#cfcfcf]">
-      <div className="mx-auto flex w-full max-w-[1170px] items-center gap-4 px-3 py-2 sm:px-0">
-        <Link href="/" className="text-lg font-light tracking-wide text-[#9a9a9a]">
+      <div className="mx-auto flex min-h-[50px] w-full max-w-[1170px] flex-wrap items-center gap-x-6 px-3 sm:px-0">
+        <Link href="/" className="text-[20px] font-light tracking-wide text-[#9a9a9a]">
           TRUCKAST
         </Link>
-        <nav className="flex flex-wrap items-center gap-1 text-xs font-semibold tracking-wide">
+        <nav className="flex flex-wrap items-center text-[14px] font-normal tracking-wide">
           {NAV_TABS.map((tab) => (
             <span
               key={tab}
               className={[
-                "cursor-pointer rounded px-3 py-1.5 hover:text-white",
-                tab === active ? "font-bold text-white" : "text-[#8a8a8a]",
+                "cursor-pointer px-3 py-[14px] hover:text-white",
+                tab === active ? "text-white" : "text-[#8a8a8a]",
               ].join(" ")}
             >
               {tab}
@@ -79,14 +79,22 @@ export function SubHeader({
   subtitle,
   backHref,
   onRefresh,
+  heightClass = "h-[46px]",
 }: {
   title: string;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   backHref?: string;
   onRefresh?: () => void;
+  /** Override the bar height (e.g. "h-[76px]" for multi-line subtitles). */
+  heightClass?: string;
 }) {
   return (
-    <div className="flex h-[46px] items-center justify-between gap-3 rounded-md border border-[#c9c9c9] bg-[#FAFAFA] px-5 text-[14px] text-[#333] shadow-sm">
+    <div
+      className={[
+        "flex items-center justify-between gap-3 rounded-md border border-[#c9c9c9] bg-[#FAFAFA] px-5 text-[14px] text-[#333] shadow-sm",
+        heightClass,
+      ].join(" ")}
+    >
       <Link
         href={backHref ?? "/"}
         aria-label="Back"
@@ -99,7 +107,7 @@ export function SubHeader({
         <strong className="block truncate text-[16px] font-bold leading-[19px] text-[#333]">
           {title}
         </strong>
-        {subtitle ? <p className="truncate text-xs text-[#555]">{subtitle}</p> : null}
+        {subtitle ? <div className="text-xs leading-tight text-[#555]">{subtitle}</div> : null}
       </div>
       <button
         type="button"
@@ -123,11 +131,14 @@ export function FoldCard({
   className,
   style,
   children,
+  noFold = false,
 }: {
   tone?: ToneName;
   className?: string;
   style?: React.CSSProperties;
   children: React.ReactNode;
+  /** Hide the folded-corner (dogear) accent. */
+  noFold?: boolean;
 }) {
   const t = TONES[tone];
   return (
@@ -136,13 +147,15 @@ export function FoldCard({
       style={{ backgroundColor: t.bg, ...style }}
     >
       {children}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/icons/dogear.png"
-        alt=""
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 right-0 h-[19px] w-[19px]"
-      />
+      {noFold ? null : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="/icons/dogear.png"
+          alt=""
+          aria-hidden
+          className="pointer-events-none absolute bottom-0 right-0 h-[19px] w-[19px]"
+        />
+      )}
     </div>
   );
 }
@@ -289,20 +302,94 @@ export function StatTile({
   value,
   sub,
   tone = "blue",
+  href,
+  newTab,
 }: {
   label: string;
   value: string;
   sub?: string;
   tone?: ToneName;
+  href?: string;
+  newTab?: boolean;
 }) {
-  return (
-    <FoldCard tone={tone} className="mb-[5px] mr-[5px] h-[90px] w-[88px] text-white">
+  const card = (
+    <FoldCard
+      tone={tone}
+      noFold={!href}
+      className={["mb-[5px] mr-[5px] h-[90px] w-[88px] text-white", href ? "cursor-pointer" : ""].join(" ")}
+    >
       <div className="p-[5px]">
         <div className="text-center text-[12px] font-bold uppercase">{label}</div>
         <div className="h-[40px] w-full text-center text-[24px] font-bold leading-[40px]">{value}</div>
         {sub ? <div className="text-center text-[12px] uppercase">{sub}</div> : null}
       </div>
     </FoldCard>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        className="block"
+      >
+        {card}
+      </Link>
+    );
+  }
+  return card;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Load-status icon (target ring + dispatch arrow)                    */
+/* ------------------------------------------------------------------ */
+
+export function LoadStatusIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      fill="none"
+      className={className}
+      aria-hidden
+      stroke="#fff"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="21" cy="27" r="13" />
+      <circle cx="21" cy="27" r="3.5" fill="#fff" stroke="none" />
+      <line x1="30" y1="18" x2="42" y2="6" />
+      <polyline points="33 6 42 6 42 15" />
+    </svg>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Evaporation-rate icon (water surface + rising vapor arrows)        */
+/* ------------------------------------------------------------------ */
+
+export function EvapIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" fill="none" className={className} aria-hidden>
+      {/* three rising vapor arrows */}
+      {[12, 24, 36].map((x, i) => (
+        <g key={x} stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <line x1={x} y1={i === 1 ? 6 : 12} x2={x} y2={24} />
+          <polyline points={`${x - 4},${i === 1 ? 11 : 17} ${x},${i === 1 ? 6 : 12} ${x + 4},${i === 1 ? 11 : 17}`} />
+        </g>
+      ))}
+      {/* two water-surface waves */}
+      {[33, 41].map((y) => (
+        <path
+          key={y}
+          d={`M4 ${y} q5 -4 10 0 t10 0 t10 0 t10 0`}
+          stroke="#fff"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          fill="none"
+        />
+      ))}
+    </svg>
   );
 }
 
@@ -328,7 +415,7 @@ export function SearchBox({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       className={[
-        "w-full rounded-[4px] border border-[#cccccc] border-t-[#bbbbbb] bg-white px-3 py-2 text-sm text-[#555] outline-none transition placeholder:text-[#999] focus:border-[#66afe9] focus:shadow-[0_0_8px_rgba(102,175,233,0.6)]",
+        "h-[30px] w-[274px] max-w-full rounded-[4px] border border-[#cccccc] border-t-[#bbbbbb] bg-white px-3 py-1 text-sm text-[#555] outline-none transition placeholder:text-[#999] focus:border-[#66afe9] focus:shadow-[0_0_8px_rgba(102,175,233,0.6)]",
         className || "",
       ].join(" ")}
     />
