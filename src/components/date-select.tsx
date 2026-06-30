@@ -8,56 +8,180 @@ function mdy(iso: string) {
   return `${Number(m)}/${Number(d)}/${y}`;
 }
 
+function formatMonthYear(date: Date) {
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" }).toUpperCase();
+}
+
+function getISODate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+interface DateOption {
+  value: string;
+  label: string;
+  type: "single" | "range";
+}
+
 /**
- * Date filter: quick presets (Today / Yesterday / …) plus a free date picker for
- * any day. Both navigate with ?date=YYYY-MM-DD (preserving other params).
+ * Date filter: quick presets (Today / Yesterday / …) plus date ranges
+ * matching D3 production layout.
  */
-export function DateSelect({ value }: { value: string }) {
+export function DateSelect({ value, valueTo }: { value: string; valueTo?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const presets = React.useMemo(() => {
+  const options = React.useMemo(() => {
     const today = new Date();
-    const days: { value: string; label: string }[] = [];
-    for (let offset = -7; offset <= 2; offset++) {
+    const items: DateOption[] = [];
+
+    // TODAY
+    const todayISO = getISODate(today);
+    items.push({ value: todayISO, label: `TODAY - ${mdy(todayISO)}`, type: "single" });
+
+    // TOMORROW
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const tomorrowISO = getISODate(tomorrow);
+    items.push({ value: tomorrowISO, label: `TOMORROW - ${mdy(tomorrowISO)}`, type: "single" });
+
+    // YESTERDAY
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const yesterdayISO = getISODate(yesterday);
+    items.push({ value: yesterdayISO, label: "YESTERDAY", type: "single" });
+
+    // Next 5 individual days (day after tomorrow + 4 more)
+    for (let i = 2; i <= 6; i++) {
       const d = new Date(today);
-      d.setDate(today.getDate() + offset);
-      const iso = d.toISOString().slice(0, 10);
-      const label =
-        offset === 0
-          ? `TODAY - ${mdy(iso)}`
-          : offset === -1
-            ? `YESTERDAY - ${mdy(iso)}`
-            : offset === 1
-              ? `TOMORROW - ${mdy(iso)}`
-              : mdy(iso);
-      days.push({ value: iso, label });
+      d.setDate(today.getDate() + i);
+      const iso = getISODate(d);
+      items.push({ value: iso, label: mdy(iso), type: "single" });
     }
-    return days;
+
+    // Current month date range (first day to last day)
+    const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    items.push({
+      value: `range:${getISODate(firstOfMonth)}:${getISODate(lastOfMonth)}`,
+      label: `${mdy(getISODate(firstOfMonth))} - ${mdy(getISODate(lastOfMonth))}`,
+      type: "range",
+    });
+
+    // LAST 7 DAYS (D3 production: day - 6 to day, 7 days inclusive)
+    const last7Start = new Date(today);
+    last7Start.setDate(today.getDate() - 6);  // today - 6 = 7 days inclusive
+    items.push({
+      value: `range:${getISODate(last7Start)}:${todayISO}`,
+      label: "LAST 7 DAYS",
+      type: "range",
+    });
+
+    // LAST 30 DAYS (D3 production: day - 29 to day, 30 days inclusive)
+    const last30Start = new Date(today);
+    last30Start.setDate(today.getDate() - 29);  // today - 29 = 30 days inclusive
+    items.push({
+      value: `range:${getISODate(last30Start)}:${todayISO}`,
+      label: "LAST 30 DAYS",
+      type: "range",
+    });
+
+    // Next 3 months (starting from next month since current month is already added above)
+    for (let i = 1; i <= 3; i++) {
+      const monthDate = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      const monthStart = getISODate(monthDate);
+      const monthEnd = getISODate(new Date(today.getFullYear(), today.getMonth() + i + 1, 0));
+      items.push({
+        value: `range:${monthStart}:${monthEnd}`,
+        label: formatMonthYear(monthDate),
+        type: "range",
+      });
+    }
+
+    // FUTURE (tomorrow onwards for 30 days)
+    const future30 = new Date(today);
+    future30.setDate(today.getDate() + 30);
+    items.push({
+      value: `range:${tomorrowISO}:${getISODate(future30)}`,
+      label: "FUTURE",
+      type: "range",
+    });
+
+    // SEARCH (placeholder - opens date picker)
+    items.push({
+      value: "search",
+      label: "SEARCH",
+      type: "single",
+    });
+
+    return items;
   }, []);
 
   const navigate = React.useCallback(
-    (date: string) => {
-      if (!date) return;
+    (selectedValue: string) => {
+      if (!selectedValue || selectedValue === "search") {
+        // For SEARCH, prompt for a date
+        const input = prompt("Enter date (YYYY-MM-DD or MM/DD/YYYY):");
+        if (input) {
+          let iso = input;
+          // Convert MM/DD/YYYY to YYYY-MM-DD if needed
+          if (input.includes("/")) {
+            const parts = input.split("/");
+            if (parts.length === 3) {
+              iso = `${parts[2]}-${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}`;
+            }
+          }
+          const params = new URLSearchParams(searchParams.toString());
+          params.set("date", iso);
+          params.delete("dateTo");
+          router.push(`${pathname}?${params.toString()}`);
+        }
+        return;
+      }
+
       const params = new URLSearchParams(searchParams.toString());
-      params.set("date", date);
+
+      // Handle range selections
+      if (selectedValue.startsWith("range:")) {
+        const [, startDate, endDate] = selectedValue.split(":");
+        params.set("date", startDate);
+        params.set("dateTo", endDate);
+      } else {
+        // Single date
+        params.set("date", selectedValue);
+        params.delete("dateTo");
+      }
+
       router.push(`${pathname}?${params.toString()}`);
     },
     [router, pathname, searchParams],
   );
 
-  // If the chosen date isn't one of the presets, surface it as a leading option
-  const hasPreset = presets.some((p) => p.value === value);
+  // Find current selection or show custom date
+  const currentOption = options.find((o) => {
+    // Single date match
+    if (!valueTo && o.value === value && o.type === "single") return true;
+    // Range match - check if both start and end dates match
+    if (valueTo && o.value.startsWith("range:")) {
+      const [, start, end] = o.value.split(":");
+      if (start === value && end === valueTo) return true;
+    }
+    return false;
+  });
+
+  const displayValue = currentOption?.value || (valueTo ? `range:${value}:${valueTo}` : value);
+  const displayLabel = valueTo ? `${mdy(value)} - ${mdy(valueTo)}` : mdy(value);
 
   return (
     <select
-      value={value}
+      value={displayValue}
       onChange={(e) => navigate(e.target.value)}
       className="h-[30px] w-full rounded-[4px] border border-[#cccccc] bg-white px-3 py-0 text-sm leading-none text-[#333] outline-none focus:border-[#2f7ed8]"
     >
-      {!hasPreset && <option value={value}>{mdy(value)}</option>}
-      {presets.map((o) => (
+      {/* Show custom date/range if not in presets */}
+      {!currentOption && <option value={displayValue}>{displayLabel}</option>}
+
+      {options.map((o) => (
         <option key={o.value} value={o.value}>
           {o.label}
         </option>
