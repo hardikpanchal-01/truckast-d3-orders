@@ -1075,3 +1075,316 @@ export async function getDoleseCustomerDelay(orderId: number): Promise<DoleseCus
     loads,
   };
 }
+
+/* ------------------------------------------------------------------ */
+/*  7. Rollout — customer invite search + customer user list          */
+/* ------------------------------------------------------------------ */
+
+export interface RolloutCustomerItem {
+  id: number;
+  code: string | null;
+  name: string | null;
+  user_count: number;
+}
+
+export interface RolloutUser {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  last_login: string | null;
+}
+
+export interface RolloutCustomerDetail {
+  id: number;
+  code: string | null;
+  name: string | null;
+  users: RolloutUser[];
+}
+
+/** Customer search for the Rollout invite flow (by company name or code). */
+export async function searchRolloutCustomers(q: string): Promise<RolloutCustomerItem[]> {
+  const term = q.trim().replace(/[,%()*]/g, " ").trim();
+  if (!term) return [];
+
+  const { data: custs, error } = await supabaseServer
+    .from("customers")
+    .select("id, code, name")
+    .or(`name.ilike.%${term}%,code.ilike.%${term}%`)
+    .order("name", { ascending: true })
+    .limit(60);
+  if (error) {
+    console.error("[ERROR] searchRolloutCustomers:", error.message);
+    return [];
+  }
+
+  const ids = (custs || []).map((c) => c.id);
+  const counts = new Map<number, number>();
+  if (ids.length) {
+    const { data: links } = await supabaseServer
+      .from("user_customers")
+      .select("customer_id")
+      .in("customer_id", ids)
+      .limit(5000);
+    for (const l of links || []) counts.set(l.customer_id, (counts.get(l.customer_id) || 0) + 1);
+  }
+
+  return (custs || []).map((c) => ({
+    id: c.id,
+    code: c.code,
+    name: c.name,
+    user_count: counts.get(c.id) || 0,
+  }));
+}
+
+/** A customer with its invited app users (for the Rollout customer-detail page). */
+export async function getRolloutCustomer(customerId: number): Promise<RolloutCustomerDetail | null> {
+  const { data: c, error } = await supabaseServer
+    .from("customers")
+    .select("id, code, name")
+    .eq("id", customerId)
+    .limit(1)
+    .maybeSingle();
+  if (error || !c) {
+    if (error) console.error("[ERROR] getRolloutCustomer:", error.message);
+    return null;
+  }
+
+  const { data: links } = await supabaseServer
+    .from("user_customers")
+    .select("user_id")
+    .eq("customer_id", customerId)
+    .limit(2000);
+  const ids = (links || []).map((l) => l.user_id);
+
+  let users: RolloutUser[] = [];
+  if (ids.length) {
+    const { data: us } = await supabaseServer
+      .from("users")
+      .select("id, full_name, email, last_login_at")
+      .in("id", ids)
+      .limit(2000);
+    users = (us || []).map((u) => ({
+      id: u.id,
+      full_name: u.full_name,
+      email: u.email,
+      last_login: u.last_login_at,
+    }));
+    users.sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
+  }
+
+  return { id: c.id, code: c.code, name: c.name, users };
+}
+
+/* ------------------------------------------------------------------ */
+/*  8. Rollout — single user detail (action grid)                     */
+/* ------------------------------------------------------------------ */
+
+export interface RolloutUserDetail {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  customer_name: string | null;
+  reinvited_date: string | null;
+  forced_logout: boolean;
+}
+
+export async function getRolloutUser(userId: string): Promise<RolloutUserDetail | null> {
+  const { data: u, error } = await supabaseServer
+    .from("users")
+    .select("id, full_name, email, phone_number, invitation_sent_at")
+    .eq("id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (error || !u) {
+    if (error) console.error("[ERROR] getRolloutUser:", error.message);
+    return null;
+  }
+
+  // Primary customer (first assignment) for the "INVITE MORE FROM …" tile.
+  let customer_name: string | null = null;
+  const { data: link } = await supabaseServer
+    .from("user_customers")
+    .select("customer_id")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (link?.customer_id) {
+    const { data: c } = await supabaseServer
+      .from("customers")
+      .select("name")
+      .eq("id", link.customer_id)
+      .maybeSingle();
+    customer_name = c?.name ?? null;
+  }
+
+  const d = u.invitation_sent_at ? new Date(u.invitation_sent_at) : null;
+  const reinvited_date =
+    d && !Number.isNaN(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}` : null;
+
+  return {
+    id: u.id,
+    full_name: u.full_name,
+    email: u.email,
+    phone: u.phone_number,
+    customer_name,
+    reinvited_date,
+    forced_logout: false,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  9. Rollout — user's project assignment table                      */
+/* ------------------------------------------------------------------ */
+
+export interface RolloutProjectRow {
+  id: number;
+  name: string;
+  code: string | null;
+  owner: string | null;
+  customer: string | null;
+  assigned: boolean;
+}
+
+export interface RolloutUserProjects {
+  user_name: string | null;
+  customer_name: string | null;
+  projects: RolloutProjectRow[];
+}
+
+export async function getRolloutUserProjects(userId: string): Promise<RolloutUserProjects | null> {
+  const { data: u, error } = await supabaseServer
+    .from("users")
+    .select("full_name")
+    .eq("id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (error || !u) {
+    if (error) console.error("[ERROR] getRolloutUserProjects:", error.message);
+    return null;
+  }
+
+  const { data: link } = await supabaseServer
+    .from("user_customers")
+    .select("customer_id")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+  const customerId = link?.customer_id;
+
+  let customer_name: string | null = null;
+  let projects: RolloutProjectRow[] = [];
+
+  if (customerId) {
+    const { data: c } = await supabaseServer
+      .from("customers")
+      .select("name")
+      .eq("id", customerId)
+      .maybeSingle();
+    customer_name = c?.name ?? null;
+
+    const [{ data: projs }, { data: assigned }] = await Promise.all([
+      supabaseServer
+        .from("projects")
+        .select("id, code, name, customer_name")
+        .eq("customer_id", customerId)
+        .order("name", { ascending: true })
+        .limit(1000),
+      supabaseServer.from("user_projects").select("project_id").eq("user_id", userId).limit(2000),
+    ]);
+
+    const assignedSet = new Set((assigned || []).map((a) => a.project_id));
+    projects = (projs || []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      code: p.code,
+      owner: p.customer_name,
+      customer: p.customer_name,
+      assigned: assignedSet.has(p.id),
+    }));
+  }
+
+  return { user_name: u.full_name, customer_name, projects };
+}
+
+/* ------------------------------------------------------------------ */
+/*  10. Order Request — project search (order by project)             */
+/* ------------------------------------------------------------------ */
+
+export interface OrderProjectCard {
+  project_id: number;
+  project_name: string;
+  project_code: string | null;
+  customer_name: string | null;
+  customer_code: string | null;
+  recent_orders: number;
+}
+
+export interface OrderProjectSearch {
+  customers: { id: number; name: string | null; code: string | null }[];
+  projects: OrderProjectCard[];
+}
+
+export async function searchOrderProjects(q: string): Promise<OrderProjectSearch> {
+  const term = q.trim().replace(/[,%()*]/g, " ").trim();
+  if (!term) return { customers: [], projects: [] };
+
+  const { data: custs, error } = await supabaseServer
+    .from("customers")
+    .select("id, code, name")
+    .or(`name.ilike.%${term}%,code.ilike.%${term}%`)
+    .order("name", { ascending: true })
+    .limit(20);
+  if (error) {
+    console.error("[ERROR] searchOrderProjects:", error.message);
+    return { customers: [], projects: [] };
+  }
+  const custIds = (custs || []).map((c) => c.id);
+  if (!custIds.length) return { customers: [], projects: [] };
+
+  const { data: projs } = await supabaseServer
+    .from("projects")
+    .select("id, code, name, customer_name, customer_code")
+    .in("customer_id", custIds)
+    .order("name", { ascending: true })
+    .limit(500);
+
+  const projIds = (projs || []).map((p) => p.id);
+  const counts = new Map<number, number>();
+  if (projIds.length) {
+    const { data: ords } = await supabaseServer
+      .from("orders")
+      .select("project_id")
+      .in("project_id", projIds)
+      .limit(20000);
+    for (const o of ords || []) {
+      if (o.project_id != null) counts.set(o.project_id, (counts.get(o.project_id) || 0) + 1);
+    }
+  }
+
+  const projects: OrderProjectCard[] = (projs || []).map((p) => ({
+    project_id: p.id,
+    project_name: p.name,
+    project_code: p.code,
+    customer_name: p.customer_name,
+    customer_code: p.customer_code,
+    recent_orders: counts.get(p.id) || 0,
+  }));
+
+  return {
+    customers: (custs || []).map((c) => ({ id: c.id, name: c.name, code: c.code })),
+    projects,
+  };
+}
+
+/** Minimal project lookup to prefill the Order Request Form. */
+export async function getProjectBasic(
+  projectId: number,
+): Promise<{ name: string; customer_name: string | null } | null> {
+  const { data } = await supabaseServer
+    .from("projects")
+    .select("name, customer_name")
+    .eq("id", projectId)
+    .maybeSingle();
+  return data ? { name: data.name, customer_name: data.customer_name } : null;
+}

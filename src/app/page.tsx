@@ -1,12 +1,9 @@
 import { getDoleseSummary } from "@/actions/orderActions";
-import { SubHeader, IconTile, FoldCard, PieGauge } from "@/components/d3-ui";
+import { SubHeader, IconTile } from "@/components/d3-ui";
 import { DateSelect } from "@/components/date-select";
+import { MarketTiles } from "@/components/market-tiles";
 
 export const dynamic = "force-dynamic";
-
-function fmt(n: number) {
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 export default async function MarketSummaryPage({
   searchParams,
@@ -18,7 +15,6 @@ export default async function MarketSummaryPage({
   const dateStr = date || today;
 
   const summary = await getDoleseSummary(dateStr);
-  const pct = summary.totalCY > 0 ? summary.usedCY / summary.totalCY : 0;
 
   return (
     <div className="space-y-4">
@@ -28,6 +24,7 @@ export default async function MarketSummaryPage({
 
       <div className="flex flex-wrap">
         <IconTile
+          href="/rollout/search"
           left={
             // eslint-disable-next-line @next/next/no-img-element
             <img src="/icons/contractor.png" alt="" className="h-12 w-auto" />
@@ -40,6 +37,7 @@ export default async function MarketSummaryPage({
           ]}
         />
         <IconTile
+          href="/order-request/project"
           left={
             // eslint-disable-next-line @next/next/no-img-element
             <img src="/icons/fill-form.png" alt="" className="h-11 w-auto" />
@@ -53,44 +51,7 @@ export default async function MarketSummaryPage({
         />
       </div>
 
-      <input
-        id="tiles-search"
-        type="text"
-        placeholder="Search"
-        className="mb-[10px] h-[30px] w-[274px] rounded-[4px] border border-[#cccccc] bg-white px-[6px] py-[4px] text-sm text-[#555] outline-none transition placeholder:text-[#999] focus:border-[#66afe9] focus:shadow-[0_0_8px_rgba(102,175,233,0.6)]"
-      />
-
-      <div className="flex flex-wrap">
-        {/* Fuel surcharge */}
-        <FoldCard tone="red" className="mb-[5px] mr-[5px] w-[274px] text-white">
-          <div className="flex h-[90px] items-center gap-3 py-2 pr-3">
-            <div className="ml-2 grid h-12 w-12 shrink-0 place-items-center rounded bg-white text-[10px] font-black italic text-[#0a5a2a]">
-              DOLESE
-            </div>
-            <div className="min-w-0 leading-tight">
-              <p className="text-[14px] opacity-90">June 22nd thru 26th, 2026</p>
-              <p className="text-[16px] font-bold">Current Fuel Surcharge</p>
-              <p className="text-[12px] opacity-90">$30.00 per load *Click for Details</p>
-            </div>
-          </div>
-        </FoldCard>
-
-        {/* Business-unit total -> drill into orders */}
-        <IconTile
-          tone="green"
-          href={`/orders?date=${dateStr}`}
-          left={<PieGauge pct={pct} size={52} />}
-          lines={[
-            { text: summary.name, bold: true, size: 16 },
-            { text: `${fmt(summary.usedCY)} OF ${fmt(summary.totalCY)} CY`, size: 14 },
-            {
-              text: `Tot ${summary.totalOrders}, Act ${summary.activeOrders}, Can ${summary.cancelledOrders}`,
-              size: 12,
-              dim: true,
-            },
-          ]}
-        />
-      </div>
+      <MarketTiles summary={summary} dateStr={dateStr} />
     </div>
   );
 }

@@ -9,6 +9,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { type LucideIcon } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -31,7 +32,7 @@ export type ToneName = keyof typeof TONES;
 /*  Top nav — dark "TRUCKAST" bar                                      */
 /* ------------------------------------------------------------------ */
 
-const NAV_TABS = [
+const MARKETS_TABS = [
   "MARKETS",
   "SETTINGS",
   "PUBLISH",
@@ -43,27 +44,62 @@ const NAV_TABS = [
   "LOGOUT",
 ] as const;
 
+// The Rollout (customer-invite) section uses its own brand + tab set.
+const ROLLOUT_TABS = [
+  "DASHBOARD",
+  "INVITE",
+  "PUBLISH",
+  "ADMIN",
+  "TRUCKAST",
+  "ORDER",
+  "PROJECTS",
+  "HELP",
+  "LOGOUT",
+] as const;
+
+// The Order Request (order concrete) section uses its own brand + tab set.
+const ORDER_TABS = ["DASHBOARD", "ORDER FORM", "SETTINGS", "PUBLISH", "ADMIN", "TRUCKAST", "LOGOUT"] as const;
+
+// Routes wired so far; tabs without an entry render as inert labels.
+const TAB_HREF: Record<string, string> = {
+  MARKETS: "/",
+  TRUCKAST: "/",
+  SETTINGS: "/settings",
+  ROLLOUT: "/rollout/search",
+  ORDER: "/order-request/project",
+};
+
 export function TopNav() {
-  // First tab is shown as the active/highlighted tab (design matches the live app).
-  const active = NAV_TABS[0];
+  const pathname = usePathname();
+  const isRollout = pathname?.startsWith("/rollout") ?? false;
+  const isOrder = pathname?.startsWith("/order-request") ?? false;
+  const brand = isRollout ? "ROLLOUT" : isOrder ? "ORDER REQUEST" : "TRUCKAST";
+  const tabs: readonly string[] = isRollout ? ROLLOUT_TABS : isOrder ? ORDER_TABS : MARKETS_TABS;
+  // First tab is the active/highlighted tab in the markets nav; the others have none.
+  const active = isRollout || isOrder ? "" : MARKETS_TABS[0];
   return (
     <header className="bg-[#1c1c1c] text-[#cfcfcf]">
       <div className="mx-auto flex min-h-[50px] w-full max-w-[1170px] flex-wrap items-center gap-x-6 px-3 sm:px-0">
         <Link href="/" className="text-[20px] font-light tracking-wide text-[#9a9a9a]">
-          TRUCKAST
+          {brand}
         </Link>
         <nav className="flex flex-wrap items-center text-[14px] font-normal tracking-wide">
-          {NAV_TABS.map((tab) => (
-            <span
-              key={tab}
-              className={[
-                "cursor-pointer px-3 py-[14px] hover:text-white",
-                tab === active ? "text-white" : "text-[#8a8a8a]",
-              ].join(" ")}
-            >
-              {tab}
-            </span>
-          ))}
+          {tabs.map((tab) => {
+            const href = TAB_HREF[tab];
+            const cls = [
+              "cursor-pointer px-3 py-[14px] hover:text-white",
+              tab === active ? "text-white" : "text-[#8a8a8a]",
+            ].join(" ");
+            return href ? (
+              <Link key={tab} href={href} className={cls}>
+                {tab}
+              </Link>
+            ) : (
+              <span key={tab} className={cls}>
+                {tab}
+              </span>
+            );
+          })}
         </nav>
       </div>
     </header>
