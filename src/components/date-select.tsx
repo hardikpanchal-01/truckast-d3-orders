@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { CalendarDays } from "lucide-react";
 
 function mdy(iso: string) {
   const [y, m, d] = iso.split("-");
@@ -52,30 +51,17 @@ export function DateSelect({ value }: { value: string }) {
   const hasPreset = presets.some((p) => p.value === value);
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <select
-        value={value}
-        onChange={(e) => navigate(e.target.value)}
-        className="w-full rounded-[4px] border border-[#cccccc] bg-white px-3 py-2 text-sm text-[#333] outline-none focus:border-[#2f7ed8] sm:flex-1"
-      >
-        {!hasPreset && <option value={value}>{mdy(value)}</option>}
-        {presets.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-
-      <label className="relative flex items-center sm:w-auto">
-        <CalendarDays className="pointer-events-none absolute left-2.5 h-4 w-4 text-[#888]" />
-        <input
-          type="date"
-          value={value}
-          onChange={(e) => navigate(e.target.value)}
-          className="w-full rounded-[4px] border border-[#cccccc] bg-white py-2 pl-8 pr-3 text-sm text-[#333] outline-none focus:border-[#2f7ed8] sm:w-[180px]"
-          aria-label="Pick a date"
-        />
-      </label>
-    </div>
+    <select
+      value={value}
+      onChange={(e) => navigate(e.target.value)}
+      className="h-[30px] w-full rounded-[4px] border border-[#cccccc] bg-white px-3 py-0 text-sm leading-none text-[#333] outline-none focus:border-[#2f7ed8]"
+    >
+      {!hasPreset && <option value={value}>{mdy(value)}</option>}
+      {presets.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
   );
 }
