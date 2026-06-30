@@ -57,8 +57,26 @@ export interface DoleseOrderDetail {
   trucks: number;
   next_truck: string | null;
   pour_finish: string | null;
-  weather: { temp?: string; description?: string; place?: string } | null;
-  pour_series: { time: string; ordered: number; delivered: number }[];
+  weather: {
+    temp?: string;
+    description?: string;
+    place?: string;
+    humidity?: string;
+    pressure?: string;
+    wind?: string;
+    updated?: string;
+    icon?: string;
+  } | null;
+  charts: {
+    // x values are minutes-of-day (CST clock); y as noted.
+    tMin: number;
+    tMax: number;
+    ordered: number;
+    delivered: { t: number; v: number }[];
+    poured: { t: number; v: number }[];
+    trucks: { t: number; waiting: number; pouring: number }[];
+  };
+  activity: { text: string; time: string }[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -202,6 +220,20 @@ function fmtTime(ts: string | null, hour12 = false): string | null {
     return `${h}:${String(m).padStart(2, "0")} ${ap}`;
   }
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "Jun 29 @ 9:18AM CST" (UTC parts = CST clock value). */
+function fmtStamp(ts: string | null): string | null {
+  if (!ts) return null;
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return null;
+  let h = d.getUTCHours();
+  const m = d.getUTCMinutes();
+  const ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()} @ ${h}:${String(m).padStart(2, "0")}${ap} CST`;
 }
 
 export async function getToday(): Promise<string> {
@@ -353,15 +385,96 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
     .filter((t) => has(t.on_job_time) && !isPouredOut(t))
     .reduce((s, t) => s + (cyByTicket.get(t.ticket_id) || 0), 0);
 
-  // Pour series: cumulative delivered over on-job times.
-  const timed = tickets
-    .filter((t) => has(t.on_job_time))
+  // --- Chart data ---------------------------------------------------
+  // x axis = minutes-of-day (CST clock value stored in UTC field).
+  const tsMin = (ts: string | null): number | null => {
+    if (!ts) return null;
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.getUTCHours() * 60 + d.getUTCMinutes();
+  };
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const pourOutTime = (t: TicketRow): string | null =>
+    t.end_unload || t.wash_time || t.at_plant_time || t.to_plant_time;
+
+  // Delivered: cumulative CY over on-job (arrival) times.
+  const deliveredTickets = tickets
+    .filter((t) => tsMin(t.on_job_time) != null)
     .sort((a, b) => (a.on_job_time || "").localeCompare(b.on_job_time || ""));
-  let cum = 0;
-  const pour_series = timed.map((t) => {
-    cum += cyByTicket.get(t.ticket_id) || 0;
-    return { time: fmtTime(t.on_job_time, true) || "", ordered, delivered: Math.round(cum * 100) / 100 };
+  let cumD = 0;
+  const delivered = deliveredTickets.map((t) => {
+    cumD += cyByTicket.get(t.ticket_id) || 0;
+    return { t: tsMin(t.on_job_time)!, v: r2(cumD) };
   });
+
+  // Poured: cumulative CY over pour-out (finished) times.
+  const pouredTickets = tickets
+    .filter((t) => tsMin(pourOutTime(t)) != null)
+    .sort((a, b) => (pourOutTime(a) || "").localeCompare(pourOutTime(b) || ""));
+  let cumP = 0;
+  const poured = pouredTickets.map((t) => {
+    cumP += cyByTicket.get(t.ticket_id) || 0;
+    return { t: tsMin(pourOutTime(t))!, v: r2(cumP) };
+  });
+
+  // Trucks on the job: waiting (arrived, not pouring) vs pouring, over time.
+  const spans = tickets
+    .map((t) => {
+      const arrive = tsMin(t.on_job_time);
+      if (arrive == null) return null;
+      return { arrive, pourStart: tsMin(t.unload_time), pourEnd: tsMin(pourOutTime(t)) };
+    })
+    .filter((s): s is { arrive: number; pourStart: number | null; pourEnd: number | null } => s != null);
+
+  const eventTimes = Array.from(
+    new Set(spans.flatMap((s) => [s.arrive, s.pourStart, s.pourEnd].filter((x): x is number => x != null))),
+  ).sort((a, b) => a - b);
+
+  const trucks_series = eventTimes.map((t) => {
+    let waiting = 0;
+    let pouring = 0;
+    for (const s of spans) {
+      if (s.pourEnd != null && t >= s.pourEnd) continue; // departed
+      const started = s.pourStart != null && t >= s.pourStart;
+      if (started) pouring++;
+      else if (t >= s.arrive) waiting++;
+    }
+    return { t, waiting, pouring };
+  });
+
+  const allT = [...delivered.map((p) => p.t), ...poured.map((p) => p.t), ...eventTimes];
+  const tMin = allT.length ? Math.min(...allT) : 0;
+  const tMax = allT.length ? Math.max(...allT) : 0;
+
+  const charts = {
+    tMin,
+    tMax,
+    ordered: r2(ordered),
+    delivered,
+    poured,
+    trucks: trucks_series,
+  };
+
+  // Activity feed: truck-movement messages derived from ticket timestamps
+  // (newest first). Status/product-change history isn't available in the data.
+  const addrLabel = order.delivery_addr1 || order.project_name || "the job";
+  const moved = tickets
+    .filter((t) => has(t.to_job_time) || has(t.on_job_time))
+    .sort((a, b) =>
+      (b.to_job_time || b.on_job_time || "").localeCompare(a.to_job_time || a.on_job_time || ""),
+    );
+  const activity = moved
+    .map((t, idx) => {
+      const stamp = fmtStamp(t.to_job_time || t.on_job_time);
+      if (!stamp || !t.truck_code) return null;
+      const arrive = fmtTime(t.on_job_time || t.to_job_time, false) || "";
+      const text =
+        idx === 0
+          ? `Truck ${t.truck_code} is your last load for ${addrLabel}. If you need more concrete, please call Dispatch.`
+          : `Truck ${t.truck_code} heading to ${addrLabel} and is expected to arrive at ${arrive}`;
+      return { text, time: stamp };
+    })
+    .filter((m): m is { text: string; time: string } => m != null);
 
   const lastTicket = tickets.length
     ? tickets.reduce((a, b) => ((b.ticket_code || "") > (a.ticket_code || "") ? b : a))
@@ -387,11 +500,33 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
     const desc =
       (w.description as string | undefined) ??
       (Array.isArray(w.weather) ? ((w.weather[0] as Record<string, unknown>)?.description as string) : undefined);
+    const main = (w.main as Record<string, unknown>) || {};
+    const wind = (w.wind as Record<string, unknown>) || {};
+    const humidity = (w.humidity ?? main.humidity) as number | undefined;
+    const pressure = (w.pressure ?? main.pressure) as number | undefined;
+    const windSpeed = (w.wind_speed ?? wind.speed) as number | undefined;
+    const dt = (w.dt ?? w.last_update ?? w.updated) as number | string | undefined;
+    const icon =
+      (w.icon as string | undefined) ??
+      (Array.isArray(w.weather) ? ((w.weather[0] as Record<string, unknown>)?.icon as string) : undefined);
     if (temp != null || desc) {
       weather = {
         temp: temp != null ? `${typeof temp === "number" ? Math.round(temp) : temp}°F` : undefined,
         description: desc,
         place: order.pricing_plant_code || undefined,
+        humidity: humidity != null ? `${humidity}%` : undefined,
+        pressure: pressure != null ? String(pressure) : undefined,
+        wind: windSpeed != null ? String(Math.round(Number(windSpeed) * 100) / 100) : undefined,
+        updated:
+          typeof dt === "number"
+            ? new Date(dt * 1000).toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+              })
+            : typeof dt === "string"
+              ? dt
+              : undefined,
+        icon: typeof icon === "string" ? icon : undefined,
       };
     }
   }
@@ -416,6 +551,7 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
     next_truck: nextTruck,
     pour_finish: pourFinish,
     weather,
-    pour_series,
+    charts,
+    activity,
   };
 }

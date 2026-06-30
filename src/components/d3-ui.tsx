@@ -9,7 +9,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw, type LucideIcon } from "lucide-react";
+import { type LucideIcon } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /*  Palette (sampled from the live app)                                */
@@ -31,14 +31,40 @@ export type ToneName = keyof typeof TONES;
 /*  Top nav — dark "TRUCKAST" bar                                      */
 /* ------------------------------------------------------------------ */
 
+const NAV_TABS = [
+  "MARKETS",
+  "SETTINGS",
+  "PUBLISH",
+  "ADMIN",
+  "ORDER",
+  "ROLLOUT",
+  "PROJECTS",
+  "HELP",
+  "LOGOUT",
+] as const;
+
 export function TopNav() {
+  // First tab is shown as the active/highlighted tab (design matches the live app).
+  const active = NAV_TABS[0];
   return (
     <header className="bg-[#1c1c1c] text-[#cfcfcf]">
-      <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3 sm:px-6">
-        <Link href="/" className="text-lg font-light tracking-wide text-white">
+      <div className="mx-auto flex w-full max-w-[1170px] items-center gap-4 px-3 py-2 sm:px-0">
+        <Link href="/" className="text-lg font-light tracking-wide text-[#9a9a9a]">
           TRUCKAST
         </Link>
-        {/* Top nav tabs hidden for now — not yet functional */}
+        <nav className="flex flex-wrap items-center gap-1 text-xs font-semibold tracking-wide">
+          {NAV_TABS.map((tab) => (
+            <span
+              key={tab}
+              className={[
+                "cursor-pointer rounded px-3 py-1.5 hover:text-white",
+                tab === active ? "font-bold text-white" : "text-[#8a8a8a]",
+              ].join(" ")}
+            >
+              {tab}
+            </span>
+          ))}
+        </nav>
       </div>
     </header>
   );
@@ -60,28 +86,29 @@ export function SubHeader({
   onRefresh?: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-[#c9c9c9] bg-gradient-to-b from-[#fbfbfb] to-[#e9e9e9] px-4 py-3 shadow-sm">
-      {backHref ? (
-        <Link href={backHref} aria-label="Back" className="text-[#1f1f1f]">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-      ) : (
-        <span className="w-5" />
-      )}
+    <div className="flex h-[46px] items-center justify-between gap-3 rounded-md border border-[#c9c9c9] bg-[#FAFAFA] px-5 text-[14px] text-[#333] shadow-sm">
+      <Link
+        href={backHref ?? "/"}
+        aria-label="Back"
+        className="cursor-pointer text-[#1f1f1f]"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icons/arrow-back.png" alt="Back" className="h-8 w-8" />
+      </Link>
       <div className="min-w-0 text-center">
-        <p className="truncate text-sm font-bold uppercase tracking-wide text-[#1f1f1f] sm:text-base">
+        <strong className="block truncate text-[16px] font-bold leading-[19px] text-[#333]">
           {title}
-        </p>
+        </strong>
         {subtitle ? <p className="truncate text-xs text-[#555]">{subtitle}</p> : null}
       </div>
       <button
         type="button"
         aria-label="Refresh"
-        onClick={onRefresh}
-        className="text-[#1f1f1f] disabled:opacity-30"
-        disabled={!onRefresh}
+        onClick={onRefresh ?? (() => window.location.reload())}
+        className="cursor-pointer text-[#1f1f1f]"
       >
-        <RefreshCw className="h-5 w-5" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icons/refresh.png" alt="Refresh" className="h-8 w-8" />
       </button>
     </div>
   );
@@ -109,15 +136,13 @@ export function FoldCard({
       style={{ backgroundColor: t.bg, ...style }}
     >
       {children}
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 16 16"
-        className="pointer-events-none absolute bottom-0 right-0"
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/icons/dogear.png"
+        alt=""
         aria-hidden
-      >
-        <polygon points="0,16 16,16 16,0" fill={t.fold} />
-      </svg>
+        className="pointer-events-none absolute bottom-0 right-0 h-[19px] w-[19px]"
+      />
     </div>
   );
 }
@@ -143,8 +168,8 @@ function TileBody({
   lines: TileLine[];
 }) {
   return (
-    <div className="flex min-h-[84px] items-center gap-1 py-2 pr-3">
-      <div className="flex w-[72px] shrink-0 items-center justify-center px-1 text-white">
+    <div className="flex h-[90px] items-center py-2 pr-3">
+      <div className="mr-[5px] flex h-[80px] w-[72px] shrink-0 items-center justify-center text-white">
         {left ? left : Icon ? <Icon className="h-10 w-10" strokeWidth={1.6} /> : null}
       </div>
       <div className="min-w-0 flex-1 pl-0.5">
@@ -185,8 +210,8 @@ export function IconTile({
   const interactive = !!(href || onClick);
   const body = <TileBody icon={icon} left={left} lines={lines} />;
   const cls = [
-    "block h-full",
-    interactive ? "transition-transform hover:-translate-y-0.5 hover:brightness-110" : "",
+    "block w-[274px] mb-[5px] mr-[5px]",
+    interactive ? "cursor-pointer" : "",
   ].join(" ");
 
   if (href) {
@@ -211,24 +236,46 @@ export function IconTile({
 /*  Pie gauge (used as the tile's left icon for orders)                */
 /* ------------------------------------------------------------------ */
 
-export function PieGauge({ pct, size = 52 }: { pct: number; size?: number }) {
-  const r = size / 2;
+// Highcharts pie palette (matches the live app): used slice vs. remainder.
+const PIE_USED = "#7cb5ec";
+const PIE_REST = "#434348";
+
+export function PieGauge({
+  pct,
+  size = 52,
+  tinted = false,
+}: {
+  pct: number;
+  size?: number;
+  // `tinted` uses translucent shades that blend with the tile colour (order list);
+  // the default solid blue/charcoal matches the Market-Summary DOLESE pie.
+  tinted?: boolean;
+}) {
+  const c = size / 2;
+  const r = c - 1; // leave room for the 1px white stroke
   const clamped = Math.max(0, Math.min(1, pct));
+  // Used slice starts at 12 o'clock and sweeps clockwise.
   const angle = clamped * 2 * Math.PI;
-  const x = r + r * Math.sin(angle);
-  const y = r - r * Math.cos(angle);
+  const x = c + r * Math.sin(angle);
+  const y = c - r * Math.cos(angle);
   const large = clamped > 0.5 ? 1 : 0;
-  const d =
-    clamped <= 0
+  const usedPath =
+    clamped <= 0 || clamped >= 1
       ? ""
-      : clamped >= 1
-        ? `M ${r} ${r} m 0 ${-r} a ${r} ${r} 0 1 1 -0.01 0 Z`
-        : `M ${r} ${r} L ${r} 0 A ${r} ${r} 0 ${large} 1 ${x} ${y} Z`;
+      : `M ${c} ${c} L ${c} ${c - r} A ${r} ${r} 0 ${large} 1 ${x} ${y} Z`;
+
+  const restFill = tinted ? "rgba(255,255,255,0.85)" : PIE_REST;
+  const usedFill = tinted ? "rgba(0,0,0,0.32)" : PIE_USED;
+  const stroke = tinted ? "rgba(255,255,255,0.65)" : "#fff";
+
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
-      <circle cx={r} cy={r} r={r} fill="rgba(0,0,0,0.18)" />
-      {d ? <path d={d} fill="rgba(255,255,255,0.95)" /> : null}
-      <circle cx={r} cy={r} r={r - 1} fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
+      {/* Base = remainder slice (full circle) */}
+      <circle cx={c} cy={c} r={r} fill={clamped >= 1 ? usedFill : restFill} stroke={stroke} strokeWidth="1" />
+      {/* Used slice on top */}
+      {usedPath ? (
+        <path d={usedPath} fill={usedFill} stroke={stroke} strokeWidth="1" strokeLinejoin="round" />
+      ) : null}
     </svg>
   );
 }
@@ -249,11 +296,11 @@ export function StatTile({
   tone?: ToneName;
 }) {
   return (
-    <FoldCard tone={tone} className="text-center text-white">
-      <div className="px-2 py-3">
-        <p className="text-[11px] font-bold uppercase tracking-wide opacity-90">{label}</p>
-        <p className="my-0.5 text-2xl font-bold leading-tight">{value}</p>
-        {sub ? <p className="text-[11px] uppercase opacity-90">{sub}</p> : null}
+    <FoldCard tone={tone} className="mb-[5px] mr-[5px] h-[90px] w-[88px] text-white">
+      <div className="p-[5px]">
+        <div className="text-center text-[12px] font-bold uppercase">{label}</div>
+        <div className="h-[40px] w-full text-center text-[24px] font-bold leading-[40px]">{value}</div>
+        {sub ? <div className="text-center text-[12px] uppercase">{sub}</div> : null}
       </div>
     </FoldCard>
   );
@@ -281,7 +328,7 @@ export function SearchBox({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       className={[
-        "w-full rounded-[4px] border border-[#cccccc] border-t-[#bbbbbb] bg-white px-3 py-2 text-sm text-[#555] outline-none placeholder:text-[#999] focus:border-[#2f7ed8]",
+        "w-full rounded-[4px] border border-[#cccccc] border-t-[#bbbbbb] bg-white px-3 py-2 text-sm text-[#555] outline-none transition placeholder:text-[#999] focus:border-[#66afe9] focus:shadow-[0_0_8px_rgba(102,175,233,0.6)]",
         className || "",
       ].join(" ")}
     />

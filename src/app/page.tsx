@@ -1,4 +1,3 @@
-import { Users, ClipboardList } from "lucide-react";
 import { getDoleseSummary } from "@/actions/orderActions";
 import { SubHeader, IconTile, FoldCard, PieGauge } from "@/components/d3-ui";
 import { DateSelect } from "@/components/date-select";
@@ -27,9 +26,12 @@ export default async function MarketSummaryPage({
 
       <DateSelect value={dateStr} />
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-wrap">
         <IconTile
-          left={<Users className="h-10 w-10" strokeWidth={1.6} />}
+          left={
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/icons/contractor.png" alt="" className="h-12 w-auto" />
+          }
           tone="blue"
           lines={[
             { text: "EASY", size: 11, dim: true },
@@ -38,7 +40,10 @@ export default async function MarketSummaryPage({
           ]}
         />
         <IconTile
-          left={<ClipboardList className="h-10 w-10" strokeWidth={1.6} />}
+          left={
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src="/icons/fill-form.png" alt="" className="h-11 w-auto" />
+          }
           tone="blue"
           lines={[
             { text: "Click Here", size: 11, dim: true },
@@ -48,10 +53,17 @@ export default async function MarketSummaryPage({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      <input
+        id="tiles-search"
+        type="text"
+        placeholder="Search"
+        className="mb-[10px] h-[30px] w-[274px] rounded-[4px] border border-[#cccccc] bg-white px-[6px] py-[4px] text-sm text-[#555] outline-none transition placeholder:text-[#999] focus:border-[#66afe9] focus:shadow-[0_0_8px_rgba(102,175,233,0.6)]"
+      />
+
+      <div className="flex flex-wrap">
         {/* Fuel surcharge */}
-        <FoldCard tone="red" className="text-white">
-          <div className="flex min-h-[84px] items-center gap-3 py-2 pr-3">
+        <FoldCard tone="red" className="mb-[5px] mr-[5px] w-[274px] text-white">
+          <div className="flex h-[90px] items-center gap-3 py-2 pr-3">
             <div className="ml-2 grid h-12 w-12 shrink-0 place-items-center rounded bg-white text-[10px] font-black italic text-[#0a5a2a]">
               DOLESE
             </div>
@@ -79,10 +91,6 @@ export default async function MarketSummaryPage({
           ]}
         />
       </div>
-
-      <p className="text-center text-xs text-slate-400">
-        Click the green <strong>DOLESE</strong> tile to see the day&apos;s orders.
-      </p>
     </div>
   );
 }
