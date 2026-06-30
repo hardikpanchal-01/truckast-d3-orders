@@ -18,9 +18,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geistSans.variable} antialiased`}>
-      <body className="min-h-screen bg-[#f3f4f6]">
+      <body className="min-h-screen bg-white">
         <TopNav />
-        <main className="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6">{children}</main>
+        <main className="mx-auto w-full max-w-[1170px] px-3 py-4 sm:px-0 sm:py-6">{children}</main>
       </body>
     </html>
   );

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { CalendarDays } from "lucide-react";
 import { SearchBox, IconTile, PieGauge, type ToneName } from "@/components/d3-ui";
 import type { DoleseOrderListItem, OrderStatus } from "@/actions/orderActions";
 
@@ -55,7 +54,7 @@ export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
       {visible.length === 0 ? (
         <p className="py-10 text-center text-sm text-slate-400">No orders for this day.</p>
       ) : (
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="flex flex-wrap">
           {visible.map((o) => {
             const tone = STATUS_TONE[o.status];
             const usePie = o.status === "IN_PROCESS" || o.status === "COMPLETED";
@@ -68,8 +67,14 @@ export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
                 key={o.order_id}
                 href={`/orders/${o.order_id}`}
                 tone={tone}
-                left={usePie ? <PieGauge pct={pct} size={52} /> : undefined}
-                icon={usePie ? undefined : CalendarDays}
+                left={
+                  usePie ? (
+                    <PieGauge pct={pct} size={52} tinted />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src="/icons/scheduled.png" alt="" className="h-[64px] w-auto" />
+                  )
+                }
                 lines={[
                   {
                     text: `${o.order_code}-${md(o.order_date)}: ${o.ordered_cy.toFixed(2)} CY (${STATUS_LABEL[o.status]})`,
