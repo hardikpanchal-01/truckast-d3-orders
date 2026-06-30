@@ -39,12 +39,12 @@ export default async function OrdersPage({
           <div className="flex h-[90px] items-center gap-3 py-2 pr-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/icons/excel-xls.png" alt="" className="ml-2 h-12 w-12 shrink-0" />
-            <div>
-              <p className="text-[11px] opacity-90">
+            <div className="leading-tight">
+              <p className="text-[14px] opacity-90">
                 {new Date(dateStr).toLocaleDateString("en-US")}
               </p>
-              <p className="text-sm font-bold">ORDERS</p>
-              <p className="text-[11px] opacity-90">Download</p>
+              <p className="text-[16px] font-bold">ORDERS</p>
+              <p className="text-[12px] opacity-90">Download</p>
             </div>
           </div>
         </FoldCard>
