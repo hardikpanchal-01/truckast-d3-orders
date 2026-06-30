@@ -217,25 +217,29 @@ function TileBody({
   lines: TileLine[];
 }) {
   return (
-    <div className="flex h-[90px] items-center py-2 pr-3">
-      <div className="mr-[5px] flex h-[80px] w-[72px] shrink-0 items-center justify-center text-white">
+    <div className="flex h-full w-full items-center">
+      {/* tileIcon */}
+      <div className="flex h-full w-[72px] shrink-0 items-center justify-center text-white">
         {left ? left : Icon ? <Icon className="h-10 w-10" strokeWidth={1.6} /> : null}
       </div>
-      <div className="min-w-0 flex-1 pl-0.5">
-        {lines.map((ln, i) => (
-          <p
-            key={i}
-            className="truncate leading-tight"
-            style={{
-              color: ln.dim ? "rgba(255,255,255,0.9)" : "#fff",
-              fontSize: ln.size ?? (ln.bold ? 14 : 12),
-              fontWeight: ln.bold ? 700 : 400,
-              marginTop: i ? 2 : 0,
-            }}
-          >
-            {ln.text}
-          </p>
-        ))}
+      {/* tileInfoSection */}
+      <div className="flex min-w-0 flex-1 items-center pr-3">
+        {/* tileCell */}
+        <div className="min-w-0 flex-1">
+          {lines.map((ln, i) => (
+            <div
+              key={i}
+              className="truncate leading-[1.2]"
+              style={{
+                color: ln.dim ? "rgba(255,255,255,0.9)" : "#fff",
+                fontSize: ln.size ?? (ln.bold ? 14 : 12),
+                fontWeight: ln.bold ? 700 : 400,
+              }}
+            >
+              {ln.text}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -258,23 +262,33 @@ export function IconTile({
 }) {
   const interactive = !!(href || onClick);
   const body = <TileBody icon={icon} left={left} lines={lines} />;
-  const cls = [
-    "block w-[274px] mb-[5px] mr-[5px]",
-    interactive ? "cursor-pointer" : "",
-  ].join(" ");
+
+  // Match D3 .tile CSS exactly
+  const tileClass = "relative block cursor-pointer text-white";
+  const tileStyle: React.CSSProperties = {
+    width: 274,
+    height: 90,
+    marginRight: 5,
+    marginBottom: 5,
+  };
 
   if (href) {
     return (
-      <Link href={href} className={cls}>
-        <FoldCard tone={tone} className="h-full">
+      <Link href={href} className={tileClass} style={tileStyle}>
+        <FoldCard tone={tone} className="h-full w-full">
           {body}
         </FoldCard>
       </Link>
     );
   }
   return (
-    <div className={cls} onClick={onClick} role={onClick ? "button" : undefined}>
-      <FoldCard tone={tone} className="h-full">
+    <div
+      className={tileClass}
+      style={tileStyle}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+    >
+      <FoldCard tone={tone} className="h-full w-full">
         {body}
       </FoldCard>
     </div>
@@ -305,8 +319,9 @@ export function PieGauge({
   const clamped = Math.max(0, Math.min(1, pct));
   // Used slice starts at 12 o'clock and sweeps clockwise.
   const angle = clamped * 2 * Math.PI;
-  const x = c + r * Math.sin(angle);
-  const y = c - r * Math.cos(angle);
+  // Round to 4 decimal places to avoid server/client hydration mismatch from floating-point precision differences
+  const x = Math.round((c + r * Math.sin(angle)) * 10000) / 10000;
+  const y = Math.round((c - r * Math.cos(angle)) * 10000) / 10000;
   const large = clamped > 0.5 ? 1 : 0;
   const usedPath =
     clamped <= 0 || clamped >= 1

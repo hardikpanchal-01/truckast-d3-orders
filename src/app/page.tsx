@@ -8,19 +8,20 @@ export const dynamic = "force-dynamic";
 export default async function MarketSummaryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; dateTo?: string }>;
 }) {
-  const { date } = await searchParams;
+  const { date, dateTo } = await searchParams;
   const today = new Date().toISOString().slice(0, 10);
   const dateStr = date || today;
+  const dateToStr = dateTo || undefined;
 
-  const summary = await getDoleseSummary(dateStr);
+const summary = await getDoleseSummary(dateStr, dateToStr);
 
   return (
     <div className="space-y-4">
       <SubHeader title="Dolese Orders" />
 
-      <DateSelect value={dateStr} />
+      <DateSelect value={dateStr} valueTo={dateToStr} />
 
       <div className="flex flex-wrap">
         <IconTile

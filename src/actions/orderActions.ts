@@ -13,6 +13,8 @@
  */
 
 import supabaseServer from "@/supabase/server";
+import { getExcludedPatterns } from "@/actions/exclusionActions";
+import { filterExcludedOrders } from "@/lib/order-filters";
 
 export type OrderStatus = "IN_PROCESS" | "PRE_POUR" | "COMPLETED" | "CANCELED";
 
@@ -38,6 +40,16 @@ export interface DoleseOrderListItem {
   status: OrderStatus;
 }
 
+export interface OrderProductInfo {
+  item_code: string;
+  description: string;
+  qty: number;
+  unit: string;
+  slump: number | null;
+  usage: string | null;
+  is_mix: boolean;
+}
+
 export interface DoleseOrderDetail {
   order_id: number;
   order_code: string;
@@ -49,7 +61,22 @@ export interface DoleseOrderDetail {
   project_name: string | null;
   zone_name: string | null;
   plant_code: string | null;
+  plant_name: string | null;
   status: OrderStatus;
+  /** Raw dispatch status label (Hold, Firm, W/C, etc.) matching D3 production */
+  dispatch_status: string;
+  /** Scheduled time on job (from order_product_schedules) */
+  scheduled_time: string | null;
+  /** Load spacing in minutes */
+  spacing_minutes: number | null;
+  /** Purchase order number */
+  purchase_order: string | null;
+  /** Special instructions */
+  instructions: string | null;
+  /** Contact who placed the order */
+  ordered_by: string | null;
+  /** Products on this order */
+  products: OrderProductInfo[];
   ordered_cy: number;
   ticketed_cy: number;
   on_job_cy: number;
@@ -85,12 +112,13 @@ export interface DoleseOrderDetail {
     ticketNo: string | null;
   } | null;
   charts: {
-    // x values are minutes-of-day (CST clock); y as noted.
+    // x values are minutes-of-day (CST clock); y values are CY/HR for pour speed chart
     tMin: number;
     tMax: number;
-    ordered: number;
-    delivered: { t: number; v: number }[];
-    poured: { t: number; v: number }[];
+    ordered: number; // Scheduled delivery rate (CY/HR)
+    orderedPoints: { t: number; v: number }[]; // Points at each scheduled truck arrival
+    delivered: { t: number; v: number }[]; // Delivered rate (CY/HR) at each arrival
+    poured: { t: number; v: number }[]; // Poured rate (CY/HR) at each pour completion
     trucks: { t: number; waiting: number; pouring: number }[];
   };
   activity: { text: string; time: string }[];
@@ -176,6 +204,7 @@ interface OrderProductRow {
   order_qty_unit: string | null;
   delv_qty: number | string | null;
   is_mix: boolean | null;
+  item_code?: string | null;
   order_product_schedules?: { start_time: string | null }[] | null;
 }
 
@@ -219,6 +248,22 @@ function deriveStatus(
     return "IN_PROCESS";
   }
   return "PRE_POUR";
+}
+
+/** Map dispatch current_status code to D3 production label */
+const DISPATCH_STATUS_LABELS: Record<number, string> = {
+  0: "Hold",
+  1: "Firm",
+  2: "Active",
+  3: "W/C",
+  4: "Complete",
+  5: "Cancelled",
+};
+
+function getDispatchStatus(currentStatus: number | null, removed: boolean | null, removeReasonCode: string | null): string {
+  if (removed === true && (removeReasonCode || "").trim() !== "") return "Cancelled";
+  if (currentStatus == null) return "Unknown";
+  return DISPATCH_STATUS_LABELS[currentStatus] || `Status ${currentStatus}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -315,7 +360,18 @@ function ticketStage(t: TicketRow): { label: string; time: string | null } {
 /* ------------------------------------------------------------------ */
 
 function dayRange(dateStr: string) {
-  return { from: `${dateStr}T00:00:00Z`, to: `${dateStr}T23:59:59Z` };
+  // Match D3 production: use date-only strings (YYYY-MM-DD)
+  // Query uses gte(dateFrom) and lt(dateTo) where dateTo is the next day
+  const [year, month, day] = dateStr.split("-").map(Number);
+
+  // Calculate next day
+  const nextDay = new Date(Date.UTC(year, month - 1, day + 1));
+  const nextDayStr = nextDay.toISOString().slice(0, 10);
+
+  return {
+    from: dateStr,        // e.g., "2026-06-30"
+    to: nextDayStr,       // e.g., "2026-07-01" (next day for lt comparison)
+  };
 }
 
 /** start_time / on_job_time are CST clock values in UTC fields → read UTC parts. */
@@ -425,23 +481,75 @@ function crackingRisk(rate: number): string {
 /*  1. Market summary (business-unit aggregate)                        */
 /* ------------------------------------------------------------------ */
 
-export async function getDoleseSummary(dateStr: string): Promise<DoleseSummary> {
-  const { from, to } = dayRange(dateStr);
-  const { data, error } = await supabaseServer
-    .from("orders")
-    .select("order_id, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix)")
-    .gte("order_date", from)
-    .lte("order_date", to);
+export async function getDoleseSummary(dateStr: string, dateToStr?: string): Promise<DoleseSummary> {
+  // Support date ranges: if dateToStr is provided, query from dateStr to dateToStr (inclusive)
+  const from = dateStr;
+  const to = dateToStr ? dayRange(dateToStr).to : dayRange(dateStr).to;
 
-  if (error) {
-    console.error("[ERROR] getDoleseSummary:", error.message);
-    return { name: "DOLESE", usedCY: 0, totalCY: 0, totalOrders: 0, activeOrders: 0, cancelledOrders: 0 };
+  // Fetch exclusion patterns first
+  const exclusionPatterns = await getExcludedPatterns();
+
+  // Paginate through all orders (Supabase default limit is 1000)
+  const PAGE_SIZE = 1000;
+  let allOrders: Array<{
+    order_id: number;
+    order_code: string;
+    customer_name: string | null;
+    delivery_addr1: string | null;
+    removed: boolean | null;
+    remove_reason_code: string | null;
+    order_products: OrderProductRow[];
+  }> = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { data, error } = await supabaseServer
+      .from("orders")
+      .select("order_id, order_code, customer_name, delivery_addr1, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix, item_code)")
+      .gte("order_date", from)
+      .lt("order_date", to)
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      console.error("[ERROR] getDoleseSummary pagination:", error.message);
+      break;
+    }
+
+    if (data && data.length > 0) {
+      allOrders = allOrders.concat(data as typeof allOrders);
+      offset += data.length;
+      hasMore = data.length === PAGE_SIZE;
+    } else {
+      hasMore = false;
+    }
   }
 
-  let totalCY = 0, usedCY = 0, totalOrders = 0, activeOrders = 0, cancelledOrders = 0;
-  for (const o of data || []) {
+  // Filter to only CY orders (matching D3 production: only check order_qty_unit, not is_mix)
+  // is_mix is only used when calculating CY quantities, not for filtering orders
+  const cyOrders = allOrders.filter((o) => {
     const products = (o.order_products || []) as OrderProductRow[];
-    if (!products.some((p) => p.order_qty_unit === "CY" && p.is_mix === true)) continue;
+    return products.some((p) => p.order_qty_unit === "CY");
+  });
+
+  // Apply exclusion patterns filtering (matches D3 production)
+  const filteredOrders = filterExcludedOrders(
+    cyOrders.map((o) => ({
+      order_id: o.order_id,
+      order_code: o.order_code,
+      customer_name: o.customer_name,
+      delivery_addr1: o.delivery_addr1,
+      order_products: o.order_products,
+      removed: o.removed,
+      remove_reason_code: o.remove_reason_code,
+    })),
+    exclusionPatterns
+  );
+
+  let totalCY = 0, usedCY = 0, totalOrders = 0, activeOrders = 0, cancelledOrders = 0;
+  for (const o of filteredOrders) {
+    const original = cyOrders.find((x) => x.order_id === o.order_id);
+    const products = (original?.order_products || []) as OrderProductRow[];
     totalOrders++;
     if (o.removed === true && (o.remove_reason_code || "").trim() !== "") {
       cancelledOrders++;
@@ -467,42 +575,68 @@ export async function getDoleseSummary(dateStr: string): Promise<DoleseSummary> 
 
 export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListItem[]> {
   const { from, to } = dayRange(dateStr);
-  const { data, error } = await supabaseServer
-    .from("orders")
-    .select(
-      "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix, order_product_schedules(start_time))",
-    )
-    .gte("order_date", from)
-    .lte("order_date", to)
-    .order("order_date", { ascending: true })
-    .limit(1000);
+
+  // Fetch orders and exclusion patterns in parallel
+  const [ordersResult, exclusionPatterns] = await Promise.all([
+    supabaseServer
+      .from("orders")
+      .select(
+        "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix, item_code, order_product_schedules(start_time))",
+      )
+      .gte("order_date", from)
+      .lt("order_date", to)
+      .order("order_date", { ascending: true })
+      .limit(1000),
+    getExcludedPatterns(),
+  ]);
+
+  const { data, error } = ordersResult;
 
   if (error) {
     console.error("[ERROR] getDoleseOrders:", error.message);
     return [];
   }
 
-  const rows = (data || []).filter((o) =>
-    ((o.order_products || []) as OrderProductRow[]).some((p) => p.order_qty_unit === "CY" && p.is_mix === true),
+  // Filter to only CY orders (matching D3 production: only check order_qty_unit, not is_mix)
+  const cyOrders = (data || []).filter((o) =>
+    ((o.order_products || []) as OrderProductRow[]).some((p) => p.order_qty_unit === "CY"),
   );
 
-  const items: DoleseOrderListItem[] = rows.map((o) => {
-    const products = (o.order_products || []) as OrderProductRow[];
-    const { ordered, ticketed } = sumCY(products);
-    return {
+  // Apply exclusion patterns filtering (matches D3 production)
+  const filteredOrders = filterExcludedOrders(
+    cyOrders.map((o) => ({
       order_id: o.order_id,
       order_code: o.order_code,
-      order_date: o.order_date,
       customer_name: o.customer_name,
       delivery_addr1: o.delivery_addr1,
-      project_name: o.project_name,
-      start_time: earliestStart(products),
-      ordered_cy: Math.round(ordered * 100) / 100,
-      ticketed_cy: Math.round(ticketed * 100) / 100,
-      // current_status === 4 covers "completed"; no per-order ticket fetch needed here.
-      status: deriveStatus(o, ordered, ticketed, false),
-    };
-  });
+      order_products: o.order_products,
+    })),
+    exclusionPatterns
+  );
+
+  // Get the filtered order IDs
+  const filteredIds = new Set(filteredOrders.map((o) => o.order_id));
+
+  // Map to DoleseOrderListItem, only including filtered orders
+  const items: DoleseOrderListItem[] = cyOrders
+    .filter((o) => filteredIds.has(o.order_id))
+    .map((o) => {
+      const products = (o.order_products || []) as OrderProductRow[];
+      const { ordered, ticketed } = sumCY(products);
+      return {
+        order_id: o.order_id,
+        order_code: o.order_code,
+        order_date: o.order_date,
+        customer_name: o.customer_name,
+        delivery_addr1: o.delivery_addr1,
+        project_name: o.project_name,
+        start_time: earliestStart(products),
+        ordered_cy: Math.round(ordered * 100) / 100,
+        ticketed_cy: Math.round(ticketed * 100) / 100,
+        // current_status === 4 covers "completed"; no per-order ticket fetch needed here.
+        status: deriveStatus(o, ordered, ticketed, false),
+      };
+    });
 
   const rank: Record<OrderStatus, number> = { IN_PROCESS: 0, PRE_POUR: 1, COMPLETED: 2, CANCELED: 3 };
   items.sort((a, b) => {
@@ -521,7 +655,11 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
   const { data: order, error } = await supabaseServer
     .from("orders")
     .select(
-      "order_id, order_code, order_date, customer_name, delivery_addr1, delivery_addr2, delivery_addr3, project_name, zone_name, pricing_plant_code, current_status, removed, remove_reason_code, weather_data, order_products(order_qty, order_qty_unit, delv_qty, is_mix, order_product_schedules(start_time))",
+      `order_id, order_code, order_date, customer_name, delivery_addr1, delivery_addr2, delivery_addr3,
+       project_name, zone_name, pricing_plant_code, current_status, removed, remove_reason_code, weather_data,
+       purchase_order, ordered_by_name, ordered_by_phone,
+       instruction_addr1, instruction_addr2, instruction_addr3, instruction_addr4, instruction_addr5, instruction_addr6,
+       order_products(order_qty, order_qty_unit, delv_qty, is_mix, item_code, description, slump, usage_name, order_product_schedules(start_time, truck_space, plant_code, delivery_rate_per_hour, number_of_loads))`,
     )
     .eq("order_id", orderId)
     .limit(1)
@@ -532,8 +670,84 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
     return null;
   }
 
-  const products = (order.order_products || []) as OrderProductRow[];
-  const { ordered, ticketed } = sumCY(products);
+  const rawProducts = (order.order_products || []) as (OrderProductRow & {
+    description?: string | null;
+    slump?: number | null;
+    usage_name?: string | null;
+  })[];
+  const { ordered, ticketed } = sumCY(rawProducts);
+
+  // Build products array for order details
+  const productsInfo: OrderProductInfo[] = rawProducts.map((p) => ({
+    item_code: p.item_code || "—",
+    description: p.description || "",
+    qty: Number(p.order_qty || 0),
+    unit: (p.order_qty_unit || "").toUpperCase(),
+    slump: p.slump != null ? Number(p.slump) : null,
+    usage: p.usage_name || null,
+    is_mix: p.is_mix === true,
+  }));
+
+  // Get scheduled time from order_product_schedules
+  const scheduledTime = earliestStart(rawProducts);
+
+  // Get schedule data (truck_space, delivery_rate_per_hour, number_of_loads) from the first product schedule
+  type ScheduleData = {
+    start_time: string | null;
+    truck_space?: number | null;
+    plant_code?: string | null;
+    delivery_rate_per_hour?: number | null;
+    number_of_loads?: number | null;
+  };
+  const firstSchedule = rawProducts
+    .flatMap((p) => (p.order_product_schedules || []) as ScheduleData[])
+    .find((s) => s.start_time);
+  const spacingMinutes = firstSchedule?.truck_space ?? null;
+  const deliveryRatePerHour = firstSchedule?.delivery_rate_per_hour ?? null;
+  const numberOfLoads = firstSchedule?.number_of_loads ?? null;
+
+  // Plant name: Get from first ticket (matches D3 production behavior)
+  // D3 shows the plant from the first ticket, not from order_product_schedules
+  let plantName: string | null = null;
+  const { data: firstTicket } = await supabaseServer
+    .from("tickets")
+    .select("plant_name, plant_code")
+    .eq("order_id", orderId)
+    .order("printed_time", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (firstTicket?.plant_name) {
+    plantName = firstTicket.plant_name;
+  } else if (firstTicket?.plant_code || firstSchedule?.plant_code || order.pricing_plant_code) {
+    // Fallback: look up from plants table
+    const plantCode = firstTicket?.plant_code || firstSchedule?.plant_code || order.pricing_plant_code;
+    const { data: plant } = await supabaseServer
+      .from("plants")
+      .select("description, short_description")
+      .eq("code", plantCode)
+      .maybeSingle();
+    plantName = plant?.description || plant?.short_description || plantCode;
+  }
+
+  // Build instructions from instruction_addr fields
+  const instrOrder = order as {
+    instruction_addr1?: string | null;
+    instruction_addr2?: string | null;
+    instruction_addr3?: string | null;
+    instruction_addr4?: string | null;
+    instruction_addr5?: string | null;
+    instruction_addr6?: string | null;
+  };
+  const instructionParts = [
+    instrOrder.instruction_addr1,
+    instrOrder.instruction_addr2,
+    instrOrder.instruction_addr3,
+    instrOrder.instruction_addr4,
+    instrOrder.instruction_addr5,
+    instrOrder.instruction_addr6,
+  ].filter((s) => s && s.trim() !== "");
+  const instructions = instructionParts.length > 0 ? instructionParts.join(" ") : null;
 
   // Tickets joined by order_id (the reliable key).
   const { data: tix } = await supabaseServer
@@ -578,24 +792,67 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
   const pourOutTime = (t: TicketRow): string | null =>
     t.end_unload || t.wash_time || t.at_plant_time || t.to_plant_time;
 
-  // Delivered: cumulative CY over on-job (arrival) times.
+  // Pour Speed chart shows CY/HR rate, not cumulative CY
+  // Delivered rate: cumulative_qty / elapsed_hours (from first delivery)
   const deliveredTickets = tickets
     .filter((t) => tsMin(t.on_job_time) != null)
     .sort((a, b) => (a.on_job_time || "").localeCompare(b.on_job_time || ""));
+
+  // Calculate scheduled rate to use as baseline/cap
+  const scheduleRate = deliveryRatePerHour && deliveryRatePerHour > 0 ? deliveryRatePerHour : 30; // default 30 CY/HR if not available
+  const maxRateCap = scheduleRate * 1.5; // Cap at 1.5x schedule rate
+
+  // First delivery time (used as reference for elapsed time calculation)
+  const firstDeliveryTime = deliveredTickets.length > 0 && deliveredTickets[0].on_job_time
+    ? new Date(deliveredTickets[0].on_job_time).getTime()
+    : null;
+
   let cumD = 0;
-  const delivered = deliveredTickets.map((t) => {
+  const delivered = deliveredTickets.map((t, index) => {
     cumD += cyByTicket.get(t.ticket_id) || 0;
-    return { t: tsMin(t.on_job_time)!, v: r2(cumD) };
+    const deliveryTime = new Date(t.on_job_time!).getTime();
+
+    let rate: number;
+    if (index === 0 || !firstDeliveryTime) {
+      // First delivery: use schedule rate
+      rate = scheduleRate;
+    } else {
+      // Calculate elapsed hours from first delivery
+      const elapsedMs = deliveryTime - firstDeliveryTime;
+      const elapsedHours = elapsedMs / (1000 * 60 * 60);
+      if (elapsedHours > 0) {
+        rate = Math.min(cumD / elapsedHours, maxRateCap);
+      } else {
+        rate = scheduleRate;
+      }
+    }
+    return { t: tsMin(t.on_job_time)!, v: r2(rate) };
   });
 
-  // Poured: cumulative CY over pour-out (finished) times.
+  // Poured rate: cumulative_qty / elapsed_hours (from first delivery)
   const pouredTickets = tickets
     .filter((t) => tsMin(pourOutTime(t)) != null)
     .sort((a, b) => (pourOutTime(a) || "").localeCompare(pourOutTime(b) || ""));
+
   let cumP = 0;
   const poured = pouredTickets.map((t) => {
     cumP += cyByTicket.get(t.ticket_id) || 0;
-    return { t: tsMin(pourOutTime(t))!, v: r2(cumP) };
+    const pourTime = new Date(pourOutTime(t)!).getTime();
+
+    let rate: number;
+    if (!firstDeliveryTime) {
+      rate = scheduleRate;
+    } else {
+      // Calculate elapsed hours from first delivery
+      const elapsedMs = pourTime - firstDeliveryTime;
+      const elapsedHours = elapsedMs / (1000 * 60 * 60);
+      if (elapsedHours > 0) {
+        rate = Math.min(cumP / elapsedHours, maxRateCap);
+      } else {
+        rate = scheduleRate;
+      }
+    }
+    return { t: tsMin(pourOutTime(t))!, v: r2(rate) };
   });
 
   // Trucks on the job: waiting (arrived, not pouring) vs pouring, over time.
@@ -623,14 +880,37 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
     return { t, waiting, pouring };
   });
 
-  const allT = [...delivered.map((p) => p.t), ...poured.map((p) => p.t), ...eventTimes];
+  // Include scheduled start time in the time range (like D3)
+  const scheduleStartMin = scheduledTime ? tsMin(scheduledTime) : null;
+  const allT = [
+    ...delivered.map((p) => p.t),
+    ...poured.map((p) => p.t),
+    ...eventTimes,
+    ...(scheduleStartMin != null ? [scheduleStartMin] : []),
+  ];
   const tMin = allT.length ? Math.min(...allT) : 0;
   const tMax = allT.length ? Math.max(...allT) : 0;
+
+  // Generate scheduled order points for the "Ordered" line
+  // Each point is spaced by truck_space minutes, all at delivery_rate_per_hour
+  const scheduledOrderPoints: { t: number; v: number }[] = [];
+  if (scheduledTime && spacingMinutes && spacingMinutes > 0 && numberOfLoads && numberOfLoads > 0) {
+    const startMin = tsMin(scheduledTime);
+    if (startMin != null) {
+      for (let i = 0; i < numberOfLoads; i++) {
+        scheduledOrderPoints.push({
+          t: startMin + i * spacingMinutes,
+          v: r2(scheduleRate),
+        });
+      }
+    }
+  }
 
   const charts = {
     tMin,
     tMax,
-    ordered: r2(ordered),
+    ordered: r2(scheduleRate), // Scheduled delivery rate (CY/HR)
+    orderedPoints: scheduledOrderPoints, // Points at each scheduled truck arrival
     delivered,
     poured,
     trucks: trucks_series,
@@ -709,7 +989,7 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
     .sort();
   const pourFinish = pourFinishRaw.length ? fmtTime(pourFinishRaw[pourFinishRaw.length - 1], true) : null;
 
-  const nextTruck = status === "COMPLETED" ? null : fmtTime(earliestStart(products), true);
+  const nextTruck = status === "COMPLETED" ? null : fmtTime(earliestStart(rawProducts), true);
 
   // Weather (JSONB shape varies; best-effort)
   let weather: DoleseOrderDetail["weather"] = null;
@@ -781,7 +1061,17 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
     project_name: order.project_name,
     zone_name: order.zone_name,
     plant_code: order.pricing_plant_code,
+    plant_name: plantName,
     status,
+    dispatch_status: getDispatchStatus(order.current_status, order.removed, order.remove_reason_code),
+    scheduled_time: scheduledTime ? fmtDateTimeUpper(scheduledTime) : null,
+    spacing_minutes: spacingMinutes,
+    purchase_order: (order as { purchase_order?: string | null }).purchase_order || null,
+    instructions,
+    ordered_by: (order as { ordered_by_name?: string | null; ordered_by_phone?: string | null }).ordered_by_name
+      ? `${(order as { ordered_by_name?: string | null }).ordered_by_name || ""}${(order as { ordered_by_phone?: string | null }).ordered_by_phone ? ` ${(order as { ordered_by_phone?: string | null }).ordered_by_phone}` : ""}`.trim() || null
+      : null,
+    products: productsInfo,
     ordered_cy: Math.round(ordered * 100) / 100,
     ticketed_cy: Math.round(ticketed * 100) / 100,
     on_job_cy: Math.round(onJobCY * 100) / 100,
