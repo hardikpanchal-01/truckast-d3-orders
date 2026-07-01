@@ -3,37 +3,71 @@
  * Only import this from server code (server actions / route handlers).
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+// Lazy initialization to avoid build-time errors when env vars aren't available
+let _supabaseServer: SupabaseClient | null = null;
+let _supabaseAuth: SupabaseClient | null = null;
 
-if (!supabaseServiceKey) {
-  console.warn(
-    "[WARNING] SUPABASE_SERVICE_ROLE_KEY is not configured — falling back to publishable key.",
-  );
+function getSupabaseServer(): SupabaseClient {
+  if (!_supabaseServer) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl) {
+      throw new Error("NEXT_PUBLIC_SUPABASE_URL is required");
+    }
+
+    if (!supabaseServiceKey) {
+      console.warn(
+        "[WARNING] SUPABASE_SERVICE_ROLE_KEY is not configured — falling back to publishable key.",
+      );
+    }
+
+    _supabaseServer = createClient(
+      supabaseUrl,
+      supabaseServiceKey || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      {
+        auth: { autoRefreshToken: false, persistSession: false },
+      },
+    );
+  }
+  return _supabaseServer;
 }
 
-export const supabaseServer = createClient(
-  supabaseUrl,
-  supabaseServiceKey || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-  {
-    auth: { autoRefreshToken: false, persistSession: false },
-  },
-);
+function getSupabaseAuth(): SupabaseClient {
+  if (!_supabaseAuth) {
+    const authSupabaseUrl = process.env.NEXT_AUTH_PUBLIC_SUPABASE_URL;
+    const authSupabaseServiceKey = process.env.NEXT_AUTH_SUPABASE_SERVICE_ROLE_KEY;
 
-// Auth Supabase client for tenant data
-const authSupabaseUrl = process.env.NEXT_AUTH_PUBLIC_SUPABASE_URL!;
-const authSupabaseServiceKey = process.env.NEXT_AUTH_SUPABASE_SERVICE_ROLE_KEY;
+    if (!authSupabaseUrl) {
+      throw new Error("NEXT_AUTH_PUBLIC_SUPABASE_URL is required");
+    }
 
-export const supabaseAuth = createClient(
-  authSupabaseUrl,
-  authSupabaseServiceKey || process.env.NEXT_AUTH_SUPABASE_PUBLISHABLE_KEY!,
-  {
-    auth: { autoRefreshToken: false, persistSession: false },
+    _supabaseAuth = createClient(
+      authSupabaseUrl,
+      authSupabaseServiceKey || process.env.NEXT_AUTH_SUPABASE_PUBLISHABLE_KEY!,
+      {
+        auth: { autoRefreshToken: false, persistSession: false },
+      },
+    );
+  }
+  return _supabaseAuth;
+}
+
+// Export as getters that lazily initialize
+export const supabaseServer = new Proxy({} as SupabaseClient, {
+  get(_, prop) {
+    return getSupabaseServer()[prop as keyof SupabaseClient];
   },
-);
+});
+
+export const supabaseAuth = new Proxy({} as SupabaseClient, {
+  get(_, prop) {
+    return getSupabaseAuth()[prop as keyof SupabaseClient];
+  },
+});
 
 export default supabaseServer;
