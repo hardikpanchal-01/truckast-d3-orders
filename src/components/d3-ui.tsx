@@ -260,7 +260,6 @@ export function IconTile({
   href?: string;
   onClick?: () => void;
 }) {
-  const interactive = !!(href || onClick);
   const body = <TileBody icon={icon} left={left} lines={lines} />;
 
   // Match D3 .tile CSS exactly
