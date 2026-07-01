@@ -39,7 +39,9 @@ function LoadCard({ load, orderId }: { load: DoleseLoad; orderId: number }) {
         </div>
         <div className="min-w-0 flex-1 leading-tight">
           <p className="text-[12px] font-semibold">LOAD # {load.load_no}</p>
-          <p className="truncate text-[12px] opacity-95">TRUCK {load.truck_code ?? "—"}</p>
+          <p className="truncate text-[12px] opacity-95">
+            TRUCK {load.truck_code ?? "—"}{load.plant_name ? ` - ${load.plant_name}` : ""}
+          </p>
           <p className="text-[13px] font-bold">
             {load.ticket_code ?? "—"}: {load.load_cy.toFixed(2)} CY
           </p>

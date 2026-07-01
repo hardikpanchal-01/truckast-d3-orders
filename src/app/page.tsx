@@ -15,11 +15,13 @@ export default async function MarketSummaryPage({
   const dateStr = date || today;
   const dateToStr = dateTo || undefined;
 
-const summary = await getDoleseSummary(dateStr, dateToStr);
+  // getDoleseSummary now returns data from tenant-specific database
+  // and includes the correct tenant name
+  const summary = await getDoleseSummary(dateStr, dateToStr);
 
   return (
     <div className="space-y-4">
-      <SubHeader title="Dolese Orders" />
+      <SubHeader title={`${summary.name} Orders`} />
 
       <DateSelect value={dateStr} valueTo={dateToStr} />
 
