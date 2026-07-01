@@ -1,4 +1,5 @@
 import { SubHeader } from "@/components/d3-ui";
+import { getTenants, getSelectedTenant, saveSelectedTenant } from "@/actions/tenantActions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,27 +19,6 @@ const NOTIF: { label: string; email: boolean }[] = [
 ];
 
 const ORDER_NOTIF = ["New Order Request", "Order Request Accepted\\Rejected", "New Post", "New Comment"];
-
-const COMPANIES = [
-  "DOLESE",
-  "BOSTONSAND",
-  "CONCRETE SUPPLY",
-  "CRH",
-  "DELTA IND",
-  "FIRTH",
-  "HARRISON",
-  "HERCULES",
-  "NEBCO",
-  "OUTBACK",
-  "ROCKVILLE FUEL FEED",
-  "SHELLY",
-  "STEVENSONWEIR",
-  "SUNRISE",
-  "TEXAS MATERIALS",
-  "TEXMIX",
-  "THOMASCONCRETE",
-  "VCNA",
-];
 
 const TIMEZONES = [
   "(UTC-10:00) Hawaii",
@@ -75,16 +55,26 @@ const TH = "border border-[#e3e3e3] bg-[#f5f5f5] px-3 py-2 text-left text-[12px]
 const TD = "border border-[#e3e3e3] px-3 py-2 text-[13px] text-[#333]";
 const TDC = "border border-[#e3e3e3] px-3 py-2 text-center";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const [tenants, selectedTenant] = await Promise.all([
+    getTenants(),
+    getSelectedTenant(),
+  ]);
+
+  // Default to first tenant if none selected
+  const currentTenant = selectedTenant || tenants[0]?.name || "";
+
   return (
-    <div className="space-y-5">
+    <form action={saveSelectedTenant} className="space-y-5">
       <SubHeader title="SETTINGS" backHref="/" />
 
       <p className="text-sm text-[#333]">Welcome, Kurt!</p>
 
-      <select className={SEL} defaultValue="DOLESE">
-        {COMPANIES.map((c) => (
-          <option key={c}>{c}</option>
+      <select name="tenant" className={SEL} defaultValue={currentTenant}>
+        {tenants.map((tenant) => (
+          <option key={tenant.uuid} value={tenant.name}>
+            {tenant.name}
+          </option>
         ))}
       </select>
 
@@ -209,6 +199,6 @@ export default function SettingsPage() {
           Save
         </button>
       </div>
-    </div>
+    </form>
   );
 }

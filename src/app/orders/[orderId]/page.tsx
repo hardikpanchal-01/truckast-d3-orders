@@ -14,9 +14,15 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   CANCELED: "CANCELLED",
 };
 
-/** "9:47 AM" -> { value: "9:47", sub: "AM" } so the big number fits the 88px tile. */
+/** "9:47 AM" -> { value: "9:47", sub: "AM" }, "8 MIN" -> { value: "8", sub: "MIN" } */
 function splitTime(s: string | null): { value: string; sub?: string } {
   if (!s) return { value: "—" };
+  // Handle "X MIN" format (e.g., "8 MIN")
+  const minMatch = s.match(/^(\d+)\s*(MIN)$/i);
+  if (minMatch) return { value: minMatch[1], sub: "MIN" };
+  // Handle "Now" format
+  if (s.toLowerCase() === "now") return { value: "Now" };
+  // Handle "H:MM AM/PM" format
   const m = s.match(/^(.*?)\s*(AM|PM)$/i);
   return m ? { value: m[1].trim(), sub: m[2].toUpperCase() } : { value: s };
 }
@@ -66,22 +72,22 @@ export default async function OrderDetailPage({
       </div>
 
       {/* Stat tiles — status-aware, color-coded to match the live D3 app.
-          PRE-POUR shows scheduling info (next truck, ordered CY …);
-          in-process / completed orders show pour results (poured, on-time, delays). */}
+          PRE-POUR, IN_PROCESS, and CANCELED show scheduling info (next truck, ordered CY …);
+          COMPLETED orders show pour results (poured, on-time, delays). */}
       <div className="flex max-w-[279px] flex-wrap">
-        {detail.status === "PRE_POUR" || detail.status === "CANCELED" ? (
+        {detail.status === "PRE_POUR" || detail.status === "IN_PROCESS" || detail.status === "CANCELED" ? (
           <>
             <StatTile label="Next Truck" {...splitTime(detail.next_truck)} tone="blue" />
             <StatTile label="Pour Finish" {...splitTime(detail.pour_finish)} tone="blue" />
             <StatTile
-              label="Loads"
-              value={String(detail.loads)}
-              sub={`${detail.trucks} trucks`}
+              label="Trucks"
+              value={String(detail.trucks)}
+              sub="MAP"
               tone="blue"
               href={`/orders/${detail.order_id}/tickets`}
             />
             <StatTile label="Ordered" value={detail.ordered_cy.toFixed(2)} sub="CY" tone="blue" />
-            <StatTile label="Ticketed" value={detail.ticketed_cy.toFixed(2)} sub="CY" tone="green" />
+            <StatTile label="Ticketed" value={detail.ticketed_cy.toFixed(2)} sub="CY" tone="green" href={`/orders/${detail.order_id}/tickets`} />
             <StatTile label="On Job" value={detail.on_job_cy.toFixed(2)} sub="CY" tone="blue" />
           </>
         ) : (

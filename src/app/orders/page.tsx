@@ -22,12 +22,12 @@ export default async function OrdersPage({
 
   return (
     <div className="space-y-4">
-      <SubHeader title="Dolese Orders" backHref={`/?date=${dateStr}`} />
+      <SubHeader title={`${summary.name} Orders`} backHref={`/?date=${dateStr}`} />
 
       <DateSelect value={dateStr} />
 
-      <Dropdown value="dolese">
-        <option value="dolese">DOLESE ({fmt(summary.totalCY)} CY)</option>
+      <Dropdown value={summary.name.toLowerCase()}>
+        <option value={summary.name.toLowerCase()}>{summary.name.toUpperCase()} ({fmt(summary.totalCY)} CY)</option>
       </Dropdown>
       <Dropdown value="default">
         <option value="default">Default</option>
