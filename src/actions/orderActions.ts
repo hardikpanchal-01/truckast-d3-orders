@@ -15,6 +15,14 @@
 import supabaseServer from "@/supabase/server";
 import { getExcludedPatterns } from "@/actions/exclusionActions";
 import { filterExcludedOrders } from "@/lib/order-filters";
+import { getTenantSupabaseClient, getSelectedTenant } from "@/actions/tenantActions";
+import { SupabaseClient } from "@supabase/supabase-js";
+
+// Helper to get the appropriate Supabase client (tenant-specific or default)
+async function getSupabaseClient(): Promise<SupabaseClient> {
+  const tenantClient = await getTenantSupabaseClient();
+  return tenantClient || supabaseServer;
+}
 
 export type OrderStatus = "IN_PROCESS" | "PRE_POUR" | "COMPLETED" | "CANCELED";
 
@@ -208,11 +216,17 @@ interface OrderProductRow {
   order_product_schedules?: { start_time: string | null }[] | null;
 }
 
+// Check if unit is a cubic yard unit (different tenants use different codes)
+function isCubicYardUnit(unit: string | null | undefined): boolean {
+  const u = (unit || "").toUpperCase().trim();
+  return u === "CY" || u === "YDQ" || u.includes("YDQ");
+}
+
 function sumCY(products: OrderProductRow[] | null | undefined) {
   let ordered = 0;
   let ticketed = 0;
   for (const p of products || []) {
-    if (p.order_qty_unit === "CY" && p.is_mix === true) {
+    if (isCubicYardUnit(p.order_qty_unit) && p.is_mix === true) {
       ordered += Number(p.order_qty || 0);
       ticketed += Number(p.delv_qty || 0);
     }
@@ -297,7 +311,20 @@ function has(t: string | null | undefined): boolean {
 }
 
 function isPouredOut(t: TicketRow): boolean {
-  return has(t.wash_time) || has(t.unload_time) || has(t.end_unload) || has(t.to_plant_time) || has(t.at_plant_time);
+  // A truck is "poured out" when it has finished pouring (for chart calculations)
+  return has(t.end_unload) || has(t.wash_time) || has(t.to_plant_time) || has(t.at_plant_time);
+}
+
+/** Check if truck has LEFT the job site (for "On Job" calculation) */
+function hasLeftJob(t: TicketRow): boolean {
+  // A truck has left the job when it's heading back to plant or already at plant
+  return has(t.to_plant_time) || has(t.at_plant_time);
+}
+
+/** Check if truck is currently active (not back at plant) */
+function isActiveTicket(t: TicketRow): boolean {
+  // A ticket is active if it has been printed but truck hasn't returned to plant
+  return has(t.printed_time) && !has(t.at_plant_time);
 }
 
 function nowCSTAsUTCEpoch(): number {
@@ -486,8 +513,14 @@ export async function getDoleseSummary(dateStr: string, dateToStr?: string): Pro
   const from = dateStr;
   const to = dateToStr ? dayRange(dateToStr).to : dayRange(dateStr).to;
 
-  // Fetch exclusion patterns first
-  const exclusionPatterns = await getExcludedPatterns();
+  // Get tenant-specific Supabase client and selected tenant name
+  const [supabase, selectedTenant, exclusionPatterns] = await Promise.all([
+    getSupabaseClient(),
+    getSelectedTenant(),
+    getExcludedPatterns(),
+  ]);
+
+  const tenantName = selectedTenant || "DOLESE";
 
   // Paginate through all orders (Supabase default limit is 1000)
   const PAGE_SIZE = 1000;
@@ -504,7 +537,7 @@ export async function getDoleseSummary(dateStr: string, dateToStr?: string): Pro
   let hasMore = true;
 
   while (hasMore) {
-    const { data, error } = await supabaseServer
+    const { data, error } = await supabase
       .from("orders")
       .select("order_id, order_code, customer_name, delivery_addr1, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix, item_code)")
       .gte("order_date", from)
@@ -525,11 +558,11 @@ export async function getDoleseSummary(dateStr: string, dateToStr?: string): Pro
     }
   }
 
-  // Filter to only CY orders (matching D3 production: only check order_qty_unit, not is_mix)
-  // is_mix is only used when calculating CY quantities, not for filtering orders
+  // Filter to only CY/YDQ orders - different tenants use different unit codes
+  // CY = Cubic Yards (standard), YDQ = Cubic Yards (some tenants like Stevenson Weir)
   const cyOrders = allOrders.filter((o) => {
     const products = (o.order_products || []) as OrderProductRow[];
-    return products.some((p) => p.order_qty_unit === "CY");
+    return products.some((p) => isCubicYardUnit(p.order_qty_unit));
   });
 
   // Apply exclusion patterns filtering (matches D3 production)
@@ -562,7 +595,7 @@ export async function getDoleseSummary(dateStr: string, dateToStr?: string): Pro
   }
 
   return {
-    name: "DOLESE",
+    name: tenantName,
     usedCY: Math.round(usedCY * 100) / 100,
     totalCY: Math.round(totalCY * 100) / 100,
     totalOrders, activeOrders, cancelledOrders,
@@ -576,9 +609,12 @@ export async function getDoleseSummary(dateStr: string, dateToStr?: string): Pro
 export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListItem[]> {
   const { from, to } = dayRange(dateStr);
 
+  // Get tenant-specific Supabase client first
+  const supabase = await getSupabaseClient();
+
   // Fetch orders and exclusion patterns in parallel
   const [ordersResult, exclusionPatterns] = await Promise.all([
-    supabaseServer
+    supabase
       .from("orders")
       .select(
         "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix, item_code, order_product_schedules(start_time))",
@@ -597,9 +633,9 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
     return [];
   }
 
-  // Filter to only CY orders (matching D3 production: only check order_qty_unit, not is_mix)
+  // Filter to only CY/YDQ orders (different tenants use different unit codes)
   const cyOrders = (data || []).filter((o) =>
-    ((o.order_products || []) as OrderProductRow[]).some((p) => p.order_qty_unit === "CY"),
+    ((o.order_products || []) as OrderProductRow[]).some((p) => isCubicYardUnit(p.order_qty_unit)),
   );
 
   // Apply exclusion patterns filtering (matches D3 production)
@@ -652,7 +688,10 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
 /* ------------------------------------------------------------------ */
 
 export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrderDetail | null> {
-  const { data: order, error } = await supabaseServer
+  // Get tenant-specific Supabase client
+  const supabase = await getSupabaseClient();
+
+  const { data: order, error } = await supabase
     .from("orders")
     .select(
       `order_id, order_code, order_date, customer_name, delivery_addr1, delivery_addr2, delivery_addr3,
@@ -709,7 +748,7 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
   // Plant name: Get from first ticket (matches D3 production behavior)
   // D3 shows the plant from the first ticket, not from order_product_schedules
   let plantName: string | null = null;
-  const { data: firstTicket } = await supabaseServer
+  const { data: firstTicket } = await supabase
     .from("tickets")
     .select("plant_name, plant_code")
     .eq("order_id", orderId)
@@ -722,7 +761,7 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
   } else if (firstTicket?.plant_code || firstSchedule?.plant_code || order.pricing_plant_code) {
     // Fallback: look up from plants table
     const plantCode = firstTicket?.plant_code || firstSchedule?.plant_code || order.pricing_plant_code;
-    const { data: plant } = await supabaseServer
+    const { data: plant } = await supabase
       .from("plants")
       .select("description, short_description")
       .eq("code", plantCode)
@@ -750,7 +789,7 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
   const instructions = instructionParts.length > 0 ? instructionParts.join(" ") : null;
 
   // Tickets joined by order_id (the reliable key).
-  const { data: tix } = await supabaseServer
+  const { data: tix } = await supabase
     .from("tickets")
     .select(TICKET_FIELDS)
     .eq("order_id", orderId)
@@ -760,24 +799,35 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
   // Delivered CY per ticket = sum of mix ticket_products.load_qty (CY).
   const cyByTicket = new Map<number, number>();
   if (tickets.length > 0) {
-    const { data: tp } = await supabaseServer
+    const { data: tp } = await supabase
       .from("ticket_products")
       .select("ticket_id, is_mix, load_qty, order_qty_unit")
       .in("ticket_id", tickets.map((t) => t.ticket_id))
       .limit(2000);
     for (const p of tp || []) {
-      if (p.is_mix === true && p.order_qty_unit === "CY") {
+      if (p.is_mix === true && isCubicYardUnit(p.order_qty_unit)) {
         cyByTicket.set(p.ticket_id, (cyByTicket.get(p.ticket_id) || 0) + Number(p.load_qty || 0));
       }
     }
   }
 
   const loads = tickets.length;
-  const trucks = new Set(tickets.map((t) => t.truck_code).filter(Boolean)).size;
 
-  // On job = delivered loads that have arrived but not yet poured out.
+  // Count only trucks that are currently active (not back at plant yet)
+  const activeTickets = tickets.filter((t) => isActiveTicket(t));
+  const trucks = new Set(activeTickets.map((t) => t.truck_code).filter(Boolean)).size;
+
+  // Calculate actual ticketed CY from ticket_products (sum of all delivered loads)
+  // This is more accurate than order_products.delv_qty which may not be updated
+  let actualTicketedCY = 0;
+  for (const cy of cyByTicket.values()) {
+    actualTicketedCY += cy;
+  }
+
+  // On job = trucks that have arrived at job site but haven't LEFT yet
+  // (trucks can be pouring or done pouring but still physically at job site)
   const onJobCY = tickets
-    .filter((t) => has(t.on_job_time) && !isPouredOut(t))
+    .filter((t) => has(t.on_job_time) && !hasLeftJob(t))
     .reduce((s, t) => s + (cyByTicket.get(t.ticket_id) || 0), 0);
 
   // --- Chart data ---------------------------------------------------
@@ -981,15 +1031,69 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
   const lastTicket = tickets.length
     ? tickets.reduce((a, b) => ((b.ticket_code || "") > (a.ticket_code || "") ? b : a))
     : null;
-  const status = deriveStatus(order, ordered, ticketed, lastTicket ? isTicketCompleted(lastTicket) : false);
+  const status = deriveStatus(order, ordered, actualTicketedCY, lastTicket ? isTicketCompleted(lastTicket) : false);
 
-  const pourFinishRaw = tickets
-    .map((t) => t.end_unload || t.unload_time || t.wash_time)
-    .filter((x): x is string => !!x)
-    .sort();
-  const pourFinish = pourFinishRaw.length ? fmtTime(pourFinishRaw[pourFinishRaw.length - 1], true) : null;
+  // Pour Finish: estimated completion time
+  // Use the latest scheduled time if available, otherwise use last ticket's estimated pour time
+  const allScheduleTimes = rawProducts
+    .flatMap((p) => (p.order_product_schedules || []) as { start_time: string | null; number_of_loads?: number | null; truck_space?: number | null }[])
+    .filter((s) => s.start_time);
 
-  const nextTruck = status === "COMPLETED" ? null : fmtTime(earliestStart(rawProducts), true);
+  let pourFinish: string | null = null;
+  if (allScheduleTimes.length > 0 && allScheduleTimes[0].number_of_loads && allScheduleTimes[0].truck_space) {
+    // Calculate estimated finish based on schedule: start_time + (number_of_loads * truck_space)
+    const schedule = allScheduleTimes[0];
+    const startTime = new Date(schedule.start_time!);
+    const totalMinutes = (schedule.number_of_loads || 0) * (schedule.truck_space || 0);
+    const finishTime = new Date(startTime.getTime() + totalMinutes * 60 * 1000);
+    pourFinish = fmtTime(finishTime.toISOString(), true);
+  } else {
+    // Fallback: use last pour end time
+    const pourFinishRaw = tickets
+      .map((t) => t.end_unload || t.wash_time)
+      .filter((x): x is string => !!x)
+      .sort();
+    pourFinish = pourFinishRaw.length ? fmtTime(pourFinishRaw[pourFinishRaw.length - 1], true) : null;
+  }
+
+  // Next Truck: find the next truck en route or calculate minutes until next arrival
+  let nextTruck: string | null = null;
+  if (status !== "COMPLETED") {
+    // Find trucks that are en route (have to_job_time but no on_job_time yet)
+    const enRouteTickets = tickets
+      .filter((t) => has(t.to_job_time) && !has(t.on_job_time))
+      .sort((a, b) => (a.to_job_time || "").localeCompare(b.to_job_time || ""));
+
+    if (enRouteTickets.length > 0) {
+      // Calculate minutes until arrival based on average travel time
+      const arrivedTickets = tickets.filter((t) => has(t.to_job_time) && has(t.on_job_time));
+      let avgTravelMin = 15; // default 15 minutes travel time
+      if (arrivedTickets.length > 0) {
+        const travelTimes = arrivedTickets
+          .map((t) => diffMin(t.on_job_time, t.to_job_time))
+          .filter((x): x is number => x != null && x > 0);
+        if (travelTimes.length > 0) {
+          avgTravelMin = Math.round(travelTimes.reduce((a, b) => a + b, 0) / travelTimes.length);
+        }
+      }
+
+      // Calculate when the en route truck will arrive
+      const nextTicket = enRouteTickets[0];
+      const departTime = new Date(nextTicket.to_job_time!).getTime();
+      const nowMs = nowCSTAsUTCEpoch();
+      const etaMs = departTime + avgTravelMin * 60 * 1000;
+      const minsUntilArrival = Math.max(0, Math.round((etaMs - nowMs) / 60000));
+
+      if (minsUntilArrival <= 0) {
+        nextTruck = "Now";
+      } else {
+        nextTruck = `${minsUntilArrival} MIN`;
+      }
+    } else {
+      // No trucks en route, show scheduled time
+      nextTruck = fmtTime(earliestStart(rawProducts), true);
+    }
+  }
 
   // Weather (JSONB shape varies; best-effort)
   let weather: DoleseOrderDetail["weather"] = null;
@@ -1073,7 +1177,7 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
       : null,
     products: productsInfo,
     ordered_cy: Math.round(ordered * 100) / 100,
-    ticketed_cy: Math.round(ticketed * 100) / 100,
+    ticketed_cy: Math.round(actualTicketedCY * 100) / 100,
     on_job_cy: Math.round(onJobCY * 100) / 100,
     poured_cy: pouredCY,
     loads,
@@ -1096,7 +1200,10 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
 /* ------------------------------------------------------------------ */
 
 export async function getDoleseTicketSummary(orderId: number): Promise<DoleseTicketSummary | null> {
-  const { data: order, error } = await supabaseServer
+  // Get tenant-specific Supabase client
+  const supabase = await getSupabaseClient();
+
+  const { data: order, error } = await supabase
     .from("orders")
     .select(
       "order_id, order_code, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products(order_qty, order_qty_unit, delv_qty, is_mix)",
@@ -1114,7 +1221,7 @@ export async function getDoleseTicketSummary(orderId: number): Promise<DoleseTic
   const { ordered, ticketed } = sumCY(products);
   const totalCY = Math.round(ordered * 100) / 100;
 
-  const { data: tix } = await supabaseServer
+  const { data: tix } = await supabase
     .from("tickets")
     .select(`${TICKET_FIELDS}, plant_name`)
     .eq("order_id", orderId)
@@ -1124,13 +1231,13 @@ export async function getDoleseTicketSummary(orderId: number): Promise<DoleseTic
   // Delivered CY per ticket = sum of mix ticket_products.load_qty (CY).
   const cyByTicket = new Map<number, number>();
   if (tickets.length > 0) {
-    const { data: tp } = await supabaseServer
+    const { data: tp } = await supabase
       .from("ticket_products")
       .select("ticket_id, is_mix, load_qty, order_qty_unit")
       .in("ticket_id", tickets.map((t) => t.ticket_id))
       .limit(2000);
     for (const p of tp || []) {
-      if (p.is_mix === true && p.order_qty_unit === "CY") {
+      if (p.is_mix === true && isCubicYardUnit(p.order_qty_unit)) {
         cyByTicket.set(p.ticket_id, (cyByTicket.get(p.ticket_id) || 0) + Number(p.load_qty || 0));
       }
     }
@@ -1186,7 +1293,10 @@ function vVal(obj: unknown, key: string): string | null {
 }
 
 export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTicketDetail | null> {
-  const { data: t, error } = await supabaseServer
+  // Get tenant-specific Supabase client
+  const supabase = await getSupabaseClient();
+
+  const { data: t, error } = await supabase
     .from("tickets")
     .select(
       `${TICKET_FIELDS}, plant_name, plant_code, delivery_addr1, project_name, current_status, order_current_status, verifi_json`,
@@ -1200,7 +1310,7 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
     return null;
   }
 
-  const { data: tp } = await supabaseServer
+  const { data: tp } = await supabase
     .from("ticket_products")
     .select("item_code, description, short_description, is_mix, load_qty, delv_qty, order_qty_unit, delv_qty_unit, slump")
     .eq("ticket_id", ticketId)
@@ -1314,7 +1424,10 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
 /* ------------------------------------------------------------------ */
 
 export async function getDoleseCustomerDelay(orderId: number): Promise<DoleseCustomerDelay | null> {
-  const { data: order, error } = await supabaseServer
+  // Get tenant-specific Supabase client
+  const supabase = await getSupabaseClient();
+
+  const { data: order, error } = await supabase
     .from("orders")
     .select("order_id, order_code, order_date, customer_name, delivery_addr1, project_name")
     .eq("order_id", orderId)
@@ -1326,7 +1439,7 @@ export async function getDoleseCustomerDelay(orderId: number): Promise<DoleseCus
     return null;
   }
 
-  const { data: tix } = await supabaseServer
+  const { data: tix } = await supabase
     .from("tickets")
     .select(TICKET_FIELDS)
     .eq("order_id", orderId)
@@ -1396,7 +1509,10 @@ export async function searchRolloutCustomers(q: string): Promise<RolloutCustomer
   const term = q.trim().replace(/[,%()*]/g, " ").trim();
   if (!term) return [];
 
-  const { data: custs, error } = await supabaseServer
+  // Get tenant-specific Supabase client
+  const supabase = await getSupabaseClient();
+
+  const { data: custs, error } = await supabase
     .from("customers")
     .select("id, code, name")
     .or(`name.ilike.%${term}%,code.ilike.%${term}%`)
@@ -1410,7 +1526,7 @@ export async function searchRolloutCustomers(q: string): Promise<RolloutCustomer
   const ids = (custs || []).map((c) => c.id);
   const counts = new Map<number, number>();
   if (ids.length) {
-    const { data: links } = await supabaseServer
+    const { data: links } = await supabase
       .from("user_customers")
       .select("customer_id")
       .in("customer_id", ids)
@@ -1428,7 +1544,10 @@ export async function searchRolloutCustomers(q: string): Promise<RolloutCustomer
 
 /** A customer with its invited app users (for the Rollout customer-detail page). */
 export async function getRolloutCustomer(customerId: number): Promise<RolloutCustomerDetail | null> {
-  const { data: c, error } = await supabaseServer
+  // Get tenant-specific Supabase client
+  const supabase = await getSupabaseClient();
+
+  const { data: c, error } = await supabase
     .from("customers")
     .select("id, code, name")
     .eq("id", customerId)
@@ -1439,7 +1558,7 @@ export async function getRolloutCustomer(customerId: number): Promise<RolloutCus
     return null;
   }
 
-  const { data: links } = await supabaseServer
+  const { data: links } = await supabase
     .from("user_customers")
     .select("user_id")
     .eq("customer_id", customerId)
@@ -1448,7 +1567,7 @@ export async function getRolloutCustomer(customerId: number): Promise<RolloutCus
 
   let users: RolloutUser[] = [];
   if (ids.length) {
-    const { data: us } = await supabaseServer
+    const { data: us } = await supabase
       .from("users")
       .select("id, full_name, email, last_login_at")
       .in("id", ids)
@@ -1480,7 +1599,10 @@ export interface RolloutUserDetail {
 }
 
 export async function getRolloutUser(userId: string): Promise<RolloutUserDetail | null> {
-  const { data: u, error } = await supabaseServer
+  // Get tenant-specific Supabase client
+  const supabase = await getSupabaseClient();
+
+  const { data: u, error } = await supabase
     .from("users")
     .select("id, full_name, email, phone_number, invitation_sent_at")
     .eq("id", userId)
@@ -1493,14 +1615,14 @@ export async function getRolloutUser(userId: string): Promise<RolloutUserDetail 
 
   // Primary customer (first assignment) for the "INVITE MORE FROM …" tile.
   let customer_name: string | null = null;
-  const { data: link } = await supabaseServer
+  const { data: link } = await supabase
     .from("user_customers")
     .select("customer_id")
     .eq("user_id", userId)
     .limit(1)
     .maybeSingle();
   if (link?.customer_id) {
-    const { data: c } = await supabaseServer
+    const { data: c } = await supabase
       .from("customers")
       .select("name")
       .eq("id", link.customer_id)
@@ -1543,7 +1665,10 @@ export interface RolloutUserProjects {
 }
 
 export async function getRolloutUserProjects(userId: string): Promise<RolloutUserProjects | null> {
-  const { data: u, error } = await supabaseServer
+  // Get tenant-specific Supabase client
+  const supabase = await getSupabaseClient();
+
+  const { data: u, error } = await supabase
     .from("users")
     .select("full_name")
     .eq("id", userId)
@@ -1554,7 +1679,7 @@ export async function getRolloutUserProjects(userId: string): Promise<RolloutUse
     return null;
   }
 
-  const { data: link } = await supabaseServer
+  const { data: link } = await supabase
     .from("user_customers")
     .select("customer_id")
     .eq("user_id", userId)
@@ -1566,7 +1691,7 @@ export async function getRolloutUserProjects(userId: string): Promise<RolloutUse
   let projects: RolloutProjectRow[] = [];
 
   if (customerId) {
-    const { data: c } = await supabaseServer
+    const { data: c } = await supabase
       .from("customers")
       .select("name")
       .eq("id", customerId)
@@ -1574,13 +1699,13 @@ export async function getRolloutUserProjects(userId: string): Promise<RolloutUse
     customer_name = c?.name ?? null;
 
     const [{ data: projs }, { data: assigned }] = await Promise.all([
-      supabaseServer
+      supabase
         .from("projects")
         .select("id, code, name, customer_name")
         .eq("customer_id", customerId)
         .order("name", { ascending: true })
         .limit(1000),
-      supabaseServer.from("user_projects").select("project_id").eq("user_id", userId).limit(2000),
+      supabase.from("user_projects").select("project_id").eq("user_id", userId).limit(2000),
     ]);
 
     const assignedSet = new Set((assigned || []).map((a) => a.project_id));
@@ -1619,7 +1744,10 @@ export async function searchOrderProjects(q: string): Promise<OrderProjectSearch
   const term = q.trim().replace(/[,%()*]/g, " ").trim();
   if (!term) return { customers: [], projects: [] };
 
-  const { data: custs, error } = await supabaseServer
+  // Get tenant-specific Supabase client
+  const supabase = await getSupabaseClient();
+
+  const { data: custs, error } = await supabase
     .from("customers")
     .select("id, code, name")
     .or(`name.ilike.%${term}%,code.ilike.%${term}%`)
@@ -1632,7 +1760,7 @@ export async function searchOrderProjects(q: string): Promise<OrderProjectSearch
   const custIds = (custs || []).map((c) => c.id);
   if (!custIds.length) return { customers: [], projects: [] };
 
-  const { data: projs } = await supabaseServer
+  const { data: projs } = await supabase
     .from("projects")
     .select("id, code, name, customer_name, customer_code")
     .in("customer_id", custIds)
@@ -1642,7 +1770,7 @@ export async function searchOrderProjects(q: string): Promise<OrderProjectSearch
   const projIds = (projs || []).map((p) => p.id);
   const counts = new Map<number, number>();
   if (projIds.length) {
-    const { data: ords } = await supabaseServer
+    const { data: ords } = await supabase
       .from("orders")
       .select("project_id")
       .in("project_id", projIds)
@@ -1671,10 +1799,41 @@ export async function searchOrderProjects(q: string): Promise<OrderProjectSearch
 export async function getProjectBasic(
   projectId: number,
 ): Promise<{ name: string; customer_name: string | null } | null> {
-  const { data } = await supabaseServer
+  // Get tenant-specific Supabase client
+  const supabase = await getSupabaseClient();
+
+  const { data } = await supabase
     .from("projects")
     .select("name, customer_name")
     .eq("id", projectId)
     .maybeSingle();
   return data ? { name: data.name, customer_name: data.customer_name } : null;
+}
+
+/** Get all projects for the Order By Project page (no search required). */
+export async function getAllProjects(): Promise<OrderProjectCard[]> {
+  // Get tenant-specific Supabase client
+  const supabase = await getSupabaseClient();
+
+  // Get all active projects ordered by customer name then project name
+  const { data: projs, error } = await supabase
+    .from("projects")
+    .select("id, code, name, customer_name, customer_code")
+    .order("customer_name", { ascending: true })
+    .order("name", { ascending: true })
+    .limit(500);
+
+  if (error) {
+    console.error("[ERROR] getAllProjects:", error.message);
+    return [];
+  }
+
+  return (projs || []).map((p) => ({
+    project_id: p.id,
+    project_name: p.name,
+    project_code: p.code,
+    customer_name: p.customer_name,
+    customer_code: p.customer_code,
+    recent_orders: 0, // Not counting orders for performance
+  }));
 }

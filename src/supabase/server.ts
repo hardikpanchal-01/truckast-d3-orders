@@ -24,4 +24,16 @@ export const supabaseServer = createClient(
   },
 );
 
+// Auth Supabase client for tenant data
+const authSupabaseUrl = process.env.NEXT_AUTH_PUBLIC_SUPABASE_URL!;
+const authSupabaseServiceKey = process.env.NEXT_AUTH_SUPABASE_SERVICE_ROLE_KEY;
+
+export const supabaseAuth = createClient(
+  authSupabaseUrl,
+  authSupabaseServiceKey || process.env.NEXT_AUTH_SUPABASE_PUBLISHABLE_KEY!,
+  {
+    auth: { autoRefreshToken: false, persistSession: false },
+  },
+);
+
 export default supabaseServer;
