@@ -111,7 +111,7 @@ export function TopNav() {
         color: "#333",
       }}
     >
-      <div className="mx-auto flex min-h-[40px] w-full max-w-[1170px] items-center px-5">
+      <div className="flex min-h-[40px] items-center" style={{ width: 1170, margin: "0 auto" }}>
         <Link
           href="/"
           style={{
@@ -119,9 +119,8 @@ export function TopNav() {
             lineHeight: "20px",
             textDecoration: "none",
             display: "block",
-            float: "left",
-            padding: "10px 20px 10px",
-            marginLeft: "-20px",
+            padding: "10px 0px 10px",
+            marginRight: "20px",
             fontSize: "20px",
             fontWeight: 200,
             textShadow: "0 -1px 0 rgba(0, 0, 0, 0.25)",
@@ -130,12 +129,12 @@ export function TopNav() {
         >
           {brand}
         </Link>
-        <nav className="flex items-center text-[13px] font-normal uppercase tracking-wide">
+        <nav className="flex items-center text-[14px] font-normal uppercase tracking-wide" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
           {tabs.map((tab) => {
             const href = TAB_HREF[tab];
             const cls = [
-              "cursor-pointer px-[10px] py-[10px] hover:text-white",
-              tab === active ? "text-white" : "text-[#8a8a8a]",
+              "cursor-pointer px-[15px] py-[10px] hover:text-white",
+              tab === active ? "text-white" : "text-[#999]",
             ].join(" ");
             return href ? (
               <Link key={tab} href={href} className={cls}>
@@ -293,7 +292,7 @@ function TileBody({
   return (
     <div className="flex h-full w-full items-center">
       {/* tileIcon */}
-      <div className="flex h-full w-[72px] shrink-0 items-center justify-center text-white">
+      <div className="flex h-[82px] w-[72px] shrink-0 items-center justify-center text-white">
         {left ? left : Icon ? <Icon className="h-10 w-10" strokeWidth={1.6} /> : null}
       </div>
       {/* tileInfoSection */}

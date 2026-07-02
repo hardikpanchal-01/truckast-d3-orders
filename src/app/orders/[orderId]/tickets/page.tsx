@@ -29,9 +29,9 @@ export default async function TicketSummaryPage({
         backHref={`/orders/${summary.order_id}`}
       />
 
-      <h2 className="text-base font-extrabold uppercase tracking-wide text-slate-800">
+      <h4 style={{ fontSize: "17.5px", margin: "10px 0", fontWeight: "bold", lineHeight: "20px", textRendering: "optimizeLegibility" }} className="uppercase tracking-wide text-slate-800">
         {STATUS_LABEL[summary.status]} - {summary.customer_name || "—"}
-      </h2>
+      </h4>
 
       <TicketSummaryList loads={summary.loads} orderId={summary.order_id} />
     </div>
