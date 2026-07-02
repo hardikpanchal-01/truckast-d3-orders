@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useState } from "react";
 
-type XY = { t: number; v: number };
+type XY = { t: number; v: number; ts?: string };
 
 export interface ChartData {
   tMin: number;
@@ -12,7 +12,7 @@ export interface ChartData {
   orderedPoints: XY[]; // Points at each scheduled truck arrival
   delivered: XY[]; // Delivered rate (CY/HR) at each arrival
   poured: XY[]; // Poured rate (CY/HR) at each pour completion
-  trucks: { t: number; waiting: number; pouring: number }[];
+  trucks: { t: number; waiting: number; pouring: number; ts?: string }[];
 }
 
 /** minutes-of-day -> "H:MM" (matches the live app's axis labels). */
@@ -22,12 +22,86 @@ function fmtT(min: number): string {
   return `${h}:${String(m).padStart(2, "0")}`;
 }
 
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Tooltip header like the live app: "Thursday, Jul 2, 02:42:42".
+ *  ts is a CST-clock value stored in a UTC field, so read UTC parts. Falls back to H:MM. */
+function fmtTooltipTime(ts: string | undefined, t: number): string {
+  if (ts) {
+    const d = new Date(ts);
+    if (!Number.isNaN(d.getTime())) {
+      const hh = String(d.getUTCHours()).padStart(2, "0");
+      const mm = String(d.getUTCMinutes()).padStart(2, "0");
+      const ss = String(d.getUTCSeconds()).padStart(2, "0");
+      return `${WEEKDAYS[d.getUTCDay()]}, ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${hh}:${mm}:${ss}`;
+    }
+  }
+  return fmtT(t);
+}
+
+/** Number formatting that trims trailing zeros, like Highcharts (79, 61.8, 38.73). */
+function fmtVal(v: number): string {
+  return String(Math.round(v * 100) / 100);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Dynamic x-axis ticks (mirrors Highcharts' datetime auto-ticking)   */
+/* ------------------------------------------------------------------ */
+
+// Allowed "nice" step sizes in minutes: 1/2/5/10/15/30 min, then 1/2/3/4/6/8/12 hr, then days.
+const NICE_MIN_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 180, 240, 360, 480, 720, 1440];
+// Highcharts default: aim for roughly one tick per 100px of plot width.
+const TICK_PIXEL_INTERVAL = 100;
+
+/**
+ * Choose x-axis tick times the way Highcharts does:
+ *   targetTicks = widthPx / 100  →  rough = span / targetTicks  →  snap UP to a nice step.
+ * Ticks are aligned to nice clock boundaries (e.g. every :00/:15/:30/:45 for a 15-min step).
+ */
+function buildTimeTicks(tMin: number, tMax: number, widthPx: number): number[] {
+  const span = Math.max(1, tMax - tMin);
+  const target = Math.max(2, Math.round(widthPx / TICK_PIXEL_INTERVAL));
+  const rough = span / target;
+  const step = NICE_MIN_STEPS.find((s) => s >= rough) ?? NICE_MIN_STEPS[NICE_MIN_STEPS.length - 1];
+  const first = Math.ceil(tMin / step) * step;
+  const ticks: number[] = [];
+  for (let t = first; t <= tMax + 1e-6; t += step) ticks.push(t);
+  return ticks;
+}
+
+/** Track an SVG element's rendered pixel width (for pixel-accurate tick density). */
+function useRenderedWidth(ref: React.RefObject<SVGSVGElement | null>): number {
+  // Default matches the viewBox so SSR and first client render agree (no hydration mismatch).
+  const [w, setW] = React.useState(900);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setW(el.getBoundingClientRect().width || 900);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return w;
+}
+
 /** Round a max value up to a "nice" axis maximum (1/2/5 × 10ⁿ), like Highcharts. */
 function niceMax(max: number): number {
   if (max <= 0) return 1;
   const pow = Math.pow(10, Math.floor(Math.log10(max)));
   const n = max / pow;
   const nice = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+  return nice * pow;
+}
+
+/** Snap a rough interval to a "nice" number (1/2/2.5/5/10 × 10ⁿ) — Highcharts' allowed
+ *  y-axis steps. The 2.5 case is why the live Trucks chart shows 0/2.5/5/7.5. */
+function niceTickInterval(rough: number): number {
+  if (rough <= 0) return 1;
+  const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+  const n = rough / pow;
+  const nice = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10;
   return nice * pow;
 }
 
@@ -51,25 +125,125 @@ interface TooltipData {
 interface TruckTooltipData {
   x: number;
   y: number;
+  t: number; // hovered point's x-value (minutes-of-day) — drives the crosshair + marker
+  stack: number; // stacked value at the marker (pouring top, or total for Waiting)
   time: string;
-  waiting: number;
-  pouring: number;
-  total: number;
+  label: "Waiting" | "Pouring"; // a single series per tooltip, like D3 (never merged)
+  value: number;
+  color: string;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Click-and-drag horizontal zoom (mirrors Highcharts zoomType: 'x')  */
+/* ------------------------------------------------------------------ */
+
+interface Zoom {
+  vMin: number;
+  vMax: number;
+  zoomed: boolean;
+  sel: { x0: number; x1: number } | null; // active drag selection, in SVG x coords
+  dragging: React.RefObject<boolean>;
+  onDown: (e: React.MouseEvent) => void;
+  onMove: (e: React.MouseEvent) => void;
+  onUp: () => void;
+  reset: () => void;
+}
+
+function useZoom(
+  svgRef: React.RefObject<SVGSVGElement | null>,
+  fullMin: number,
+  fullMax: number,
+  W: number,
+  padLeft: number,
+  innerW: number,
+): Zoom {
+  const [zoom, setZoom] = React.useState<{ min: number; max: number } | null>(null);
+  const [sel, setSel] = React.useState<{ x0: number; x1: number } | null>(null);
+  const dragging = React.useRef(false);
+
+  const vMin = zoom ? zoom.min : fullMin;
+  const vMax = zoom ? zoom.max : fullMax;
+
+  const toSvgX = (clientX: number): number | null => {
+    if (!svgRef.current) return null;
+    const rect = svgRef.current.getBoundingClientRect();
+    const raw = ((clientX - rect.left) / rect.width) * W;
+    return Math.max(padLeft, Math.min(padLeft + innerW, raw));
+  };
+  const toTime = (sx: number) => vMin + ((sx - padLeft) / innerW) * (vMax - vMin);
+
+  const onDown = (e: React.MouseEvent) => {
+    const sx = toSvgX(e.clientX);
+    if (sx == null) return;
+    dragging.current = true;
+    setSel({ x0: sx, x1: sx });
+  };
+  const onMove = (e: React.MouseEvent) => {
+    if (!dragging.current) return;
+    const sx = toSvgX(e.clientX);
+    if (sx == null) return;
+    setSel((s) => (s ? { ...s, x1: sx } : null));
+  };
+  const onUp = () => {
+    if (!dragging.current) return;
+    dragging.current = false;
+    if (sel && Math.abs(sel.x1 - sel.x0) > 4) {
+      const a = toTime(Math.min(sel.x0, sel.x1));
+      const b = toTime(Math.max(sel.x0, sel.x1));
+      if (b - a > 0.001) setZoom({ min: a, max: b });
+    }
+    setSel(null);
+  };
+  const reset = () => setZoom(null);
+
+  return { vMin, vMax, zoomed: zoom != null, sel, dragging, onDown, onMove, onUp, reset };
 }
 
 function ChartFrame({
   title,
+  subtitle = "Click and drag in the plot area to zoom in",
+  onReset,
   children,
 }: {
   title: string;
+  subtitle?: string;
+  onReset?: () => void;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-1">
       <p className="text-center text-base font-bold text-slate-700">{title}</p>
-      <p className="text-center text-xs text-[#2f7ed8]">Hover over points for details</p>
-      <div className="relative w-full overflow-x-auto bg-white">{children}</div>
+      <p className="text-center text-xs text-[#2f7ed8]">{subtitle}</p>
+      {/* overflow-visible so a tooltip near an edge is never clipped by the frame. */}
+      <div className="relative w-full overflow-visible bg-white">
+        {onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="absolute right-2 top-1 z-40 rounded border border-gray-300 bg-gray-100 px-2 py-0.5 text-xs text-gray-700 shadow-sm hover:bg-gray-200"
+          >
+            Reset zoom
+          </button>
+        )}
+        {children}
+      </div>
     </div>
+  );
+}
+
+/** Tooltip caret: points down when the box is above the point, up when it's below. */
+function TooltipCaret({ below }: { below: boolean }) {
+  const common = "absolute left-1/2 h-0 w-0 -translate-x-1/2";
+  const side = below ? "bottom-full" : "top-full";
+  const edge = below ? "borderBottom" : "borderTop";
+  return (
+    <>
+      <span className={`${common} ${side}`} style={{ borderLeft: "7px solid transparent", borderRight: "7px solid transparent", [edge]: "7px solid #d1d5db" }} />
+      <span
+        className={`${common} ${side}`}
+        style={{ [below ? "marginBottom" : "marginTop"]: -1, borderLeft: "6px solid transparent", borderRight: "6px solid transparent", [edge]: "6px solid rgba(255,255,255,0.85)" }}
+      />
+    </>
   );
 }
 
@@ -92,8 +266,9 @@ function Legend({ items }: { items: { label: string; color: string; box?: boolea
 function Tooltip({ data }: { data: TooltipData | null }) {
   if (!data) return null;
 
+  // Matches the live app's Highcharts tooltip: series name in quotes, raw value, no unit.
   const typeLabels = {
-    ordered: "Scheduled",
+    ordered: "Ordered",
     delivered: "Delivered",
     poured: "Poured",
   };
@@ -104,28 +279,33 @@ function Tooltip({ data }: { data: TooltipData | null }) {
     poured: COL.poured,
   };
 
+  // Flip below the point when there isn't room above (keeps it from clipping the top).
+  const below = data.y < 90;
   return (
     <div
-      className="pointer-events-none absolute z-50 rounded bg-white px-3 py-2 text-xs shadow-lg border border-gray-200"
+      className="pointer-events-none absolute z-50"
       style={{
         left: data.x,
-        top: data.y - 60,
-        transform: "translateX(-50%)",
+        top: below ? data.y + 12 : data.y - 12,
+        transform: below ? "translate(-50%, 0)" : "translate(-50%, -100%)",
       }}
     >
-      <div className="font-semibold text-gray-700">{data.time}</div>
-      <div className="flex items-center gap-2 mt-1">
-        <span
-          className="inline-block h-2 w-2 rounded-full"
-          style={{ backgroundColor: colors[data.type] }}
-        />
-        <span style={{ color: colors[data.type] }}>
-          {typeLabels[data.type]}: {data.value.toFixed(2)} CY/HR
-        </span>
+      <div className="relative rounded-md border border-gray-300 bg-white/85 px-3 py-2 text-xs shadow-md backdrop-blur-sm">
+        <div className="font-bold text-gray-800">{data.time}</div>
+        <div
+          className="mt-1 flex items-center gap-1.5 font-semibold"
+          style={{ color: colors[data.type] }}
+        >
+          <span
+            className="inline-block h-2.5 w-2.5 rounded-full"
+            style={{ backgroundColor: colors[data.type] }}
+          />
+          <span>
+            &quot;{typeLabels[data.type]}&quot;: {fmtVal(data.value)}
+          </span>
+        </div>
+        <TooltipCaret below={below} />
       </div>
-      {data.type === "ordered" && (
-        <div className="text-gray-500 mt-1">Load #{data.index + 1}</div>
-      )}
     </div>
   );
 }
@@ -133,28 +313,26 @@ function Tooltip({ data }: { data: TooltipData | null }) {
 function TruckTooltip({ data }: { data: TruckTooltipData | null }) {
   if (!data) return null;
 
+  // Flip below the point when there isn't room above (keeps it from clipping the top).
+  const below = data.y < 90;
+  // Dot colour: the darker readable green for Pouring so it stays legible on white.
+  const dot = data.label === "Pouring" ? "#90ed7d" : "#434348";
   return (
     <div
-      className="pointer-events-none absolute z-50 rounded bg-white px-3 py-2 text-xs shadow-lg border border-gray-200"
+      className="pointer-events-none absolute z-50"
       style={{
         left: data.x,
-        top: data.y - 80,
-        transform: "translateX(-50%)",
+        top: below ? data.y + 12 : data.y - 12,
+        transform: below ? "translate(-50%, 0)" : "translate(-50%, -100%)",
       }}
     >
-      <div className="font-semibold text-gray-700">{data.time}</div>
-      <div className="mt-1 space-y-1">
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-2 w-3" style={{ backgroundColor: "#434348" }} />
-          <span>Waiting: {data.waiting}</span>
+      <div className="relative rounded-md border border-gray-300 bg-white/85 px-3 py-2 text-xs shadow-md backdrop-blur-sm">
+        <div className="font-bold text-gray-800">{data.time}</div>
+        <div className="mt-1 flex items-center gap-1.5 font-semibold" style={{ color: data.color }}>
+          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: dot }} />
+          <span>&quot;{data.label}&quot;: {data.value}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-2 w-3" style={{ backgroundColor: "#90ed7d" }} />
-          <span>Pouring: {data.pouring}</span>
-        </div>
-        <div className="border-t pt-1 font-semibold">
-          Total on Job: {data.total}
-        </div>
+        <TooltipCaret below={below} />
       </div>
     </div>
   );
@@ -167,6 +345,29 @@ function TruckTooltip({ data }: { data: TruckTooltipData | null }) {
 export function PourChart({ data }: { data: ChartData }) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
+  const chartW = useRenderedWidth(svgRef);
+  const clipId = React.useId();
+
+  const W = 900;
+  // Shorter than before so the 0/50/100 gridlines sit closer together (compact height).
+  const H = 175;
+  const pad = { top: 16, right: 20, bottom: 26, left: 40 };
+  const innerW = W - pad.left - pad.right;
+  const innerH = H - pad.top - pad.bottom;
+
+  // X-axis spans only the actual pour window (delivered/poured + the server's
+  // scheduled-start anchor in data.tMin/tMax). We deliberately DO NOT stretch the
+  // axis to the last scheduled "Ordered" point — the live app clips those to the
+  // data window instead of leaving a large empty right margin.
+  const dataTimes = [
+    ...data.delivered.map((p) => p.t),
+    ...data.poured.map((p) => p.t),
+  ];
+  const tMin = dataTimes.length > 0 ? Math.min(data.tMin, ...dataTimes) : data.tMin;
+  const tMax = dataTimes.length > 0 ? Math.max(data.tMax, ...dataTimes) : data.tMax;
+
+  // Drag-to-zoom on the x-axis (all hooks must run before the early return).
+  const zoom = useZoom(svgRef, tMin, tMax, W, pad.left, innerW);
 
   const hasData = data.delivered.length > 0 || data.poured.length > 0 || data.orderedPoints.length > 0;
   if (!hasData) {
@@ -177,21 +378,14 @@ export function PourChart({ data }: { data: ChartData }) {
     );
   }
 
-  const W = 900;
-  const H = 240;
-  const pad = { top: 20, right: 20, bottom: 30, left: 40 };
-  const innerW = W - pad.left - pad.right;
-  const innerH = H - pad.top - pad.bottom;
+  // Visible x-window = the current zoom range (or the full data range).
+  const vMin = zoom.vMin;
+  const vMax = zoom.vMax;
+  const tSpan = Math.max(1, vMax - vMin);
 
-  // Include orderedPoints in time range calculation
-  const allTimes = [
-    ...data.delivered.map((p) => p.t),
-    ...data.poured.map((p) => p.t),
-    ...data.orderedPoints.map((p) => p.t),
-  ];
-  const tMin = allTimes.length > 0 ? Math.min(data.tMin, ...allTimes) : data.tMin;
-  const tMax = allTimes.length > 0 ? Math.max(data.tMax, ...allTimes) : data.tMax;
-  const tSpan = Math.max(1, tMax - tMin);
+  // Only render scheduled "Ordered" markers that fall inside the full window; the
+  // clipPath trims anything outside the zoomed viewport.
+  const visibleOrdered = data.orderedPoints.filter((p) => p.t >= tMin && p.t <= tMax);
 
   const dataMax = Math.max(
     data.ordered,
@@ -201,17 +395,17 @@ export function PourChart({ data }: { data: ChartData }) {
   );
   const maxY = niceMax(dataMax);
 
-  const x = (t: number) => pad.left + ((t - tMin) / tSpan) * innerW;
+  const x = (t: number) => pad.left + ((t - vMin) / tSpan) * innerW;
   const y = (v: number) => pad.top + innerH - (v / maxY) * innerH;
 
   const linePath = (pts: XY[]) => pts.map((p, i) => `${i === 0 ? "M" : "L"} ${x(p.t)} ${y(p.v)}`).join(" ");
 
   const yTicks = [0, maxY / 2, maxY];
-  const xTickCount = 8;
-  const xTicks = Array.from({ length: xTickCount + 1 }, (_, k) => tMin + (k / xTickCount) * tSpan);
+  // Dynamic "nice" ticks (15/30/5-min etc.) based on span + rendered width, like Highcharts.
+  const xTicks = buildTimeTicks(vMin, vMax, chartW);
 
   const handleMouseEnter = (type: "ordered" | "delivered" | "poured", point: XY, index: number) => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || zoom.dragging.current) return;
     const rect = svgRef.current.getBoundingClientRect();
     const svgX = x(point.t);
     const svgY = y(point.v);
@@ -223,7 +417,7 @@ export function PourChart({ data }: { data: ChartData }) {
       x: domX,
       y: domY,
       type,
-      time: fmtT(point.t),
+      time: fmtTooltipTime(point.ts, point.t),
       value: point.v,
       index,
     });
@@ -235,14 +429,23 @@ export function PourChart({ data }: { data: ChartData }) {
 
   return (
     <>
-      <ChartFrame title="Pour Speed (CY/HR)">
+      <ChartFrame title="Pour Speed (CY/HR)" onReset={zoom.zoomed ? zoom.reset : undefined}>
         <Tooltip data={tooltip} />
         <svg
           ref={svgRef}
           viewBox={`0 0 ${W} ${H}`}
-          className="h-auto w-full"
+          className="h-auto w-full cursor-crosshair select-none"
           preserveAspectRatio="xMidYMid meet"
+          onMouseDown={(e) => { setTooltip(null); zoom.onDown(e); }}
+          onMouseMove={zoom.onMove}
+          onMouseUp={zoom.onUp}
+          onMouseLeave={() => { zoom.onUp(); handleMouseLeave(); }}
         >
+          <defs>
+            <clipPath id={clipId}>
+              <rect x={pad.left} y={pad.top} width={innerW} height={innerH} />
+            </clipPath>
+          </defs>
           {yTicks.map((t) => (
             <g key={t}>
               <line x1={pad.left} y1={y(t)} x2={W - pad.right} y2={y(t)} stroke={COL.grid} />
@@ -257,9 +460,22 @@ export function PourChart({ data }: { data: ChartData }) {
             </text>
           ))}
 
-          {/* Ordered: horizontal blue line at scheduled rate + square markers at scheduled times */}
-          <line x1={pad.left} y1={y(data.ordered)} x2={W - pad.right} y2={y(data.ordered)} stroke={COL.ordered} strokeWidth={2} />
-          {data.orderedPoints.map((p, i) => (
+          <g clipPath={`url(#${clipId})`}>
+          {/* Ordered: horizontal blue line at the scheduled rate, spanning only the
+              scheduled window (first→last scheduled load) — NOT the full plot width —
+              plus square markers at each scheduled time. Matches the live app, where
+              the blue line stops at the last scheduled load rather than the right edge. */}
+          {visibleOrdered.length > 0 && (
+            <line
+              x1={x(visibleOrdered[0].t)}
+              y1={y(data.ordered)}
+              x2={x(visibleOrdered[visibleOrdered.length - 1].t)}
+              y2={y(data.ordered)}
+              stroke={COL.ordered}
+              strokeWidth={2}
+            />
+          )}
+          {visibleOrdered.map((p, i) => (
             <g key={`ord-${i}`}>
               <rect
                 x={x(p.t) - 3}
@@ -325,6 +541,19 @@ export function PourChart({ data }: { data: ChartData }) {
               ))}
             </>
           )}
+          </g>
+
+          {/* Drag selection rectangle while zooming */}
+          {zoom.sel && (
+            <rect
+              x={Math.min(zoom.sel.x0, zoom.sel.x1)}
+              y={pad.top}
+              width={Math.abs(zoom.sel.x1 - zoom.sel.x0)}
+              height={innerH}
+              fill="#5aa0e6"
+              fillOpacity={0.2}
+            />
+          )}
         </svg>
       </ChartFrame>
       <Legend
@@ -345,6 +574,19 @@ export function PourChart({ data }: { data: ChartData }) {
 export function TrucksChart({ data }: { data: ChartData }) {
   const [tooltip, setTooltip] = useState<TruckTooltipData | null>(null);
   const svgRef = React.useRef<SVGSVGElement>(null);
+  const chartW = useRenderedWidth(svgRef);
+  const clipId = React.useId();
+
+  const W = 900;
+  // Shorter than the Pour chart so the 0/2.5/5/7.5 gridlines sit closer together
+  // (a compact height like the live app), instead of tall, widely-spaced bands.
+  const H = 165;
+  const pad = { top: 16, right: 20, bottom: 26, left: 40 };
+  const innerW = W - pad.left - pad.right;
+  const innerH = H - pad.top - pad.bottom;
+
+  // Drag-to-zoom on the x-axis (all hooks must run before the early return).
+  const zoom = useZoom(svgRef, data.tMin, data.tMax, W, pad.left, innerW);
 
   const pts = data.trucks;
   if (pts.length === 0) {
@@ -355,43 +597,64 @@ export function TrucksChart({ data }: { data: ChartData }) {
     );
   }
 
-  const W = 900;
-  const H = 240;
-  const pad = { top: 20, right: 20, bottom: 30, left: 40 };
-  const innerW = W - pad.left - pad.right;
-  const innerH = H - pad.top - pad.bottom;
-
-  const tMin = data.tMin;
-  const tSpan = Math.max(1, data.tMax - data.tMin);
+  // Visible x-window = current zoom range (or the full data range).
+  const vMin = zoom.vMin;
+  const vMax = zoom.vMax;
+  const tMin = vMin;
+  const tSpan = Math.max(1, vMax - vMin);
   const rawMax = Math.max(1, ...pts.map((p) => p.waiting + p.pouring));
-  // Round up to an even number with headroom (matches the live app: 0,2,4,6 …).
-  const maxY = Math.max(2, Math.ceil((rawMax + 0.5) / 2) * 2);
+  // Nice y-axis like Highcharts: pick a nice step from the rough interval (range /
+  // ~one tick per 72px of height) then extend the top to a whole tick. For a max of
+  // 6 this yields step 2.5 → 0 / 2.5 / 5 / 7.5, matching the live chart.
+  // Aim for ~2.5 tick intervals, independent of pixel height, so shrinking the chart
+  // keeps the 0/2.5/5/7.5 gridlines (just closer together) instead of dropping to 0/5/10.
+  const yStep = niceTickInterval(rawMax / 2.5);
+  const maxY = Math.max(yStep, Math.ceil(rawMax / yStep) * yStep);
 
   const x = (t: number) => pad.left + ((t - tMin) / tSpan) * innerW;
   const y = (v: number) => pad.top + innerH - (v / maxY) * innerH;
 
-  // Step-after area from a value down to the zero baseline.
+  // Width (in viewBox px) of the diagonal slope on each transition: instead of a
+  // vertical wall, the area ramps to the new value over this span. Increase for a
+  // gentler slope, decrease for steeper.
+  const RAMP = 4;
+
+  // Step area down to the zero baseline, but every transition (the first lead-in and
+  // each subsequent riser/drop) is drawn as a short diagonal slope rather than a hard
+  // vertical jump. The slope width is clamped to 60% of the gap to the next event so
+  // closely-spaced points never overlap or backtrack.
   const areaToZero = (val: (p: (typeof pts)[number]) => number) => {
     const d: string[] = [];
-    pts.forEach((p, i) => {
-      const px = x(p.t);
-      if (i === 0) d.push(`M ${px} ${y(val(p))}`);
-      else d.push(`L ${px} ${y(val(pts[i - 1]))}`, `L ${px} ${y(val(p))}`);
-    });
+    d.push(`M ${x(pts[0].t)} ${y(0)}`); // baseline at the first event
+    for (let i = 0; i < pts.length; i++) {
+      const xi = x(pts[i].t);
+      const xNext = i + 1 < pts.length ? x(pts[i + 1].t) : x(data.tMax);
+      const ramp = Math.max(0, Math.min(RAMP, (xNext - xi) * 0.6));
+      if (i > 0) d.push(`L ${xi} ${y(val(pts[i - 1]))}`); // hold previous value up to this event
+      d.push(`L ${xi + ramp} ${y(val(pts[i]))}`);          // sloped transition to this value
+    }
     const last = pts[pts.length - 1];
-    d.push(`L ${x(data.tMax)} ${y(val(last))}`, `L ${x(data.tMax)} ${y(0)}`, `L ${x(pts[0].t)} ${y(0)}`, "Z");
+    d.push(`L ${x(data.tMax)} ${y(val(last))}`, `L ${x(data.tMax)} ${y(0)}`, "Z");
     return d.join(" ");
   };
 
-  const yTicks = Array.from({ length: maxY / 2 + 1 }, (_, i) => i * 2);
-  const xTickCount = 8;
-  const xTicks = Array.from({ length: xTickCount + 1 }, (_, k) => tMin + (k / xTickCount) * tSpan);
+  const yTicks = Array.from({ length: Math.round(maxY / yStep) + 1 }, (_, i) => i * yStep);
+  // Dynamic "nice" ticks (15/30/5-min etc.) based on span + rendered width, like Highcharts.
+  const xTicks = buildTimeTicks(vMin, vMax, chartW);
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!svgRef.current) return;
+    zoom.onMove(e);
+    // While drag-zooming, show the selection rect instead of a tooltip.
+    if (zoom.dragging.current) {
+      setTooltip(null);
+      return;
+    }
     const rect = svgRef.current.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
     const svgX = (mouseX / rect.width) * W;
+    const svgY = (mouseY / rect.height) * H;
 
     // Convert SVG x coordinate back to time
     const t = tMin + ((svgX - pad.left) / innerW) * tSpan;
@@ -403,17 +666,25 @@ export function TrucksChart({ data }: { data: ChartData }) {
       else break;
     }
 
-    const domX = (x(closest.t) / W) * rect.width;
+    // Pick a SINGLE series based on which stacked band the cursor is over — like D3,
+    // where Waiting and Pouring have their own tooltips and are never merged.
+    // Green (Pouring) fills 0→pouring; gray (Waiting) sits on top, pouring→total.
     const total = closest.waiting + closest.pouring;
-    const domY = (y(total) / H) * rect.height;
+    const inGreen = svgY >= y(closest.pouring); // at/below the green top = in the green band
+    const label: "Waiting" | "Pouring" = inGreen ? "Pouring" : "Waiting";
+    const value = inGreen ? closest.pouring : closest.waiting;
+    const color = inGreen ? "#5aa02c" : "#434348";
+    const stack = inGreen ? closest.pouring : total; // marker sits on the hovered series' top
 
     setTooltip({
-      x: domX,
-      y: domY,
-      time: fmtT(closest.t),
-      waiting: closest.waiting,
-      pouring: closest.pouring,
-      total,
+      x: (x(closest.t) / W) * rect.width,
+      y: (y(stack) / H) * rect.height,
+      t: closest.t,
+      stack,
+      time: fmtTooltipTime(closest.ts, closest.t),
+      label,
+      value,
+      color,
     });
   };
 
@@ -423,16 +694,23 @@ export function TrucksChart({ data }: { data: ChartData }) {
 
   return (
     <>
-      <ChartFrame title="Trucks on the Job">
+      <ChartFrame title="Trucks on the Job" onReset={zoom.zoomed ? zoom.reset : undefined}>
         <TruckTooltip data={tooltip} />
         <svg
           ref={svgRef}
           viewBox={`0 0 ${W} ${H}`}
-          className="h-auto w-full cursor-crosshair"
+          className="h-auto w-full cursor-crosshair select-none"
           preserveAspectRatio="xMidYMid meet"
+          onMouseDown={(e) => { setTooltip(null); zoom.onDown(e); }}
           onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
+          onMouseUp={zoom.onUp}
+          onMouseLeave={() => { zoom.onUp(); handleMouseLeave(); }}
         >
+          <defs>
+            <clipPath id={clipId}>
+              <rect x={pad.left} y={pad.top} width={innerW} height={innerH} />
+            </clipPath>
+          </defs>
           {yTicks.map((t) => (
             <g key={t}>
               <line x1={pad.left} y1={y(t)} x2={W - pad.right} y2={y(t)} stroke={COL.grid} />
@@ -447,20 +725,45 @@ export function TrucksChart({ data }: { data: ChartData }) {
             </text>
           ))}
 
-          {/* Stacked: Waiting (dark) on the bottom, Pouring (green) on top — matches Highcharts. */}
-          <path d={areaToZero((p) => p.pouring + p.waiting)} fill="#90ed7d" fillOpacity={0.75} />
-          <path d={areaToZero((p) => p.waiting)} fill="#434348" fillOpacity={0.75} />
+          <g clipPath={`url(#${clipId})`}>
+            {/* Stacked to match the live app: Pouring (green) on the bottom, Waiting (dark) on top.
+                Draw the full total in dark first, then paint the pouring portion green over the base. */}
+            <path d={areaToZero((p) => p.pouring + p.waiting)} fill="#434348" fillOpacity={0.75} />
+            <path d={areaToZero((p) => p.pouring)} fill="#90ed7d" fillOpacity={0.85} />
 
-          {/* Vertical crosshair line when hovering */}
-          {tooltip && (
-            <line
-              x1={x(pts.find(p => fmtT(p.t) === tooltip.time)?.t ?? tMin)}
-              y1={pad.top}
-              x2={x(pts.find(p => fmtT(p.t) === tooltip.time)?.t ?? tMin)}
-              y2={H - pad.bottom}
-              stroke="#999"
-              strokeWidth={1}
-              strokeDasharray="4,4"
+            {/* Vertical crosshair + point marker on the hovered series. */}
+            {tooltip && (
+              <>
+                <line
+                  x1={x(tooltip.t)}
+                  y1={pad.top}
+                  x2={x(tooltip.t)}
+                  y2={H - pad.bottom}
+                  stroke="#999"
+                  strokeWidth={1}
+                  strokeDasharray="4,4"
+                />
+                <circle
+                  cx={x(tooltip.t)}
+                  cy={y(tooltip.stack)}
+                  r={4}
+                  fill={tooltip.label === "Pouring" ? "#90ed7d" : "#434348"}
+                  stroke="#fff"
+                  strokeWidth={1.5}
+                />
+              </>
+            )}
+          </g>
+
+          {/* Drag selection rectangle while zooming */}
+          {zoom.sel && (
+            <rect
+              x={Math.min(zoom.sel.x0, zoom.sel.x1)}
+              y={pad.top}
+              width={Math.abs(zoom.sel.x1 - zoom.sel.x0)}
+              height={innerH}
+              fill="#5aa0e6"
+              fillOpacity={0.2}
             />
           )}
         </svg>

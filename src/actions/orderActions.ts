@@ -124,10 +124,11 @@ export interface DoleseOrderDetail {
     tMin: number;
     tMax: number;
     ordered: number; // Scheduled delivery rate (CY/HR)
-    orderedPoints: { t: number; v: number }[]; // Points at each scheduled truck arrival
-    delivered: { t: number; v: number }[]; // Delivered rate (CY/HR) at each arrival
-    poured: { t: number; v: number }[]; // Poured rate (CY/HR) at each pour completion
-    trucks: { t: number; waiting: number; pouring: number }[];
+    // ts = raw CST-clock timestamp for the point; drives the tooltip's "Weekday, Mon D, HH:MM:SS" header.
+    orderedPoints: { t: number; v: number; ts?: string }[]; // Points at each scheduled truck arrival
+    delivered: { t: number; v: number; ts?: string }[]; // Delivered rate (CY/HR) at each arrival
+    poured: { t: number; v: number; ts?: string }[]; // Poured rate (CY/HR) at each pour completion
+    trucks: { t: number; waiting: number; pouring: number; ts?: string }[];
   };
   activity: { text: string; time: string }[];
 }
@@ -835,12 +836,15 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     .reduce((s, t) => s + (cyByTicket.get(t.ticket_id) || 0), 0);
 
   // --- Chart data ---------------------------------------------------
-  // x axis = minutes-of-day (CST clock value stored in UTC field).
+  // x axis = minutes-of-day (CST clock value stored in UTC field), kept to
+  // sub-minute (seconds) precision so brief truck arrivals/departures render as
+  // thin spikes exactly like the live Highcharts chart (whole-minute rounding
+  // would merge or widen them into blocks).
   const tsMin = (ts: string | null): number | null => {
     if (!ts) return null;
     const d = new Date(ts);
     if (Number.isNaN(d.getTime())) return null;
-    return d.getUTCHours() * 60 + d.getUTCMinutes();
+    return d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
   };
   const r2 = (n: number) => Math.round(n * 100) / 100;
   const pourOutTime = (t: TicketRow): string | null =>
@@ -880,7 +884,7 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
         rate = scheduleRate;
       }
     }
-    return { t: tsMin(t.on_job_time)!, v: r2(rate) };
+    return { t: tsMin(t.on_job_time)!, v: r2(rate), ts: t.on_job_time || undefined };
   });
 
   // Poured rate: cumulative_qty / elapsed_hours (from first delivery)
@@ -906,15 +910,24 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
         rate = scheduleRate;
       }
     }
-    return { t: tsMin(pourOutTime(t))!, v: r2(rate) };
+    return { t: tsMin(pourOutTime(t))!, v: r2(rate), ts: pourOutTime(t) || undefined };
   });
 
   // Trucks on the job: waiting (arrived, not pouring) vs pouring, over time.
+  // Remember a raw timestamp for each event's x so the tooltip can show H:MM:SS.
+  const tsByT = new Map<number, string>();
   const spans = tickets
     .map((t) => {
       const arrive = tsMin(t.on_job_time);
       if (arrive == null) return null;
-      return { arrive, pourStart: tsMin(t.unload_time), pourEnd: tsMin(pourOutTime(t)) };
+      const pourStartTs = t.unload_time;
+      const pourEndTs = pourOutTime(t);
+      const pourStart = tsMin(pourStartTs);
+      const pourEnd = tsMin(pourEndTs);
+      if (t.on_job_time) tsByT.set(arrive, t.on_job_time);
+      if (pourStart != null && pourStartTs) tsByT.set(pourStart, pourStartTs);
+      if (pourEnd != null && pourEndTs) tsByT.set(pourEnd, pourEndTs);
+      return { arrive, pourStart, pourEnd };
     })
     .filter((s): s is { arrive: number; pourStart: number | null; pourEnd: number | null } => s != null);
 
@@ -931,7 +944,7 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
       if (started) pouring++;
       else if (t >= s.arrive) waiting++;
     }
-    return { t, waiting, pouring };
+    return { t, waiting, pouring, ts: tsByT.get(t) };
   });
 
   // Include scheduled start time in the time range (like D3)
@@ -947,14 +960,16 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
 
   // Generate scheduled order points for the "Ordered" line
   // Each point is spaced by truck_space minutes, all at delivery_rate_per_hour
-  const scheduledOrderPoints: { t: number; v: number }[] = [];
+  const scheduledOrderPoints: { t: number; v: number; ts?: string }[] = [];
   if (scheduledTime && spacingMinutes && spacingMinutes > 0 && numberOfLoads && numberOfLoads > 0) {
     const startMin = tsMin(scheduledTime);
-    if (startMin != null) {
+    const startMs = new Date(scheduledTime).getTime();
+    if (startMin != null && !Number.isNaN(startMs)) {
       for (let i = 0; i < numberOfLoads; i++) {
         scheduledOrderPoints.push({
           t: startMin + i * spacingMinutes,
           v: r2(scheduleRate),
+          ts: new Date(startMs + i * spacingMinutes * 60000).toISOString(),
         });
       }
     }
