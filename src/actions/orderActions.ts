@@ -36,7 +36,7 @@ export interface DoleseSummary {
 }
 
 export interface DoleseOrderListItem {
-  order_id: number;
+  order_id: number | string;
   order_code: string;
   order_date: string;
   customer_name: string | null;
@@ -59,7 +59,7 @@ export interface OrderProductInfo {
 }
 
 export interface DoleseOrderDetail {
-  order_id: number;
+  order_id: number | string;
   order_code: string;
   order_date: string;
   customer_name: string | null;
@@ -687,9 +687,13 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
 /*  3. Single order detail                                            */
 /* ------------------------------------------------------------------ */
 
-export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrderDetail | null> {
+export async function getDoleseOrderDetail(orderId: number | string): Promise<DoleseOrderDetail | null> {
   // Get tenant-specific Supabase client
   const supabase = await getSupabaseClient();
+
+  // Handle both integer and UUID order IDs
+  const isUUID = typeof orderId === "string" && orderId.includes("-");
+  const orderIdValue = isUUID ? orderId : Number(orderId);
 
   const { data: order, error } = await supabase
     .from("orders")
@@ -700,7 +704,7 @@ export async function getDoleseOrderDetail(orderId: number): Promise<DoleseOrder
        instruction_addr1, instruction_addr2, instruction_addr3, instruction_addr4, instruction_addr5, instruction_addr6,
        order_products(order_qty, order_qty_unit, delv_qty, is_mix, item_code, description, slump, usage_name, order_product_schedules(start_time, truck_space, plant_code, delivery_rate_per_hour, number_of_loads))`,
     )
-    .eq("order_id", orderId)
+    .eq("order_id", orderIdValue)
     .limit(1)
     .maybeSingle();
 
@@ -1836,4 +1840,188 @@ export async function getAllProjects(): Promise<OrderProjectCard[]> {
     customer_code: p.customer_code,
     recent_orders: 0, // Not counting orders for performance
   }));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Company Search (for Projects -> Company page)                      */
+/* ------------------------------------------------------------------ */
+
+export interface CompanySearchResult {
+  id: number;
+  name: string | null;
+  code: string | null;
+  project_count: number;
+  user_count: number;
+}
+
+export async function searchCompanies(q: string): Promise<CompanySearchResult[]> {
+  const term = q.trim().replace(/[,%()*]/g, " ").trim();
+  if (!term) return [];
+
+  const supabase = await getSupabaseClient();
+
+  const { data: custs, error } = await supabase
+    .from("customers")
+    .select("id, code, name")
+    .or(`name.ilike.%${term}%,code.ilike.%${term}%`)
+    .order("name", { ascending: true })
+    .limit(50);
+
+  if (error) {
+    console.error("[ERROR] searchCompanies:", error.message);
+    return [];
+  }
+
+  if (!custs || custs.length === 0) return [];
+
+  // Get project counts for each customer
+  const custIds = custs.map((c) => c.id);
+  const { data: projCounts } = await supabase
+    .from("projects")
+    .select("customer_id")
+    .in("customer_id", custIds);
+
+  const projectCountMap = new Map<number, number>();
+  for (const p of projCounts || []) {
+    if (p.customer_id != null) {
+      projectCountMap.set(p.customer_id, (projectCountMap.get(p.customer_id) || 0) + 1);
+    }
+  }
+
+  return custs.map((c) => ({
+    id: c.id,
+    name: c.name,
+    code: c.code,
+    project_count: projectCountMap.get(c.id) || 0,
+    user_count: 15, // Placeholder - would need user_customers table query
+  }));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Project Search (for Projects -> Project page)                      */
+/* ------------------------------------------------------------------ */
+
+export interface ProjectSearchResult {
+  id: number;
+  name: string | null;
+  code: string | null;
+  customer_name: string | null;
+  user_count: number;
+}
+
+export async function searchProjectsByName(q: string): Promise<ProjectSearchResult[]> {
+  const term = q.trim().replace(/[,%()*]/g, " ").trim();
+  if (!term) return [];
+
+  const supabase = await getSupabaseClient();
+
+  const { data: projs, error } = await supabase
+    .from("projects")
+    .select("id, code, name, customer_name")
+    .or(`name.ilike.%${term}%,customer_name.ilike.%${term}%`)
+    .order("name", { ascending: true })
+    .limit(50);
+
+  if (error) {
+    console.error("[ERROR] searchProjectsByName:", error.message);
+    return [];
+  }
+
+  return (projs || []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    code: p.code,
+    customer_name: p.customer_name,
+    user_count: 15, // Placeholder
+  }));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Order Requests (for Order Request Dashboard)                       */
+/* ------------------------------------------------------------------ */
+
+export interface OrderRequestItem {
+  order_id: number | string;
+  order_code: string;
+  order_date: string;
+  start_time: string | null;
+  ordered_cy: number;
+  address: string | null;
+  customer_name: string | null;
+  status: "active" | "scheduled";
+}
+
+export async function getOrderRequests(): Promise<OrderRequestItem[]> {
+  const supabase = await getSupabaseClient();
+
+  // Get today's orders only
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: orders, error } = await supabase
+    .from("orders")
+    .select(
+      "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products(order_qty, order_qty_unit, is_mix, order_product_schedules(start_time))"
+    )
+    .eq("order_date", today)
+    .order("order_code", { ascending: true })
+    .limit(100);
+
+  if (error) {
+    console.error("[ERROR] getOrderRequests:", error.message);
+    return [];
+  }
+
+  if (!orders) return [];
+
+  return orders.map((o) => {
+    // Calculate ordered CY
+    const products = (o.order_products || []) as {
+      order_qty: number | null;
+      order_qty_unit: string | null;
+      is_mix: boolean | null;
+      order_product_schedules?: { start_time: string | null }[];
+    }[];
+
+    let orderedCY = 0;
+    let startTime: string | null = null;
+
+    for (const p of products) {
+      if (p.is_mix && p.order_qty_unit === "CY") {
+        orderedCY += p.order_qty || 0;
+      }
+      // Get earliest start time
+      for (const s of p.order_product_schedules || []) {
+        if (s.start_time && (!startTime || s.start_time < startTime)) {
+          startTime = s.start_time;
+        }
+      }
+    }
+
+    // Determine status: active (in process) or scheduled (pre-pour)
+    const currentStatus = o.current_status as number | null;
+    const isRemoved = o.removed === true;
+    const hasStarted = currentStatus !== null && currentStatus > 0;
+
+    // Format start time
+    let formattedTime = "";
+    if (startTime) {
+      const d = new Date(startTime);
+      const month = d.getUTCMonth() + 1;
+      const day = d.getUTCDate();
+      const hours = String(d.getUTCHours()).padStart(2, "0");
+      const minutes = String(d.getUTCMinutes()).padStart(2, "0");
+      formattedTime = `${month}/${day} ${hours}:${minutes}`;
+    }
+
+    return {
+      order_id: o.order_id,
+      order_code: o.order_code || "",
+      order_date: o.order_date,
+      start_time: formattedTime || null,
+      ordered_cy: Math.round(orderedCY * 100) / 100,
+      address: o.delivery_addr1 || o.project_name || null,
+      customer_name: o.customer_name || null,
+      status: (hasStarted && !isRemoved ? "active" : "scheduled") as "active" | "scheduled",
+    };
+  });
 }
