@@ -30,7 +30,7 @@ export default async function MarketSummaryPage({
           href="/rollout/search"
           left={
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/icons/contractor.png" alt="" className="h-12 w-auto" />
+            <img src="/icons/contractor.png" alt="" style={{ width: 72, height: 82 }} />
           }
           tone="blue"
           lines={[
@@ -43,7 +43,7 @@ export default async function MarketSummaryPage({
           href="/order-request/project"
           left={
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/icons/fill-form.png" alt="" className="h-11 w-auto" />
+            <img src="/icons/fill-form.png" alt="" style={{ width: 72, height: 82 }} />
           }
           tone="blue"
           lines={[
