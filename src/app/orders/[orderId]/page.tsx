@@ -49,19 +49,13 @@ export default async function OrderDetailPage({
         backHref={backHref}
       />
 
-      <h2 className="text-base font-extrabold uppercase tracking-wide text-slate-800">
+      <h4 style={{ fontSize: "17.5px", margin: "10px 0", fontWeight: "bold", lineHeight: "20px", textRendering: "optimizeLegibility" }} className="uppercase tracking-wide text-slate-800">
         {STATUS_LABEL[detail.status]} — {detail.customer_name || "—"}
-      </h2>
+      </h4>
 
-      {/* Spacer below the status line (matches the live app); XLS + PDF icons at the right. */}
+      {/* Spacer below the status line (matches the live app); PDF icon at the right. */}
       <div className="relative h-28">
-        <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/icons/excel-xls.png"
-            alt="Export to Excel"
-            className="h-12 w-12 cursor-pointer"
-          />
+        <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/icons/pdf-icon.png"
@@ -87,7 +81,7 @@ export default async function OrderDetailPage({
               href={`/orders/${detail.order_id}/tickets`}
             />
             <StatTile label="Ordered" value={detail.ordered_cy.toFixed(2)} sub="CY" tone="blue" />
-            <StatTile label="Ticketed" value={detail.ticketed_cy.toFixed(2)} sub="CY" tone="green" href={`/orders/${detail.order_id}/tickets`} />
+            <StatTile label="Ticketed" value={detail.ticketed_cy.toFixed(2)} sub="CY" tone="blue" href={`/orders/${detail.order_id}/tickets`} />
             <StatTile label="On Job" value={detail.on_job_cy.toFixed(2)} sub="CY" tone="blue" />
           </>
         ) : (
