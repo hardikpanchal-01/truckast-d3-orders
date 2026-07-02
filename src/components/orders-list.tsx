@@ -57,7 +57,8 @@ export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
         <div className="flex flex-wrap">
           {visible.map((o) => {
             const tone = STATUS_TONE[o.status];
-            const usePie = o.status === "IN_PROCESS" || o.status === "COMPLETED";
+            const isCompleted = o.status === "COMPLETED";
+            const usePie = o.status === "IN_PROCESS";
             const pct = o.ordered_cy > 0 ? o.ticketed_cy / o.ordered_cy : 0;
             // Only PRE-POUR tiles lead with the scheduled time (matches the live app).
             const start = o.status === "PRE_POUR" ? startLabel(o.start_time) : "";
@@ -67,13 +68,14 @@ export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
                 key={o.order_id}
                 href={`/orders/${o.order_id}`}
                 tone={tone}
+                completed={isCompleted}
                 left={
                   usePie ? (
                     <PieGauge pct={pct} size={52} tinted />
-                  ) : (
+                  ) : !isCompleted ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src="/icons/scheduled.png" alt="" className="h-[64px] w-auto" />
-                  )
+                  ) : undefined
                 }
                 lines={[
                   {

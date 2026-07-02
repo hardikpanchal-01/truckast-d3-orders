@@ -136,6 +136,21 @@ export async function saveSelectedTenant(formData: FormData): Promise<void> {
   redirect("/");
 }
 
+export async function selectTenant(tenantName: string): Promise<void> {
+  if (tenantName) {
+    const cookieStore = await cookies();
+    cookieStore.set(TENANT_COOKIE, tenantName, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365, // 1 year
+      path: "/",
+    });
+  }
+
+  redirect("/");
+}
+
 export async function getTenantCredentials(tenantName: string): Promise<TenantWithCredentials | null> {
   const { data, error } = await supabaseAuth
     .schema("auth_tenant")

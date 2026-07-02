@@ -1,7 +1,8 @@
 import { getDoleseOrders, getDoleseSummary } from "@/actions/orderActions";
-import { SubHeader, FoldCard, Dropdown } from "@/components/d3-ui";
+import { SubHeader, Dropdown } from "@/components/d3-ui";
 import { DateSelect } from "@/components/date-select";
 import { OrdersList } from "@/components/orders-list";
+import { DownloadTile } from "@/components/download-tile";
 
 export const dynamic = "force-dynamic";
 
@@ -34,21 +35,7 @@ export default async function OrdersPage({
       </Dropdown>
 
       {/* Download tile */}
-      <div className="flex">
-        <FoldCard tone="green" className="mb-[5px] mr-[5px] w-[274px] text-white">
-          <div className="flex h-[90px] items-center gap-3 py-2 pr-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icons/excel-xls.png" alt="" className="ml-2 h-12 w-12 shrink-0" />
-            <div className="leading-tight">
-              <p className="text-[14px] opacity-90">
-                {new Date(dateStr).toLocaleDateString("en-US")}
-              </p>
-              <p className="text-[16px] font-bold">ORDERS</p>
-              <p className="text-[12px] opacity-90">Download</p>
-            </div>
-          </div>
-        </FoldCard>
-      </div>
+      <DownloadTile date={dateStr} />
 
       <OrdersList orders={orders} />
     </div>
