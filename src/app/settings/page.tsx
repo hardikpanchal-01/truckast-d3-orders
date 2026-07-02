@@ -1,5 +1,6 @@
 import { SubHeader } from "@/components/d3-ui";
-import { getTenants, getSelectedTenant, saveSelectedTenant } from "@/actions/tenantActions";
+import { getTenants, getSelectedTenant } from "@/actions/tenantActions";
+import { TenantSelector } from "@/components/tenant-selector";
 
 export const dynamic = "force-dynamic";
 
@@ -65,18 +66,12 @@ export default async function SettingsPage() {
   const currentTenant = selectedTenant || tenants[0]?.name || "";
 
   return (
-    <form action={saveSelectedTenant} className="space-y-5">
+    <div className="space-y-5">
       <SubHeader title="SETTINGS" backHref="/" />
 
       <p className="text-sm text-[#333]">Welcome, Kurt!</p>
 
-      <select name="tenant" className={SEL} defaultValue={currentTenant}>
-        {tenants.map((tenant) => (
-          <option key={tenant.uuid} value={tenant.name}>
-            {tenant.name}
-          </option>
-        ))}
-      </select>
+      <TenantSelector tenants={tenants} currentTenant={currentTenant} />
 
       <div>
         <Row label="Mobile Number:">
@@ -192,13 +187,7 @@ export default async function SettingsPage() {
         >
           ADMIN Settings
         </button>
-        <button
-          type="submit"
-          className="rounded-[4px] bg-[#d2322d] px-6 py-2 text-sm font-semibold text-white hover:bg-[#c12e2a]"
-        >
-          Save
-        </button>
       </div>
-    </form>
+    </div>
   );
 }

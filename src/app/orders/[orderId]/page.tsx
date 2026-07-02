@@ -36,7 +36,7 @@ export default async function OrderDetailPage({
 }) {
   const { orderId } = await params;
   const { date } = await searchParams;
-  const detail = await getDoleseOrderDetail(Number(orderId));
+  const detail = await getDoleseOrderDetail(orderId);
   if (!detail) notFound();
 
   const backHref = date ? `/orders?date=${date}` : "/orders";
@@ -55,10 +55,10 @@ export default async function OrderDetailPage({
 
       {/* Spacer below the status line (matches the live app); XLS + PDF icons at the right. */}
       <div className="relative h-28">
-        <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-3">
+        <div className="absolute right-0 top-1/2 flex -translate-y-1/2 items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://d3.truckast.com/Images/excel-xls-icon.48x48pixel.png"
+            src="/icons/excel-xls.png"
             alt="Export to Excel"
             className="h-12 w-12 cursor-pointer"
           />

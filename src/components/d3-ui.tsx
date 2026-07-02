@@ -60,34 +60,81 @@ const ROLLOUT_TABS = [
 // The Order Request (order concrete) section uses its own brand + tab set.
 const ORDER_TABS = ["DASHBOARD", "ORDER FORM", "SETTINGS", "PUBLISH", "ADMIN", "TRUCKAST", "LOGOUT"] as const;
 
+// The Projects section uses its own brand + tab set.
+const PROJECTS_TABS = [
+  "PUBLISH",
+  "ADMIN",
+  "TRUCKAST",
+  "ROLLOUT",
+  "HELP",
+  "SETTINGS",
+  "LOGOUT",
+] as const;
+
 // Routes wired so far; tabs without an entry render as inert labels.
 const TAB_HREF: Record<string, string> = {
   MARKETS: "/",
   TRUCKAST: "/",
   SETTINGS: "/settings",
+  ADMIN: "/admin",
+  PROJECTS: "/projects",
   ROLLOUT: "/rollout/search",
-  ORDER: "/order-request/project",
+  ORDER: "/order-request",
 };
 
 export function TopNav() {
   const pathname = usePathname();
   const isRollout = pathname?.startsWith("/rollout") ?? false;
   const isOrder = pathname?.startsWith("/order-request") ?? false;
-  const brand = isRollout ? "ROLLOUT" : isOrder ? "ORDER REQUEST" : "TRUCKAST";
-  const tabs: readonly string[] = isRollout ? ROLLOUT_TABS : isOrder ? ORDER_TABS : MARKETS_TABS;
+  const isProjects = pathname?.startsWith("/projects") ?? false;
+  const brand = isRollout ? "ROLLOUT" : isOrder ? "ORDER REQUEST" : isProjects ? "PROJECTS" : "TRUCKAST";
+  const tabs: readonly string[] = isRollout ? ROLLOUT_TABS : isOrder ? ORDER_TABS : isProjects ? PROJECTS_TABS : MARKETS_TABS;
   // First tab is the active/highlighted tab in the markets nav; the others have none.
-  const active = isRollout || isOrder ? "" : MARKETS_TABS[0];
+  const active = isRollout || isOrder || isProjects ? "" : MARKETS_TABS[0];
   return (
-    <header className="bg-[#1c1c1c] text-[#cfcfcf]">
-      <div className="mx-auto flex min-h-[50px] w-full max-w-[1170px] flex-wrap items-center gap-x-6 px-3 sm:px-0">
-        <Link href="/" className="text-[20px] font-light tracking-wide text-[#9a9a9a]">
+    <header
+      style={{
+        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+        fontSize: "14px",
+        lineHeight: "20px",
+        minHeight: "40px",
+        border: "1px solid #d4d4d4",
+        borderWidth: "0 0 1px",
+        borderColor: "#252525",
+        borderRadius: "0",
+        paddingRight: "0",
+        paddingLeft: "0",
+        backgroundColor: "#1b1b1b",
+        backgroundImage: "linear-gradient(to bottom, #222, #111)",
+        backgroundRepeat: "repeat-x",
+        boxShadow: "0 1px 10px rgba(0, 0, 0, 0.1)",
+        color: "#333",
+      }}
+    >
+      <div className="mx-auto flex min-h-[40px] w-full max-w-[1170px] items-center px-5">
+        <Link
+          href="/"
+          style={{
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+            lineHeight: "20px",
+            textDecoration: "none",
+            display: "block",
+            float: "left",
+            padding: "10px 20px 10px",
+            marginLeft: "-20px",
+            fontSize: "20px",
+            fontWeight: 200,
+            textShadow: "0 -1px 0 rgba(0, 0, 0, 0.25)",
+            color: "#999",
+          }}
+        >
           {brand}
         </Link>
-        <nav className="flex flex-wrap items-center text-[14px] font-normal tracking-wide">
+        <nav className="flex items-center text-[13px] font-normal uppercase tracking-wide">
           {tabs.map((tab) => {
             const href = TAB_HREF[tab];
             const cls = [
-              "cursor-pointer px-3 py-[14px] hover:text-white",
+              "cursor-pointer px-[10px] py-[10px] hover:text-white",
               tab === active ? "text-white" : "text-[#8a8a8a]",
             ].join(" ");
             return href ? (
@@ -179,8 +226,13 @@ export function FoldCard({
   const t = TONES[tone];
   return (
     <div
-      className={["relative overflow-hidden", className || ""].join(" ")}
-      style={{ backgroundColor: t.bg, ...style }}
+      className={["relative overflow-hidden cursor-pointer text-white", className || ""].join(" ")}
+      style={{
+        position: "relative",
+        backgroundColor: t.bg,
+        display: "block",
+        ...style,
+      }}
     >
       {children}
       {noFold ? null : (
@@ -193,6 +245,28 @@ export function FoldCard({
         />
       )}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Completed checkmark (for completed orders)                         */
+/* ------------------------------------------------------------------ */
+
+export function CompletedCheckmark({
+  size = 48,
+}: {
+  size?: number;
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/icons/checkmark.png"
+      alt="Completed"
+      style={{
+        width: size,
+        height: size,
+      }}
+    />
   );
 }
 
@@ -252,6 +326,7 @@ export function IconTile({
   lines,
   href,
   onClick,
+  completed = false,
 }: {
   icon?: LucideIcon;
   left?: React.ReactNode;
@@ -259,17 +334,25 @@ export function IconTile({
   lines: TileLine[];
   href?: string;
   onClick?: () => void;
+  /** Show a completed checkmark icon instead of the regular icon */
+  completed?: boolean;
 }) {
-  const interactive = !!(href || onClick);
-  const body = <TileBody icon={icon} left={left} lines={lines} />;
+  // If completed, show checkmark; otherwise use the provided left/icon
+  const leftContent = completed ? <CompletedCheckmark size={48} /> : left;
+  const body = <TileBody icon={icon} left={leftContent} lines={lines} />;
 
   // Match D3 .tile CSS exactly
   const tileClass = "relative block cursor-pointer text-white";
   const tileStyle: React.CSSProperties = {
+    position: "relative",
     width: 274,
     height: 90,
     marginRight: 5,
     marginBottom: 5,
+    float: "left",
+    color: "white",
+    cursor: "pointer",
+    display: "block",
   };
 
   if (href) {
