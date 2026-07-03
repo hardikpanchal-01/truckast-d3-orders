@@ -153,6 +153,7 @@ export interface DoleseLoad {
 export interface DoleseTicketSummary {
   order_id: number;
   order_code: string;
+  order_date: string;
   subtitle: string | null;
   customer_name: string | null;
   status: OrderStatus;
@@ -1299,7 +1300,7 @@ export async function getDoleseTicketSummary(orderId: number): Promise<DoleseTic
   const { data: order, error } = await supabase
     .from("orders")
     .select(
-      "order_id, order_code, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products(order_qty, order_qty_unit, delv_qty, is_mix)",
+      "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products(order_qty, order_qty_unit, delv_qty, is_mix)",
     )
     .eq("order_id", orderId)
     .limit(1)
@@ -1366,6 +1367,7 @@ export async function getDoleseTicketSummary(orderId: number): Promise<DoleseTic
   return {
     order_id: order.order_id,
     order_code: order.order_code,
+    order_date: order.order_date,
     subtitle: order.delivery_addr1 || order.project_name || null,
     customer_name: order.customer_name,
     status,

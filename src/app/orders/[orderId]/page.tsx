@@ -14,6 +14,13 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   CANCELED: "CANCELLED",
 };
 
+/** order_date -> "-7/3" title suffix, matching D3 (month/day, no zero-pad; TZ-safe slice). */
+function dateSuffix(s: string | null | undefined): string {
+  if (!s) return "";
+  const [, m, d] = s.slice(0, 10).split("-").map(Number);
+  return m && d ? `-${m}/${d}` : "";
+}
+
 /** "9:47 AM" -> { value: "9:47", sub: "AM" }, "8 MIN" -> { value: "8", sub: "MIN" } */
 function splitTime(s: string | null): { value: string; sub?: string } {
   if (!s) return { value: "—" };
@@ -44,7 +51,7 @@ export default async function OrderDetailPage({
   return (
     <div className="space-y-5">
       <SubHeader
-        title={`Order ${detail.order_code}`}
+        title={`Order ${detail.order_code}${dateSuffix(detail.order_date)}`}
         subtitle={detail.delivery_addr1 || detail.project_name || undefined}
         backHref={backHref}
       />
