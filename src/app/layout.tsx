@@ -20,7 +20,7 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} antialiased`}>
       <body className="bg-white">
         <TopNav />
-        <main style={{ width: 1170, margin: "0 auto" }} className="px-3 py-4 sm:px-0 sm:py-6">{children}</main>
+        <main className="mx-auto w-full max-w-[724px] px-[15px] py-[20px] min-[980px]:max-w-[1170px] min-[980px]:px-0">{children}</main>
       </body>
     </html>
   );

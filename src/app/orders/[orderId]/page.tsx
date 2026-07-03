@@ -68,7 +68,7 @@ export default async function OrderDetailPage({
       {/* Stat tiles — status-aware, color-coded to match the live D3 app.
           PRE-POUR, IN_PROCESS, and CANCELED show scheduling info (next truck, ordered CY …);
           COMPLETED orders show pour results (poured, on-time, delays). */}
-      <div className="flex max-w-[279px] flex-wrap">
+      <div className="flex w-full flex-wrap sm:max-w-[279px]">
         {detail.status === "PRE_POUR" || detail.status === "IN_PROCESS" || detail.status === "CANCELED" ? (
           <>
             <StatTile label="Next Truck" {...splitTime(detail.next_truck)} tone="blue" />
@@ -109,7 +109,7 @@ export default async function OrderDetailPage({
 
       {/* Weather */}
       {detail.weather && (
-        <FoldCard tone="blue" noFold className="h-[90px] w-[274px] text-white">
+        <FoldCard tone="blue" noFold className="h-[90px] w-full text-white sm:w-[274px]">
           <div className="flex h-[90px] items-center gap-3 px-3">
             {detail.weather.icon ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -151,7 +151,7 @@ export default async function OrderDetailPage({
 
       {/* Evaporation rate (ACI 305 surface-evaporation guide) */}
       {detail.evaporation && (
-        <FoldCard tone="green" noFold className="w-[274px] text-white">
+        <FoldCard tone="green" noFold className="w-full text-white sm:w-[274px]">
           <div className="flex items-center gap-3 px-3 py-2">
             <EvapIcon className="h-12 w-12 shrink-0" />
             <div className="min-w-0 leading-tight">

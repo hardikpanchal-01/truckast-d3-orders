@@ -35,7 +35,7 @@ function TileBody({
 
 function ProductCard({ p }: { p: TicketProductCard }) {
   return (
-    <FoldCard tone={p.is_mix ? "green" : "blue"} noFold className="h-[90px] w-[274px] text-white">
+    <FoldCard tone={p.is_mix ? "green" : "blue"} noFold className="h-[90px] w-full text-white sm:w-[274px]">
       <TileBody
         slug="order"
         badge="ORDER"
@@ -49,7 +49,7 @@ function ProductCard({ p }: { p: TicketProductCard }) {
 
 function EventCard({ ev }: { ev: TicketEventCard }) {
   return (
-    <FoldCard tone={ev.dark ? "gray" : "blue"} noFold className="h-[90px] w-[274px] text-white">
+    <FoldCard tone={ev.dark ? "gray" : "blue"} noFold className="h-[90px] w-full text-white sm:w-[274px]">
       <TileBody
         slug={ev.dark ? "verifi" : ev.icon}
         badge={ev.dark ? undefined : ev.badge}
@@ -85,7 +85,7 @@ export default async function TicketDetailPage({
       </div>
 
       {/* Plant / truck header card */}
-      <FoldCard tone="blue" noFold className="h-[90px] w-[274px] text-white">
+      <FoldCard tone="blue" noFold className="h-[90px] w-full text-white sm:w-[274px]">
         <TileBody
           slug="truck"
           title={detail.plant_name ? `PLANT: ${detail.plant_name}` : ""}

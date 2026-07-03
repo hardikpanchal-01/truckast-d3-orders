@@ -36,13 +36,10 @@ function OrderRequestTile({ order }: { order: OrderRequestItem }) {
 
   return (
     <div
-      className="relative block cursor-pointer text-white"
+      className="relative block w-full cursor-pointer text-white sm:mr-[5px] sm:w-[274px]"
       style={{
-        width: 274,
         height: 90,
-        marginRight: 5,
         marginBottom: 5,
-        float: "left",
       }}
     >
       <FoldCard tone={tone} className="h-full w-full">

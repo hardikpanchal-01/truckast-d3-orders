@@ -15,7 +15,7 @@ function LoadCard({ load, orderId }: { load: DoleseLoad; orderId: number }) {
   const [iconBroken, setIconBroken] = React.useState(false);
   return (
     <Link href={`/orders/${orderId}/tickets/${load.ticket_id}`} className="block">
-    <FoldCard tone="blue" className="h-[90px] w-[274px] cursor-pointer text-white">
+    <FoldCard tone="blue" className="h-[90px] w-full cursor-pointer text-white sm:w-[274px]">
       <div className="flex h-full items-center gap-2 p-1">
         <div className="relative h-[82px] w-[72px] shrink-0">
           {iconBroken ? (

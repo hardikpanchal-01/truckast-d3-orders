@@ -187,6 +187,12 @@ export default async function SettingsPage() {
         >
           ADMIN Settings
         </button>
+        <button
+          type="button"
+          className="rounded-[4px] bg-[#c9302c] px-8 py-2 text-sm font-semibold text-white hover:bg-[#ac2925]"
+        >
+          Save
+        </button>
       </div>
     </div>
   );
