@@ -54,12 +54,12 @@ export function MarketTiles({ summary, dateStr }: { summary: DoleseSummary; date
           <IconTile
             tone="green"
             href={`/orders?date=${dateStr}`}
-            left={<div style={{ marginLeft: 20, marginRight: 20 }}><PieGauge pct={pct} size={72} /></div>}
+            left={<div style={{ marginLeft: 10, marginRight: 10 }}><PieGauge pct={pct} size={60} /></div>}
             lines={[
               { text: summary.name.split(" ")[0].toUpperCase(), size: 14 },
               { text: `${fmt(summary.usedCY)} OF ${fmt(summary.totalCY)} CY`, bold: true, size: 16 },
               {
-                text: `Total ${summary.totalOrders}, Active ${summary.activeOrders}, Cancelled ${summary.cancelledOrders}`,
+                text: `Tot ${summary.totalOrders}, Act ${summary.activeOrders}, Can ${summary.cancelledOrders}`,
                 size: 12,
                 dim: true,
               },

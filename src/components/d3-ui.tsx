@@ -246,7 +246,7 @@ export function SubHeader({
         <img src="/icons/arrow-back.png" alt="Back" className="h-8 w-8" />
       </Link>
       <div className="min-w-0 text-center">
-        <strong className="block truncate text-[16px] font-bold leading-[19px] text-[#333]">
+        <strong className="block truncate text-[16px] font-bold leading-[19px] text-[#333] pb-2">
           {title}
         </strong>
         {subtitle ? <div className="text-xs leading-tight text-[#555]">{subtitle}</div> : null}
@@ -351,8 +351,9 @@ function TileBody({
 }) {
   return (
     <div className="flex h-full w-full items-center">
-      {/* tileIcon */}
-      <div className="flex h-[82px] w-[72px] shrink-0 items-center justify-center text-white">
+      {/* tileIcon — min-w (not fixed w) so an icon's own margins (e.g. the blue tiles'
+          marginRight) push the text over instead of being swallowed by a fixed box. */}
+      <div className="flex h-[82px] min-w-[72px] shrink-0 items-center justify-center text-white">
         {left ? left : Icon ? <Icon className="h-10 w-10" strokeWidth={1.6} /> : null}
       </div>
       {/* tileInfoSection */}
@@ -401,8 +402,8 @@ export function IconTile({
   const leftContent = completed ? <CompletedCheckmark size={48} /> : left;
   const body = <TileBody icon={icon} left={leftContent} lines={lines} />;
 
-  // Match D3 .tile CSS exactly
-  const tileClass = "relative block cursor-pointer text-white";
+  // Match D3 .tile CSS exactly; darken slightly on hover (D3's tile hover effect).
+  const tileClass = "relative block cursor-pointer text-white transition duration-150 hover:brightness-90";
   const tileStyle: React.CSSProperties = {
     position: "relative",
     width: 274,
@@ -483,6 +484,8 @@ export function PieGauge({
       {usedPath ? (
         <path d={usedPath} fill={usedFill} stroke={stroke} strokeWidth="1" strokeLinejoin="round" />
       ) : null}
+      {/* Radius seam line at 12 o'clock — D3's pie always shows this, even when full. */}
+      <line x1={c} y1={c} x2={c} y2={c - r} stroke={stroke} strokeWidth="1" />
     </svg>
   );
 }

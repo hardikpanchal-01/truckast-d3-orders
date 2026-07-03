@@ -12,6 +12,13 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   CANCELED: "CANCELLED",
 };
 
+/** order_date -> "-7/3" title suffix, matching D3 (month/day, no zero-pad; TZ-safe slice). */
+function dateSuffix(s: string | null | undefined): string {
+  if (!s) return "";
+  const [, m, d] = s.slice(0, 10).split("-").map(Number);
+  return m && d ? `-${m}/${d}` : "";
+}
+
 export default async function TicketSummaryPage({
   params,
 }: {
@@ -24,7 +31,7 @@ export default async function TicketSummaryPage({
   return (
     <div className="space-y-5">
       <SubHeader
-        title={`Order ${summary.order_code}`}
+        title={`Order ${summary.order_code}${dateSuffix(summary.order_date)}`}
         subtitle={summary.subtitle || undefined}
         backHref={`/orders/${summary.order_id}`}
       />
