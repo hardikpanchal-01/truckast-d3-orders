@@ -21,16 +21,18 @@ export default async function MarketSummaryPage({
 
   return (
     <div className="space-y-4">
-      <SubHeader title={`${summary.name} Orders`} />
+      <SubHeader title={`${summary.name.split(" ")[0].charAt(0).toUpperCase() + summary.name.split(" ")[0].slice(1).toLowerCase()} Orders`} />
 
-      <DateSelect value={dateStr} valueTo={dateToStr} />
+      <div style={{ marginTop: 15 }}>
+        <DateSelect value={dateStr} valueTo={dateToStr} />
+      </div>
 
-      <div className="flex flex-wrap">
+      <div className="flex flex-wrap" style={{ marginTop: 10, marginBottom: 5 }}>
         <IconTile
           href="/rollout/search"
           left={
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/icons/contractor.png" alt="" style={{ width: 72, height: 82 }} />
+            <img src="/icons/contractor.png" alt="" style={{ width: 72, height: 82, marginRight: 25, marginBottom: 5, marginLeft: 30 }} />
           }
           tone="blue"
           lines={[
@@ -43,7 +45,7 @@ export default async function MarketSummaryPage({
           href="/order-request/project"
           left={
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/icons/fill-form.png" alt="" style={{ width: 72, height: 82 }} />
+            <img src="/icons/fill-form.png" alt="" style={{ width: 64, height: 64, marginRight: 25, marginBottom: 5, marginLeft: 30 }} />
           }
           tone="blue"
           lines={[

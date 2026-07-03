@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 function mdy(iso: string) {
   const [y, m, d] = iso.split("-");
-  return `${Number(m)}/${Number(d)}/${y}`;
+  return `${m}/${d}/${y}`;
 }
 
 function formatMonthYear(date: Date) {
@@ -176,7 +176,8 @@ export function DateSelect({ value, valueTo }: { value: string; valueTo?: string
     <select
       value={displayValue}
       onChange={(e) => navigate(e.target.value)}
-      className="h-[30px] w-full rounded-[4px] border border-[#cccccc] bg-white px-3 py-0 text-sm leading-none text-[#333] outline-none focus:border-[#2f7ed8]"
+      className="block h-[30px] w-full cursor-pointer rounded-[4px] border border-[#ccc] bg-white px-[6px] py-[4px] align-middle text-[14px] font-normal leading-[30px] text-[#555] outline-none focus:border-[#2f7ed8]"
+      style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
     >
       {/* Show custom date/range if not in presets */}
       {!currentOption && <option value={displayValue}>{displayLabel}</option>}

@@ -11,7 +11,7 @@ export function DownloadTile({ date }: { date: string }) {
     <div className="flex">
       <FoldCard
         tone="green"
-        className="mb-[5px] mr-[5px] w-[274px] cursor-pointer text-white"
+        className="mb-[5px] w-full cursor-pointer text-white sm:mr-[5px] sm:w-[274px]"
       >
         <div
           className="flex h-[90px] items-center gap-3 py-2 pr-3"

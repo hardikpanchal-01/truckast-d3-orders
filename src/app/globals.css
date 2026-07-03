@@ -27,3 +27,75 @@ body {
   background: #ffffff;
   -webkit-text-size-adjust: 100%;
 }
+
+/* Navbar styles */
+.navbar .nav>li>a {
+  float: none;
+  padding: 10px 15px 10px;
+  color: #777;
+  text-decoration: none;
+  text-shadow: 0 1px 0 #fff;
+}
+
+.navbar-inverse .brand {
+  color: #999;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+.navbar-inverse .nav>li>a {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 979px) {
+  /* Make navbar relative for absolute positioning of nav-collapse */
+  .navbar {
+    position: relative;
+  }
+
+  /* Make nav-collapse overlay on top of content */
+  .nav-collapse {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background-color: #1a1a1a;
+  }
+
+  .nav-collapse .nav>li>a {
+    margin: 0 0 2px;
+  }
+
+  .nav-collapse .nav>li>a,
+  .nav-collapse .dropdown-menu a {
+    padding: 9px 15px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: normal;
+    color: #777;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+  }
+
+  .navbar-inverse .nav-collapse .nav>li>a,
+  .navbar-inverse .nav-collapse .dropdown-menu a {
+    color: #999999;
+  }
+
+  /* Hover state with dark background */
+  .navbar-inverse .nav-collapse .nav>li>a:hover,
+  .navbar-inverse .nav-collapse .nav>li>a:focus {
+    color: #fff;
+    background-color: #333;
+    background-image: none;
+  }
+
+  /* Active state with gradient background */
+  .navbar-inverse .nav-collapse .nav>li.active>a {
+    color: #fff;
+    background-image: linear-gradient(to right, #c4d63f, #8dc63f, #00a650, #00a99d, #00aeef);
+    background-color: #8dc63f;
+  }
+}
