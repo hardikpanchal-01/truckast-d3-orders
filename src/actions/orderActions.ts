@@ -46,6 +46,10 @@ export interface DoleseOrderListItem {
   ordered_cy: number;
   ticketed_cy: number;
   status: OrderStatus;
+  /** Dispatch label (Firm / W/C / Hold / Cancelled …) — drives PRE-POUR card colour. */
+  dispatch_status: string;
+  /** Poured speed as a % of planned speed (0–100+), or null. Drives IN_PROCESS/COMPLETE colour. */
+  pour_pct: number | null;
 }
 
 export interface OrderProductInfo {
@@ -618,7 +622,7 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
     supabase
       .from("orders")
       .select(
-        "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix, item_code, order_product_schedules(start_time))",
+        "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix, item_code, order_product_schedules(start_time, delivery_rate_per_hour))",
       )
       .gte("order_date", from)
       .lt("order_date", to)
@@ -654,12 +658,20 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
   // Get the filtered order IDs
   const filteredIds = new Set(filteredOrders.map((o) => o.order_id));
 
-  // Map to DoleseOrderListItem, only including filtered orders
+  // Map to DoleseOrderListItem, only including filtered orders. Also capture each order's
+  // planned delivery rate (CY/HR) so we can later compute the poured-speed %.
+  const plannedByOrder = new Map<number, number>();
   const items: DoleseOrderListItem[] = cyOrders
     .filter((o) => filteredIds.has(o.order_id))
     .map((o) => {
-      const products = (o.order_products || []) as OrderProductRow[];
+      const products = (o.order_products || []) as (OrderProductRow & {
+        order_product_schedules?: { start_time: string | null; delivery_rate_per_hour?: number | null }[];
+      })[];
       const { ordered, ticketed } = sumCY(products);
+      const planned = products
+        .flatMap((p) => p.order_product_schedules || [])
+        .find((s) => s?.delivery_rate_per_hour != null)?.delivery_rate_per_hour;
+      if (planned != null) plannedByOrder.set(Number(o.order_id), Number(planned));
       return {
         order_id: o.order_id,
         order_code: o.order_code,
@@ -672,8 +684,70 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
         ticketed_cy: Math.round(ticketed * 100) / 100,
         // current_status === 4 covers "completed"; no per-order ticket fetch needed here.
         status: deriveStatus(o, ordered, ticketed, false),
+        dispatch_status: getDispatchStatus(o.current_status, o.removed, o.remove_reason_code),
+        pour_pct: null as number | null,
       };
     });
+
+  // Poured-speed % for IN_PROCESS / COMPLETE orders (drives their card colour). Batch-fetch
+  // tickets for those orders in one round-trip, then pour rate = poured CY / pour-window hrs.
+  const activeIds = items
+    .filter((i) => i.status === "IN_PROCESS" || i.status === "COMPLETED")
+    .map((i) => Number(i.order_id));
+  if (activeIds.length > 0) {
+    const { data: tix } = await supabase
+      .from("tickets")
+      .select(`${TICKET_FIELDS}, order_id`)
+      .in("order_id", activeIds)
+      .limit(5000);
+    const tickets = ((tix || []) as (TicketRow & { order_id: number })[]).filter(isValidTicket);
+
+    const cyByTicket = new Map<number, number>();
+    if (tickets.length > 0) {
+      const { data: tp } = await supabase
+        .from("ticket_products")
+        .select("ticket_id, is_mix, load_qty, order_qty_unit")
+        .in("ticket_id", tickets.map((t) => t.ticket_id))
+        .limit(20000);
+      for (const p of tp || []) {
+        if (p.is_mix === true && isCubicYardUnit(p.order_qty_unit)) {
+          cyByTicket.set(p.ticket_id, (cyByTicket.get(p.ticket_id) || 0) + Number(p.load_qty || 0));
+        }
+      }
+    }
+
+    const tByOrder = new Map<number, (TicketRow & { order_id: number })[]>();
+    for (const t of tickets) {
+      const arr = tByOrder.get(t.order_id) ?? [];
+      arr.push(t);
+      tByOrder.set(t.order_id, arr);
+    }
+    const minOf = (ts: string | null): number | null => {
+      if (!ts) return null;
+      const d = new Date(ts);
+      return Number.isNaN(d.getTime()) ? null : d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
+    };
+    const pourEndOf = (t: TicketRow) => t.end_unload || t.wash_time || t.at_plant_time || t.to_plant_time;
+
+    for (const it of items) {
+      if (it.status !== "IN_PROCESS" && it.status !== "COMPLETED") continue;
+      const ot = tByOrder.get(Number(it.order_id)) || [];
+      let poured = 0;
+      const starts: number[] = [];
+      const ends: number[] = [];
+      for (const t of ot) {
+        const ps = minOf(t.unload_time);
+        const pe = minOf(pourEndOf(t));
+        if (ps != null) starts.push(ps);
+        if (pe != null) { ends.push(pe); poured += cyByTicket.get(t.ticket_id) || 0; }
+      }
+      const planned = plannedByOrder.get(Number(it.order_id));
+      if (starts.length && ends.length && poured > 0 && planned && planned > 0) {
+        const durMin = Math.max(...ends) - Math.min(...starts);
+        if (durMin > 0) it.pour_pct = Math.round(((poured / (durMin / 60)) / planned) * 100);
+      }
+    }
+  }
 
   const rank: Record<OrderStatus, number> = { IN_PROCESS: 0, PRE_POUR: 1, COMPLETED: 2, CANCELED: 3 };
   items.sort((a, b) => {

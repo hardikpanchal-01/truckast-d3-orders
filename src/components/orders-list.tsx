@@ -11,12 +11,44 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   CANCELED: "CANCELLED",
 };
 
-const STATUS_TONE: Record<OrderStatus, ToneName> = {
-  IN_PROCESS: "green",
-  PRE_POUR: "orange",
-  COMPLETED: "green", // poured-out orders read green in the live app
-  CANCELED: "red",
-};
+/**
+ * Card colour rules (from the live app):
+ *  Green  – Firm order while PRE-POUR; or IN_PROCESS/COMPLETE with poured speed ≥ 90% of plan.
+ *  Yellow – Will-Call order while PRE-POUR; or IN_PROCESS/COMPLETE with poured speed 60–89%.
+ *  Red    – Cancelled or on-hold order; or IN_PROCESS/COMPLETE with poured speed < 60%.
+ */
+function cardTone(o: DoleseOrderListItem): ToneName {
+  const ds = o.dispatch_status;
+  if (o.status === "CANCELED" || ds === "Cancelled" || ds === "Hold") return "red";
+  if (o.status === "PRE_POUR") {
+    // D3 paints pre-pour orders yellow (Will-Call) unless dispatch has firmed them.
+    // In DOLESE's data every pre-pour order comes back current_status = 1, which D3
+    // treats as Will-Call → yellow. A firmed order is flagged current_status = 2 ("Active").
+    // (We can't confirm the exact code table without prod-DB access, but this matches D3.)
+    return ds === "Active" ? "green" : "yellow";
+  }
+  // IN_PROCESS / COMPLETE → poured speed vs planned speed.
+  const pct = o.pour_pct;
+  if (pct == null) return "green"; // no pour data yet → treat as on-plan
+  if (pct >= 90) return "green";
+  if (pct >= 60) return "yellow";
+  return "red";
+}
+
+/** D3 shows CY as 0.00 until an order reaches a full 1 CY (sub-1 values display as zero). */
+function cyLabel(cy: number): string {
+  return (cy < 1 ? 0 : cy).toFixed(2);
+}
+
+/** D3's cancelled-order glyph: a white "no entry" (⊘) circle with a diagonal bar. */
+function BanIcon() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-[64px] w-[64px]" aria-hidden="true">
+      <circle cx="50" cy="50" r="42" fill="none" stroke="#fff" strokeWidth="11" />
+      <line x1="21" y1="21" x2="79" y2="79" stroke="#fff" strokeWidth="11" />
+    </svg>
+  );
+}
 
 function md(dateStr: string): string {
   const d = new Date(dateStr);
@@ -47,8 +79,9 @@ export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
     );
   }, [orders, filter]);
 
+  // space-y-3 keeps the search → tiles gap tight (matching D3).
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 pt-2">
       <SearchBox value={filter} onChange={setFilter} placeholder="Search" />
 
       {visible.length === 0 ? (
@@ -56,13 +89,14 @@ export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
       ) : (
         <div className="flex flex-wrap">
           {visible.map((o) => {
-            const tone = STATUS_TONE[o.status];
+            const tone = cardTone(o);
             const isCompleted = o.status === "COMPLETED";
             const usePie = o.status === "IN_PROCESS";
             const pct = o.ordered_cy > 0 ? o.ticketed_cy / o.ordered_cy : 0;
             // Only PRE-POUR tiles lead with the scheduled time (matches the live app).
             const start = o.status === "PRE_POUR" ? startLabel(o.start_time) : "";
-            const boldLine = [start, o.delivery_addr1 || o.project_name || "—"].filter(Boolean).join(" ");
+            // D3 renders the address + customer lines UPPERCASE on the tiles.
+            const boldLine = [start, o.delivery_addr1 || o.project_name || "—"].filter(Boolean).join(" ").toUpperCase();
             return (
               <IconTile
                 key={o.order_id}
@@ -72,6 +106,8 @@ export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
                 left={
                   usePie ? (
                     <PieGauge pct={pct} size={52} tinted />
+                  ) : o.status === "CANCELED" ? (
+                    <BanIcon />
                   ) : !isCompleted ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src="/icons/scheduled.png" alt="" className="h-[64px] w-auto" />
@@ -79,12 +115,12 @@ export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
                 }
                 lines={[
                   {
-                    text: `${o.order_code}-${md(o.order_date)}: ${o.ordered_cy.toFixed(2)} CY (${STATUS_LABEL[o.status]})`,
+                    text: `${o.order_code}-${md(o.order_date)}: ${cyLabel(o.ordered_cy)} CY (${STATUS_LABEL[o.status]})`,
                     size: 14,
                     dim: true,
                   },
                   { text: boldLine, bold: true, size: 16 },
-                  { text: o.customer_name || "—", size: 12, dim: true },
+                  { text: (o.customer_name || "—").toUpperCase(), size: 12, dim: true },
                 ]}
               />
             );

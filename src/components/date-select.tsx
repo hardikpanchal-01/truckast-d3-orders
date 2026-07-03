@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 function mdy(iso: string) {
+  // Zero-padded MM/DD/YYYY like D3 ("07/03/2026"); the ISO parts are already padded.
   const [y, m, d] = iso.split("-");
   return `${m}/${d}/${y}`;
 }

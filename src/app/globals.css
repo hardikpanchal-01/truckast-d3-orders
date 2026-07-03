@@ -15,7 +15,9 @@
 html, body {
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
+  /* clip (not hidden) prevents horizontal scroll WITHOUT creating a scroll container,
+     so the sticky header keeps sticking to the viewport instead of scrolling away. */
+  overflow-x: clip;
 }
 
 body {
@@ -28,74 +30,46 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
-/* Navbar styles */
-.navbar .nav>li>a {
-  float: none;
-  padding: 10px 15px 10px;
-  color: #777;
-  text-decoration: none;
-  text-shadow: 0 1px 0 #fff;
-}
-
-.navbar-inverse .brand {
-  color: #999;
-  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
-}
-
-.navbar-inverse .nav>li>a {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
-}
-
-@media (max-width: 979px) {
-  /* Make navbar relative for absolute positioning of nav-collapse */
-  .navbar {
-    position: relative;
+/* ------------------------------------------------------------------
+   Bootstrap 2.2.2 base element styles — the live D3 app is a Bootstrap 2
+   app, and Tailwind's preflight resets these, which is why paragraph
+   spacing, link colours and heading sizes/weights drifted from D3.
+   These MUST live in @layer base so component Tailwind utility classes
+   (e.g. a nav link's text-[#8a8a8a]) still override them — otherwise the
+   unlayered rules would win and, for example, turn every link blue.
+   ------------------------------------------------------------------ */
+@layer base {
+  p {
+    margin: 0 0 10px;
   }
-
-  /* Make nav-collapse overlay on top of content */
-  .nav-collapse {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    background-color: #1a1a1a;
+  a {
+    color: #08c;
+    text-decoration: none;
   }
-
-  .nav-collapse .nav>li>a {
-    margin: 0 0 2px;
+  a:hover {
+    color: #005580;
+    text-decoration: underline;
   }
-
-  .nav-collapse .nav>li>a,
-  .nav-collapse .dropdown-menu a {
-    padding: 9px 15px;
-    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 14px;
-    font-weight: normal;
-    color: #777;
-    -webkit-border-radius: 3px;
-    -moz-border-radius: 3px;
-    border-radius: 3px;
+  strong,
+  b {
+    font-weight: bold;
   }
-
-  .navbar-inverse .nav-collapse .nav>li>a,
-  .navbar-inverse .nav-collapse .dropdown-menu a {
-    color: #999999;
+  small {
+    font-size: 85%;
   }
-
-  /* Hover state with dark background */
-  .navbar-inverse .nav-collapse .nav>li>a:hover,
-  .navbar-inverse .nav-collapse .nav>li>a:focus {
-    color: #fff;
-    background-color: #333;
-    background-image: none;
+  .muted {
+    color: #999;
   }
-
-  /* Active state with gradient background */
-  .navbar-inverse .nav-collapse .nav>li.active>a {
-    color: #fff;
-    background-image: linear-gradient(to right, #c4d63f, #8dc63f, #00a650, #00a99d, #00aeef);
-    background-color: #8dc63f;
+  /* NOTE: intentionally NOT restoring Bootstrap's h1–h6 font-sizes/margins here.
+     Every heading in this app is a styled component (Tailwind text-* classes), and
+     the Bootstrap sizes (h2 = 31.5px) would blow those up — e.g. the order status
+     line. Raw headings are rare; leave them at Tailwind's reset. */
+  ul,
+  ol {
+    padding: 0;
+    margin: 0 0 10px 25px;
+  }
+  li {
+    line-height: 20px;
   }
 }

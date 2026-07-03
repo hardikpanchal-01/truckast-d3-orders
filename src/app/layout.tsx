@@ -20,7 +20,9 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} antialiased`}>
       <body className="bg-white">
         <TopNav />
-        <main className="mx-auto w-full max-w-[724px] px-[15px] py-[20px] min-[980px]:max-w-[1170px] min-[980px]:px-0">{children}</main>
+        {/* px-5 (20px) matches the header's navbar gutter so the brand lines up with the
+            sub-header / dropdowns / cards below, like D3. */}
+        <main className="mx-auto w-full max-w-[724px] pt-5 pb-4 min-[980px]:max-w-[1170px] min-[980px]:px-5 sm:pb-6">{children}</main>
       </body>
     </html>
   );
