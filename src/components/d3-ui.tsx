@@ -84,7 +84,6 @@ const TAB_HREF: Record<string, string> = {
 
 export function TopNav() {
   const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = React.useState(false);
   const isRollout = pathname?.startsWith("/rollout") ?? false;
   const isOrder = pathname?.startsWith("/order-request") ?? false;
   const isProjects = pathname?.startsWith("/projects") ?? false;
@@ -92,10 +91,34 @@ export function TopNav() {
   const tabs: readonly string[] = isRollout ? ROLLOUT_TABS : isOrder ? ORDER_TABS : isProjects ? PROJECTS_TABS : MARKETS_TABS;
   // First tab is the active/highlighted tab in the markets nav; the others have none.
   const active = isRollout || isOrder || isProjects ? "" : MARKETS_TABS[0];
+  const [open, setOpen] = React.useState(false);
+  const renderTab = (tab: string, inMenu = false) => {
+    const href = TAB_HREF[tab];
+    const isActive = tab === active;
+    const cls = [
+      "cursor-pointer no-underline hover:no-underline",
+      // Text colour = the header logo gray (#999). Desktop turns the active/hovered tab
+      // white; the mobile menu keeps every item gray (only the dark hover bg changes).
+      !inMenu && isActive ? "text-white" : "text-[#999]",
+      !inMenu ? "hover:text-white" : "",
+      inMenu ? "mb-[2px] px-5 py-[9px] leading-5 transition-colors hover:bg-black/25" : "px-[15px] py-[10px]",
+    ].join(" ");
+    return href ? (
+      <Link key={tab} href={href} className={cls} onClick={() => setOpen(false)}>
+        {tab}
+      </Link>
+    ) : (
+      <span key={tab} className={cls}>
+        {tab}
+      </span>
+    );
+  };
   return (
     <header
-      className="p-[5px] min-[980px]:p-0 relative"
       style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 1030,
         fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
         fontSize: "14px",
         lineHeight: "20px",
@@ -104,100 +127,87 @@ export function TopNav() {
         borderWidth: "0 0 1px",
         borderColor: "#252525",
         borderRadius: "0",
+        paddingRight: "0",
+        paddingLeft: "0",
         backgroundColor: "#1b1b1b",
-        backgroundImage: "linear-gradient(to bottom, #222, #111)",
+        backgroundImage: "linear-gradient(to bottom, #242424, #1a1a1a)",
         backgroundRepeat: "repeat-x",
         boxShadow: "0 1px 10px rgba(0, 0, 0, 0.1)",
         color: "#333",
       }}
     >
-      <div className="mx-auto flex min-h-[40px] w-full max-w-[1170px] items-center justify-between px-3 min-[980px]:justify-start min-[980px]:px-0">
-        <Link
-          href="/"
-          style={{
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-            lineHeight: "20px",
-            textDecoration: "none",
-            display: "block",
-            padding: "10px 20px 10px 0",
-            fontSize: "20px",
-            fontWeight: 200,
-            textShadow: "0 -1px 0 rgba(0, 0, 0, 0.25)",
-            color: "#999",
-          }}
-        >
-          {brand}
-        </Link>
-        {/* Hamburger menu button - visible below 980px */}
-        <button
-          type="button"
-          onClick={() => setMenuOpen(!menuOpen)}
-          className="flex flex-col items-center justify-center gap-[4px] rounded border border-[#333] bg-transparent px-[10px] py-[9px] hover:bg-[#333] min-[980px]:hidden"
-          aria-label="Toggle menu"
-        >
-          <span className="block h-[2px] w-[22px] rounded-sm bg-[#f5f5f5]" />
-          <span className="block h-[2px] w-[22px] rounded-sm bg-[#f5f5f5]" />
-          <span className="block h-[2px] w-[22px] rounded-sm bg-[#f5f5f5]" />
-        </button>
-        {/* Desktop nav - hidden on mobile */}
-        <nav className="hidden items-center text-[14px] font-normal uppercase tracking-wide min-[980px]:flex" style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}>
-          {tabs.map((tab) => {
-            const href = TAB_HREF[tab];
-            const cls = [
-              "cursor-pointer px-[15px] py-[10px] hover:text-white",
-              tab === active ? "text-white" : "text-[#999]",
-            ].join(" ");
-            return href ? (
-              <Link key={tab} href={href} className={cls}>
-                {tab}
-              </Link>
-            ) : (
-              <span key={tab} className={cls}>
-                {tab}
-              </span>
-            );
-          })}
-        </nav>
+      {/* No container padding — the brand + hamburger get their own insets via the
+          brand's padding/margin; content aligns to the full-width dark header bar. */}
+      <div className="mx-auto w-full max-w-[724px] px-0 min-[980px]:max-w-[1170px]">
+        <div className="flex min-h-[40px] items-center">
+          <Link
+            href="/"
+            style={{
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              lineHeight: "20px",
+              textDecoration: "none",
+              display: "block",
+              padding: "15px 20px 15px",
+              marginLeft: "-30px",
+              fontSize: "20px",
+              fontWeight: 200,
+              textShadow: "0 -1px 0 rgba(0, 0, 0, 0.25)",
+              color: "#999",
+            }}
+          >
+            {brand}
+          </Link>
+          {/* Desktop nav — hidden on small screens */}
+          <nav className="hidden items-center text-[14px] font-normal uppercase lg:flex">
+            {tabs.map((t) => renderTab(t))}
+          </nav>
+          {/* Mobile hamburger toggle — Bootstrap .btn-navbar (dark box + 3 light bars). */}
+          <button
+            type="button"
+            aria-label="Toggle menu"
+            aria-expanded={open}
+            onClick={() => setOpen((o) => !o)}
+            className="ml-auto flex flex-col gap-[3px] lg:hidden"
+            style={{
+              padding: "7px 10px",
+              borderRadius: "4px",
+              border: "1px solid rgba(0,0,0,0.25)",
+              borderColor: "rgba(0,0,0,0.1) rgba(0,0,0,0.1) rgba(0,0,0,0.25)",
+              backgroundImage: "linear-gradient(to bottom, #151515, #040404)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1), 0 1px 0 rgba(255,255,255,0.075)",
+            }}
+          >
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                style={{ display: "block", width: 18, height: 2, borderRadius: 1, backgroundColor: "#f5f5f5", boxShadow: "0 1px 0 rgba(0,0,0,0.25)" }}
+              />
+            ))}
+          </button>
+        </div>
       </div>
-      {/* Mobile menu dropdown */}
-      {menuOpen && (
-        <nav
-          className="flex w-full flex-col border-t border-[#333] p-0 min-[980px]:hidden"
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            zIndex: 1000,
-            backgroundColor: "#1b1b1b",
-            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
-            fontSize: "14px",
-            lineHeight: "20px",
-            color: "#333",
-          }}
-        >
-          {tabs.map((tab) => {
-            const href = TAB_HREF[tab];
-            const isActive = tab === active;
-            const baseClass = "cursor-pointer px-[15px] py-[10px] text-[14px] leading-[20px] font-bold";
-            const hoverClass = "hover:bg-[#333] hover:text-white";
-            const colorClass = isActive ? "text-white" : "text-[#999]";
-            const cls = `${baseClass} ${hoverClass} ${colorClass}`;
-            const activeStyle = isActive ? {
-              backgroundColor: "#333",
-            } : {};
-            return href ? (
-              <Link key={tab} href={href} className={cls} style={activeStyle} onClick={() => setMenuOpen(false)}>
-                {tab}
-              </Link>
-            ) : (
-              <span key={tab} className={cls} style={activeStyle}>
-                {tab}
-              </span>
-            );
-          })}
-        </nav>
-      )}
+      {/* Mobile nav — collapsible & animated, and OVERLAYS the page (absolute) instead
+          of pushing the sub-header down. The grid-rows 0fr→1fr trick animates height. */}
+      <div
+        className={[
+          "absolute inset-x-0 top-full z-40 -mt-px grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out lg:hidden",
+          open ? "grid-rows-[1fr] opacity-100" : "pointer-events-none grid-rows-[0fr] opacity-0",
+        ].join(" ")}
+        style={{
+          // Continues the header's gradient (top #1a1a1a = header's bottom colour → #111),
+          // so header + menu read as one surface; -mt-px covers the 1px border seam.
+          backgroundImage: "linear-gradient(to bottom, #1a1a1a, #111)",
+          boxShadow: "0 6px 12px rgba(0,0,0,0.3)",
+        }}
+      >
+        {/* No horizontal padding here → item hover highlight spans the FULL width (like D3);
+            the items' own px provides the text inset. */}
+        <div className="mx-auto min-h-0 w-full max-w-[724px] overflow-hidden min-[980px]:max-w-[1170px]">
+          <nav className="flex flex-col pb-2 text-[14px] font-bold uppercase tracking-wide">
+            {tabs.map((t) => renderTab(t, true))}
+          </nav>
+        </div>
+      </div>
     </header>
   );
 }
@@ -348,20 +358,16 @@ function TileBody({
       {/* tileInfoSection */}
       <div className="flex min-w-0 flex-1 items-center pr-3">
         {/* tileCell */}
-        <div className="min-w-0 flex-1" style={{ marginLeft: 10 }}>
+        <div className="min-w-0 flex-1">
           {lines.map((ln, i) => (
             <div
               key={i}
-              className="leading-[1.2]"
+              className="truncate leading-[1.2]"
               style={{
-                width: 185,
-                fontSize: ln.bold ? 16 : (ln.size ?? 14),
-                fontWeight: ln.bold ? "bold" : "normal",
-                color: ln.dim ? "rgba(255,255,255,0.9)" : "#fff",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                marginTop: ln.dim ? 3 : 0,
+                // D3's .tile sets color:white for every line (no dimming).
+                color: "#fff",
+                fontSize: ln.size ?? (ln.bold ? 14 : 12),
+                fontWeight: ln.bold ? 700 : 400,
               }}
             >
               {ln.text}
@@ -395,12 +401,23 @@ export function IconTile({
   const leftContent = completed ? <CompletedCheckmark size={48} /> : left;
   const body = <TileBody icon={icon} left={leftContent} lines={lines} />;
 
-  // Tile styling to match D3: 274px x 90px, margins, float left
-  const tileClass = "relative block cursor-pointer text-white w-full sm:w-[274px] h-[90px] mb-[5px] sm:mr-[5px] sm:float-left";
+  // Match D3 .tile CSS exactly
+  const tileClass = "relative block cursor-pointer text-white";
+  const tileStyle: React.CSSProperties = {
+    position: "relative",
+    width: 274,
+    height: 90,
+    marginRight: 5,
+    marginBottom: 5,
+    float: "left",
+    color: "white",
+    cursor: "pointer",
+    display: "block",
+  };
 
   if (href) {
     return (
-      <Link href={href} className={tileClass}>
+      <Link href={href} className={tileClass} style={tileStyle}>
         <FoldCard tone={tone} className="h-full w-full">
           {body}
         </FoldCard>
@@ -410,6 +427,7 @@ export function IconTile({
   return (
     <div
       className={tileClass}
+      style={tileStyle}
       onClick={onClick}
       role={onClick ? "button" : undefined}
     >
@@ -424,13 +442,13 @@ export function IconTile({
 /*  Pie gauge (used as the tile's left icon for orders)                */
 /* ------------------------------------------------------------------ */
 
-// Highcharts pie palette: blue = delivered/completed, dark = remaining.
-const PIE_DELIVERED = "#7cb5ec";
-const PIE_REMAINING = "#434348";
+// Highcharts pie palette (matches the live app): used slice vs. remainder.
+const PIE_USED = "#7cb5ec";
+const PIE_REST = "#434348";
 
 export function PieGauge({
   pct,
-  size = 72,
+  size = 52,
   tinted = false,
 }: {
   pct: number;
@@ -440,53 +458,31 @@ export function PieGauge({
   tinted?: boolean;
 }) {
   const c = size / 2;
-  const r = c - 6; // radius with padding for stroke
+  const r = c - 1; // leave room for the 1px white stroke
   const clamped = Math.max(0, Math.min(1, pct));
+  // Used slice starts at 12 o'clock and sweeps clockwise.
+  const angle = clamped * 2 * Math.PI;
+  // Round to 4 decimal places to avoid server/client hydration mismatch from floating-point precision differences
+  const x = Math.round((c + r * Math.sin(angle)) * 10000) / 10000;
+  const y = Math.round((c - r * Math.cos(angle)) * 10000) / 10000;
+  const large = clamped > 0.5 ? 1 : 0;
+  const usedPath =
+    clamped <= 0 || clamped >= 1
+      ? ""
+      : `M ${c} ${c} L ${c} ${c - r} A ${r} ${r} 0 ${large} 1 ${x} ${y} Z`;
 
-  // Blue = delivered/completed, Dark = remaining
-  const deliveredFill = tinted ? "rgba(0,0,0,0.32)" : PIE_DELIVERED;
-  const remainingFill = tinted ? "rgba(255,255,255,0.85)" : PIE_REMAINING;
-  const stroke = "#FFFFFF";
-
-  // Full circle paths for edge cases
-  if (clamped >= 1) {
-    // All delivered - full blue circle with white line
-    return (
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden style={{ fontFamily: '"Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif', fontSize: 12 }}>
-        <circle cx={c} cy={c} r={r} fill={deliveredFill} stroke={stroke} strokeWidth="1" />
-        <line x1={c} y1={c} x2={c} y2={c - r} stroke={stroke} strokeWidth="1" />
-      </svg>
-    );
-  }
-
-  if (clamped <= 0) {
-    // None delivered - full dark circle (all remaining) with white line
-    return (
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden style={{ fontFamily: '"Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif', fontSize: 12 }}>
-        <circle cx={c} cy={c} r={r} fill={remainingFill} stroke={stroke} strokeWidth="1" />
-        <line x1={c} y1={c} x2={c} y2={c - r} stroke={stroke} strokeWidth="1" />
-      </svg>
-    );
-  }
-
-  // Blue (delivered) slice starts at 12 o'clock and sweeps clockwise
-  const deliveredAngle = clamped * 2 * Math.PI;
-  const deliveredX = Math.round((c + r * Math.sin(deliveredAngle)) * 10000) / 10000;
-  const deliveredY = Math.round((c - r * Math.cos(deliveredAngle)) * 10000) / 10000;
-  const deliveredLarge = clamped > 0.5 ? 1 : 0;
-  const remainingLarge = (1 - clamped) > 0.5 ? 1 : 0;
-
-  // Delivered slice (blue) - starts at 12 o'clock, goes clockwise
-  const deliveredPath = `M ${c} ${c} L ${c} ${c - r} A ${r} ${r} 0 ${deliveredLarge} 1 ${deliveredX} ${deliveredY} Z`;
-  // Remaining slice (dark) - fills the rest
-  const remainingPath = `M ${c} ${c} L ${deliveredX} ${deliveredY} A ${r} ${r} 0 ${remainingLarge} 1 ${c} ${c - r} Z`;
+  const restFill = tinted ? "rgba(255,255,255,0.85)" : PIE_REST;
+  const usedFill = tinted ? "rgba(0,0,0,0.32)" : PIE_USED;
+  const stroke = tinted ? "rgba(255,255,255,0.65)" : "#fff";
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden style={{ fontFamily: '"Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif', fontSize: 12 }}>
-      {/* Dark remaining slice (draw first, background) */}
-      <path d={remainingPath} fill={remainingFill} stroke={stroke} strokeWidth="1" strokeLinejoin="round" />
-      {/* Blue delivered slice (draw second, starts at 12 o'clock) */}
-      <path d={deliveredPath} fill={deliveredFill} stroke={stroke} strokeWidth="1" strokeLinejoin="round" />
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
+      {/* Base = remainder slice (full circle) */}
+      <circle cx={c} cy={c} r={r} fill={clamped >= 1 ? usedFill : restFill} stroke={stroke} strokeWidth="1" />
+      {/* Used slice on top */}
+      {usedPath ? (
+        <path d={usedPath} fill={usedFill} stroke={stroke} strokeWidth="1" strokeLinejoin="round" />
+      ) : null}
     </svg>
   );
 }
@@ -514,7 +510,7 @@ export function StatTile({
     <FoldCard
       tone={tone}
       noFold={!href}
-      className={["mb-[5px] mr-[5px] h-[90px] w-[88px] text-white", href ? "cursor-pointer" : ""].join(" ")}
+      className={["mb-[4px] mr-[5px] h-[90px] w-[88px] text-white", href ? "cursor-pointer" : ""].join(" ")}
     >
       <div className="p-[5px]">
         <div className="text-center text-[12px] font-bold uppercase">{label}</div>
@@ -613,7 +609,7 @@ export function SearchBox({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       className={[
-        "h-[30px] w-full sm:w-[274px] rounded-[4px] border border-[#cccccc] border-t-[#bbbbbb] bg-white px-3 py-1 text-sm text-[#555] outline-none transition placeholder:text-[#999] focus:border-[#66afe9] focus:shadow-[0_0_8px_rgba(102,175,233,0.6)]",
+        "h-[30px] w-[274px] max-w-full rounded-[4px] border border-[#cccccc] border-t-[#bbbbbb] bg-white px-3 py-1 text-sm text-[#555] outline-none transition placeholder:text-[#999] focus:border-[#66afe9] focus:shadow-[0_0_8px_rgba(102,175,233,0.6)]",
         className || "",
       ].join(" ")}
     />
@@ -640,7 +636,8 @@ export function Dropdown({
       value={value}
       onChange={(e) => onChange?.(e.target.value)}
       className={[
-        "w-full rounded-[4px] border border-[#cccccc] bg-white px-3 py-2 text-sm text-[#555] outline-none focus:border-[#2f7ed8]",
+        // Match DateSelect + Bootstrap 2.2.2 select metrics so all three boxes are identical.
+        "block h-[30px] w-full cursor-pointer rounded-[4px] border border-[#ccc] bg-white px-[6px] py-[4px] align-middle text-[14px] font-normal leading-[30px] text-[#555] outline-none focus:border-[#2f7ed8]",
         className || "",
       ].join(" ")}
     >

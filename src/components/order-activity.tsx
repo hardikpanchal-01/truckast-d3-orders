@@ -14,7 +14,7 @@ const CARD = "#d6e3ec";
 function ActivityCard({ children, time }: { children: React.ReactNode; time?: string }) {
   return (
     <div className="relative rounded px-4 py-3" style={{ backgroundColor: CARD }}>
-      <div className="text-[12px] leading-snug text-[#333]">{children}</div>
+      <div className="text-[14px] leading-[20px] text-[#333]">{children}</div>
       <div className="mt-1 flex items-center gap-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/icons/truckast-40.png" alt="" className="h-10 w-10 rounded" />

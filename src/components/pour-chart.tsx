@@ -45,60 +45,6 @@ function fmtVal(v: number): string {
   return String(Math.round(v * 100) / 100);
 }
 
-/**
- * Smooth SVG path through pixel points using a MONOTONE cubic Hermite spline
- * (Fritsch–Carlson). Unlike a plain Catmull-Rom, it never overshoots the data — the
- * curve stays within the points, so sharp dips/peaks round off smoothly without an
- * S-bump. This matches the gentle, non-overshooting look of D3's spline. Falls back to
- * straight segments for 1–2 points.
- */
-function smoothPath(pts: { x: number; y: number }[]): string {
-  const n = pts.length;
-  if (n === 0) return "";
-  if (n < 3) return pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-
-  const dx: number[] = [];
-  const delta: number[] = [];
-  for (let i = 0; i < n - 1; i++) {
-    dx[i] = pts[i + 1].x - pts[i].x;
-    delta[i] = dx[i] !== 0 ? (pts[i + 1].y - pts[i].y) / dx[i] : 0;
-  }
-
-  // Tangents: 0 at local extrema (sign change), else average of neighbouring slopes.
-  const m: number[] = new Array(n);
-  m[0] = delta[0];
-  m[n - 1] = delta[n - 2];
-  for (let i = 1; i < n - 1; i++) {
-    m[i] = delta[i - 1] * delta[i] <= 0 ? 0 : (delta[i - 1] + delta[i]) / 2;
-  }
-  // Fritsch–Carlson: clamp tangents so each segment stays monotone (no overshoot).
-  for (let i = 0; i < n - 1; i++) {
-    if (delta[i] === 0) {
-      m[i] = 0;
-      m[i + 1] = 0;
-      continue;
-    }
-    const a = m[i] / delta[i];
-    const b = m[i + 1] / delta[i];
-    const s = a * a + b * b;
-    if (s > 9) {
-      const t = 3 / Math.sqrt(s);
-      m[i] = t * a * delta[i];
-      m[i + 1] = t * b * delta[i];
-    }
-  }
-
-  let d = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 0; i < n - 1; i++) {
-    const cp1x = pts[i].x + dx[i] / 3;
-    const cp1y = pts[i].y + (m[i] * dx[i]) / 3;
-    const cp2x = pts[i + 1].x - dx[i] / 3;
-    const cp2y = pts[i + 1].y - (m[i + 1] * dx[i]) / 3;
-    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${pts[i + 1].x} ${pts[i + 1].y}`;
-  }
-  return d;
-}
-
 /* ------------------------------------------------------------------ */
 /*  Dynamic x-axis ticks (mirrors Highcharts' datetime auto-ticking)   */
 /* ------------------------------------------------------------------ */
@@ -139,8 +85,9 @@ function fmtTick(min: number, step: number): string {
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
+  const hh = String(h).padStart(2, "0");
   const mm = String(m).padStart(2, "0");
-  return step < 1 ? `${h}:${mm}:${String(s).padStart(2, "0")}` : `${h}:${mm}`;
+  return step < 1 ? `${hh}:${mm}:${String(s).padStart(2, "0")}` : `${hh}:${mm}`;
 }
 
 /** Track an SVG element's rendered pixel width (for pixel-accurate tick density). */
@@ -183,8 +130,11 @@ const COL = {
   poured: "#7ac043",
   ordered: "#5aa0e6",
   grid: "#e3e3e3",
-  axis: "#666",
+  axis: "#606060", // matches D3's axis label colour
 };
+
+// The exact font stack the live D3 charts use (Highcharts 4.x default).
+const FONT = '"Lucida Grande", "Lucida Sans Unicode", Arial, Helvetica, sans-serif';
 
 interface TooltipData {
   x: number;
@@ -286,9 +236,10 @@ function ChartFrame({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1">
-      <p className="text-center text-base font-bold text-slate-700">{title}</p>
-      <p className="text-center text-xs text-[#2f7ed8]">{subtitle}</p>
+    <div className="space-y-1" style={{ fontFamily: FONT }}>
+      {/* Match D3's Highcharts SVG: title 18px normal #333, subtitle 12px #555. */}
+      <p className="text-center text-[18px] font-normal text-[#333]">{title}</p>
+      <p className="text-center text-xs text-[#555]">{subtitle}</p>
       {/* overflow-visible so a tooltip near an edge is never clipped by the frame. */}
       <div className="relative w-full overflow-visible bg-white">
         {onReset && (
@@ -309,18 +260,29 @@ function ChartFrame({
 type Align = "left" | "center" | "right";
 
 /** Tooltip caret: points down when the box is above the point, up when below, and sits
- *  at the horizontal spot that lines up with the data point for the box's alignment. */
-function TooltipCaret({ below, align = "center" }: { below: boolean; align?: Align }) {
+ *  at the horizontal spot that lines up with the data point for the box's alignment.
+ *  Border colour = the series colour (like D3), front = the box background. */
+function TooltipCaret({
+  below,
+  align = "center",
+  color = "#d1d5db",
+  bg = "rgba(249,249,249,0.85)",
+}: {
+  below: boolean;
+  align?: Align;
+  color?: string;
+  bg?: string;
+}) {
   const side = below ? "bottom-full" : "top-full";
   const edge = below ? "borderBottom" : "borderTop";
   // Matches the box transform offsets (12px = left-3 / right-3) so it points at the point.
   const hpos = align === "left" ? "left-3" : align === "right" ? "right-3" : "left-1/2 -translate-x-1/2";
   return (
     <>
-      <span className={`absolute h-0 w-0 ${side} ${hpos}`} style={{ borderLeft: "7px solid transparent", borderRight: "7px solid transparent", [edge]: "7px solid #d1d5db" }} />
+      <span className={`absolute h-0 w-0 ${side} ${hpos}`} style={{ borderLeft: "7px solid transparent", borderRight: "7px solid transparent", [edge]: `7px solid ${color}` }} />
       <span
         className={`absolute h-0 w-0 ${side} ${hpos}`}
-        style={{ [below ? "marginBottom" : "marginTop"]: -1, borderLeft: "6px solid transparent", borderRight: "6px solid transparent", [edge]: "6px solid rgba(255,255,255,0.85)" }}
+        style={{ [below ? "marginBottom" : "marginTop"]: -1, borderLeft: "6px solid transparent", borderRight: "6px solid transparent", [edge]: `6px solid ${bg}` }}
       />
     </>
   );
@@ -343,7 +305,7 @@ function Legend({
   onToggle?: (label: string) => void;
 }) {
   return (
-    <div className="flex justify-center gap-5 pt-1 text-xs text-slate-600">
+    <div className="flex justify-center gap-5 pt-1 text-xs font-bold text-[#333]" style={{ fontFamily: FONT }}>
       {items.map((it) => {
         const off = hidden?.has(it.label) ?? false;
         return (
@@ -397,21 +359,18 @@ function Tooltip({ data }: { data: TooltipData | null }) {
         transform: alignTransform(data.align, below),
       }}
     >
-      <div className="relative whitespace-nowrap rounded-md border border-gray-300 bg-white/85 px-3 py-2 text-xs shadow-md backdrop-blur-sm">
-        <div className="font-bold text-gray-800">{data.time}</div>
-        <div
-          className="mt-1 flex items-center gap-1.5 font-semibold"
-          style={{ color: colors[data.type] }}
-        >
-          <span
-            className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: colors[data.type] }}
-          />
+      <div
+        className="relative whitespace-nowrap rounded border px-2 py-1.5 shadow-md"
+        style={{ backgroundColor: "rgba(249,249,249,0.85)", borderColor: colors[data.type] }}
+      >
+        <div className="text-[10px] text-[#333]">{data.time}</div>
+        <div className="mt-0.5 flex items-center gap-1 text-[12px] text-[#333]">
+          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: colors[data.type] }} />
           <span>
-            &quot;{typeLabels[data.type]}&quot;: {fmtVal(data.value)}
+            &quot;{typeLabels[data.type]}&quot;: <span className="font-bold">{fmtVal(data.value)}</span>
           </span>
         </div>
-        <TooltipCaret below={below} align={data.align} />
+        <TooltipCaret below={below} align={data.align} color={colors[data.type]} />
       </div>
     </div>
   );
@@ -433,13 +392,16 @@ function TruckTooltip({ data }: { data: TruckTooltipData | null }) {
         transform: alignTransform(data.align, below),
       }}
     >
-      <div className="relative whitespace-nowrap rounded-md border border-gray-300 bg-white/85 px-3 py-2 text-xs shadow-md backdrop-blur-sm">
-        <div className="font-bold text-gray-800">{data.time}</div>
-        <div className="mt-1 flex items-center gap-1.5 font-semibold" style={{ color: data.color }}>
-          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: dot }} />
-          <span>&quot;{data.label}&quot;: {data.value}</span>
+      <div
+        className="relative whitespace-nowrap rounded border px-2 py-1.5 shadow-md"
+        style={{ backgroundColor: "rgba(249,249,249,0.85)", borderColor: dot }}
+      >
+        <div className="text-[10px] text-[#333]">{data.time}</div>
+        <div className="mt-0.5 flex items-center gap-1 text-[12px] text-[#333]">
+          <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: dot }} />
+          <span>&quot;{data.label}&quot;: <span className="font-bold">{data.value}</span></span>
         </div>
-        <TooltipCaret below={below} align={data.align} />
+        <TooltipCaret below={below} align={data.align} color={dot} />
       </div>
     </div>
   );
@@ -470,8 +432,8 @@ export function PourChart({ data }: { data: ChartData }) {
   });
 
   const W = 900;
-  // Shorter than before so the 0/50/100 gridlines sit closer together (compact height).
-  const H = 175;
+  // Short/wide plot (~10:1) so it looks stretched horizontally like the D3 chart.
+  const H = 122;
   const pad = { top: 16, right: 20, bottom: 26, left: 40 };
   const innerW = W - pad.left - pad.right;
   const innerH = H - pad.top - pad.bottom;
@@ -516,8 +478,40 @@ export function PourChart({ data }: { data: ChartData }) {
   );
   const maxY = niceMax(dataMax);
 
-  const x = (t: number) => pad.left + ((t - vMin) / tSpan) * innerW;
+  // Inset the data by a few px on each side (like Highcharts' axis padding) so the first
+  // and last points aren't flush against the plot edge / clipped. Gridlines stay full width.
+  const XPAD = 12;
+  const x = (t: number) => pad.left + XPAD + ((t - vMin) / tSpan) * (innerW - 2 * XPAD);
   const y = (v: number) => pad.top + innerH - (v / maxY) * innerH;
+
+  // Smooth (monotone cubic) curve through the points — no overshoot at sharp dips/peaks.
+  const linePath = (pts: XY[]) => {
+    const P = pts.map((p) => ({ x: x(p.t), y: y(p.v) }));
+    const n = P.length;
+    if (n < 3) return P.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+    const dx: number[] = [];
+    const slope: number[] = [];
+    for (let i = 0; i < n - 1; i++) {
+      dx[i] = P[i + 1].x - P[i].x;
+      slope[i] = dx[i] !== 0 ? (P[i + 1].y - P[i].y) / dx[i] : 0;
+    }
+    const m: number[] = new Array(n);
+    m[0] = slope[0];
+    m[n - 1] = slope[n - 2];
+    for (let i = 1; i < n - 1; i++) m[i] = slope[i - 1] * slope[i] <= 0 ? 0 : (slope[i - 1] + slope[i]) / 2;
+    for (let i = 0; i < n - 1; i++) {
+      if (slope[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+      const a = m[i] / slope[i];
+      const b = m[i + 1] / slope[i];
+      const s = a * a + b * b;
+      if (s > 9) { const t = 3 / Math.sqrt(s); m[i] = t * a * slope[i]; m[i + 1] = t * b * slope[i]; }
+    }
+    let d = `M ${P[0].x} ${P[0].y}`;
+    for (let i = 0; i < n - 1; i++) {
+      d += ` C ${P[i].x + dx[i] / 3} ${P[i].y + (m[i] * dx[i]) / 3}, ${P[i + 1].x - dx[i] / 3} ${P[i + 1].y - (m[i + 1] * dx[i]) / 3}, ${P[i + 1].x} ${P[i + 1].y}`;
+    }
+    return d;
+  };
 
   const yTicks = [0, maxY / 2, maxY];
   // Dynamic "nice" ticks (sec/min/hr) based on span + rendered width, like Highcharts.
@@ -577,7 +571,7 @@ export function PourChart({ data }: { data: ChartData }) {
             </g>
           ))}
           {xTicks.map((t, i) => (
-            <text key={i} x={x(t)} y={H - 8} textAnchor="middle" fontSize="10" fill={COL.axis}>
+            <text key={i} x={x(t)} y={H - 8} textAnchor="middle" fontSize="11" fill={COL.axis}>
               {fmtTick(t, xStep)}
             </text>
           ))}
@@ -585,49 +579,11 @@ export function PourChart({ data }: { data: ChartData }) {
           <g clipPath={`url(#${clipId})`}>
           {/* Each series stays mounted and fades via opacity so toggling animates.
               Hidden series also drop pointer events so they're not hoverable. */}
-          {/* Ordered: horizontal blue line at the scheduled rate, spanning only the
-              scheduled window (first→last scheduled load) — NOT the full plot width —
-              plus square markers at each scheduled time. */}
-          <g style={fade("Ordered")}>
-            {visibleOrdered.length > 0 && (
-              <line
-                x1={x(visibleOrdered[0].t)}
-                y1={y(data.ordered)}
-                x2={x(visibleOrdered[visibleOrdered.length - 1].t)}
-                y2={y(data.ordered)}
-                stroke={COL.ordered}
-                strokeWidth={2}
-              />
-            )}
-            {visibleOrdered.map((p, i) => (
-              <g key={`ord-${i}`}>
-                <rect x={x(p.t) - 3} y={y(p.v) - 3} width={6} height={6} fill={COL.ordered} />
-                {/* Larger invisible hit area for hover */}
-                <rect
-                  x={x(p.t) - 10}
-                  y={y(p.v) - 10}
-                  width={20}
-                  height={20}
-                  fill="transparent"
-                  className="cursor-pointer"
-                  onMouseEnter={() => handleMouseEnter("ordered", p, i)}
-                  onMouseLeave={handleMouseLeave}
-                />
-              </g>
-            ))}
-          </g>
-
           {/* Poured: green line with circle markers */}
           <g style={fade("Poured")}>
             {data.poured.length > 0 && (
               <>
-                {/* Poured draws as a subtle spline (little curves), like D3. */}
-                <path
-                  d={smoothPath(data.poured.map((p) => ({ x: x(p.t), y: y(p.v) })))}
-                  fill="none"
-                  stroke={COL.poured}
-                  strokeWidth={2}
-                />
+                <path d={linePath(data.poured)} fill="none" stroke={COL.poured} strokeWidth={2} />
                 {data.poured.map((p, i) => (
                   <g key={`pour-${i}`}>
                     <circle cx={x(p.t)} cy={y(p.v)} r={3} fill={COL.poured} />
@@ -650,13 +606,7 @@ export function PourChart({ data }: { data: ChartData }) {
           <g style={fade("Delivered")}>
             {data.delivered.length > 0 && (
               <>
-                {/* Delivered draws as a subtle spline (little curves); Poured stays straight. */}
-                <path
-                  d={smoothPath(data.delivered.map((p) => ({ x: x(p.t), y: y(p.v) })))}
-                  fill="none"
-                  stroke={COL.delivered}
-                  strokeWidth={2}
-                />
+                <path d={linePath(data.delivered)} fill="none" stroke={COL.delivered} strokeWidth={2} />
                 {data.delivered.map((p, i) => (
                   <g key={`del-${i}`}>
                     <circle cx={x(p.t)} cy={y(p.v)} r={3} fill={COL.delivered} />
@@ -673,6 +623,36 @@ export function PourChart({ data }: { data: ChartData }) {
                 ))}
               </>
             )}
+          </g>
+
+          {/* Ordered drawn LAST so the blue line + squares sit ON TOP of the Delivered
+              dots (where the black line touches the ordered rate). */}
+          <g style={fade("Ordered")}>
+            {visibleOrdered.length > 0 && (
+              <line
+                x1={x(visibleOrdered[0].t)}
+                y1={y(data.ordered)}
+                x2={x(visibleOrdered[visibleOrdered.length - 1].t)}
+                y2={y(data.ordered)}
+                stroke={COL.ordered}
+                strokeWidth={2}
+              />
+            )}
+            {visibleOrdered.map((p, i) => (
+              <g key={`ord-${i}`}>
+                <rect x={x(p.t) - 3} y={y(p.v) - 3} width={6} height={6} fill={COL.ordered} />
+                <rect
+                  x={x(p.t) - 10}
+                  y={y(p.v) - 10}
+                  width={20}
+                  height={20}
+                  fill="transparent"
+                  className="cursor-pointer"
+                  onMouseEnter={() => handleMouseEnter("ordered", p, i)}
+                  onMouseLeave={handleMouseLeave}
+                />
+              </g>
+            ))}
           </g>
           </g>
 
@@ -754,32 +734,51 @@ export function TrucksChart({ data }: { data: ChartData }) {
   const yStep = niceTickInterval(rawMax / 2.5);
   const maxY = Math.max(yStep, Math.ceil(rawMax / yStep) * yStep);
 
-  const x = (t: number) => pad.left + ((t - tMin) / tSpan) * innerW;
+  // Inset the data by a few px on each side (like Highcharts' axis padding) so the first
+  // and last points aren't flush against the plot edge / clipped. Gridlines stay full width.
+  const XPAD = 12;
+  const x = (t: number) => pad.left + XPAD + ((t - tMin) / tSpan) * (innerW - 2 * XPAD);
   const y = (v: number) => pad.top + innerH - (v / maxY) * innerH;
 
-  // Width (in viewBox px) of the diagonal slope on each transition: instead of a
-  // vertical wall, the area ramps to the new value over this span. Increase for a
-  // gentler slope, decrease for steeper.
-  const RAMP = 4;
+  // Width (in viewBox px) of the diagonal slope on internal transitions (risers/drops);
+  // small = steeper. The two OUTER edges (lead-in from the baseline, and the trailing
+  // drop to the baseline) use a wider ramp so their angle is clearly visible.
+  // ONE consistent small ramp on every transition (lead-in, risers, drops, trailing) —
+  // a faithful copy of D3, whose step transitions are a ~2.6px diagonal on a 1118px plot.
+  // In our 900-wide viewBox that's ~2px. Internal ramps clamp to 60% of the gap to the
+  // next event so tightly-spaced points never overlap.
+  const RAMP = 2;
 
-  // Step area down to the zero baseline, but every transition (the first lead-in and
-  // each subsequent riser/drop) is drawn as a short diagonal slope rather than a hard
-  // vertical jump. The slope width is clamped to 60% of the gap to the next event so
-  // closely-spaced points never overlap or backtrack.
   const areaToZero = (val: (p: (typeof pts)[number]) => number) => {
     const d: string[] = [];
     d.push(`M ${x(pts[0].t)} ${y(0)}`); // baseline at the first event
-    for (let i = 0; i < pts.length; i++) {
+    d.push(`L ${x(pts[0].t) + RAMP} ${y(val(pts[0]))}`); // lead-in slope from the baseline
+    for (let i = 1; i < pts.length; i++) {
       const xi = x(pts[i].t);
-      const xNext = i + 1 < pts.length ? x(pts[i + 1].t) : x(data.tMax);
-      const ramp = Math.max(0, Math.min(RAMP, (xNext - xi) * 0.6));
-      if (i > 0) d.push(`L ${xi} ${y(val(pts[i - 1]))}`); // hold previous value up to this event
-      d.push(`L ${xi + ramp} ${y(val(pts[i]))}`);          // sloped transition to this value
+      // The last point has no "next" to clamp against — always give it a full RAMP so its
+      // final value change slopes instead of dropping vertically (it has room in the margin).
+      const ramp =
+        i + 1 < pts.length
+          ? Math.max(0, Math.min(RAMP, (x(pts[i + 1].t) - xi) * 0.6))
+          : RAMP;
+      d.push(`L ${xi} ${y(val(pts[i - 1]))}`);    // hold previous value up to this event
+      d.push(`L ${xi + ramp} ${y(val(pts[i]))}`); // sloped transition to this value
     }
     const last = pts[pts.length - 1];
-    d.push(`L ${x(data.tMax)} ${y(val(last))}`, `L ${x(data.tMax)} ${y(0)}`, "Z");
+    // Trailing edge: hold the last value to the data edge, then slope down to the
+    // baseline over RAMP (into the XPAD margin) — same small angle as every other step.
+    const endX = x(data.tMax);
+    d.push(`L ${endX} ${y(val(last))}`, `L ${endX + RAMP} ${y(0)}`);
+    // No "Z": fill auto-closes along the baseline, and the same open path is reused as
+    // the top-edge stroke (like D3, which draws a 1px line over the filled area).
     return d.join(" ");
   };
+
+  // Precompute each stacked-area path so it can be used for both fill and top stroke.
+  const dTotal = areaToZero((p) => p.pouring + p.waiting);
+  const dWaiting = areaToZero((p) => p.waiting);
+  const dPouring = areaToZero((p) => p.pouring);
+  const areaAnim = { transition: "opacity 550ms ease" } as const;
 
   const yTicks = Array.from({ length: Math.round(maxY / yStep) + 1 }, (_, i) => i * yStep);
   // Dynamic "nice" ticks (15/30/5-min etc.) based on span + rendered width, like Highcharts.
@@ -869,35 +868,26 @@ export function TrucksChart({ data }: { data: ChartData }) {
             </g>
           ))}
           {xTicks.map((t, i) => (
-            <text key={i} x={x(t)} y={H - 8} textAnchor="middle" fontSize="10" fill={COL.axis}>
+            <text key={i} x={x(t)} y={H - 8} textAnchor="middle" fontSize="11" fill={COL.axis}>
               {fmtTick(t, xStep)}
             </text>
           ))}
 
           <g clipPath={`url(#${clipId})`}>
-            {/* Three stacked-area paths that crossfade on toggle (opacity animated):
-                  total(dark)      — shown when BOTH series are on
+            {/* Stacked areas that crossfade on toggle (opacity animated). Each is a
+                0.75-opacity fill plus a 1px top-edge stroke, exactly like D3:
+                  total(dark)        — shown when BOTH series are on
                   waiting-only(dark) — shown when only Waiting is on
-                  pouring(green)   — shown whenever Pouring is on
+                  pouring(green)     — shown whenever Pouring is on
                 Pouring green (bottom layer) is drawn last so it sits over the dark. */}
-            <path
-              d={areaToZero((p) => p.pouring + p.waiting)}
-              fill="#434348"
-              fillOpacity={0.75}
-              style={{ transition: "opacity 550ms ease", opacity: showWaiting && showPouring ? 1 : 0 }}
-            />
-            <path
-              d={areaToZero((p) => p.waiting)}
-              fill="#434348"
-              fillOpacity={0.75}
-              style={{ transition: "opacity 550ms ease", opacity: showWaiting && !showPouring ? 1 : 0 }}
-            />
-            <path
-              d={areaToZero((p) => p.pouring)}
-              fill="#90ed7d"
-              fillOpacity={0.85}
-              style={{ transition: "opacity 550ms ease", opacity: showPouring ? 1 : 0 }}
-            />
+            <path d={dTotal} fill="#434348" fillOpacity={0.75} style={{ ...areaAnim, opacity: showWaiting && showPouring ? 1 : 0 }} />
+            <path d={dTotal} fill="none" stroke="#434348" strokeWidth={1} strokeLinejoin="round" strokeLinecap="round" style={{ ...areaAnim, opacity: showWaiting && showPouring ? 1 : 0 }} />
+
+            <path d={dWaiting} fill="#434348" fillOpacity={0.75} style={{ ...areaAnim, opacity: showWaiting && !showPouring ? 1 : 0 }} />
+            <path d={dWaiting} fill="none" stroke="#434348" strokeWidth={1} strokeLinejoin="round" strokeLinecap="round" style={{ ...areaAnim, opacity: showWaiting && !showPouring ? 1 : 0 }} />
+
+            <path d={dPouring} fill="#90ed7d" fillOpacity={0.75} style={{ ...areaAnim, opacity: showPouring ? 1 : 0 }} />
+            <path d={dPouring} fill="none" stroke="#90ed7d" strokeWidth={1} strokeLinejoin="round" strokeLinecap="round" style={{ ...areaAnim, opacity: showPouring ? 1 : 0 }} />
 
             {/* Vertical crosshair + point marker on the hovered series. */}
             {tooltip && (

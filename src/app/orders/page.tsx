@@ -7,7 +7,9 @@ import { DownloadTile } from "@/components/download-tile";
 export const dynamic = "force-dynamic";
 
 function fmt(n: number) {
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // D3 shows CY as 0.00 until it reaches a full 1 CY (sub-1 totals display as zero).
+  const v = n < 1 ? 0 : n;
+  return v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default async function OrdersPage({
@@ -22,8 +24,11 @@ export default async function OrdersPage({
   const [orders, summary] = await Promise.all([getDoleseOrders(dateStr), getDoleseSummary(dateStr)]);
 
   return (
-    <div className="space-y-4">
-      <SubHeader title={`${summary.name} Orders`} backHref={`/?date=${dateStr}`} />
+    <div className="space-y-5">
+      <SubHeader
+        title={`${summary.name.charAt(0).toUpperCase() + summary.name.slice(1).toLowerCase()} Orders`}
+        backHref={`/?date=${dateStr}`}
+      />
 
       <DateSelect value={dateStr} />
 
