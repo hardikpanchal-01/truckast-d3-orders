@@ -41,9 +41,9 @@ export function MarketTiles({ summary, dateStr }: { summary: DoleseSummary; date
                   className="shrink-0"
                 />
                 <div className="min-w-0 leading-tight">
-                  <p className="truncate text-[13px] opacity-90">June 22nd thru 26th, 2026</p>
-                  <p className="truncate text-[15px] font-bold">Current Fuel Surcharge</p>
-                  <p className="text-[12px] leading-tight opacity-90">$30.00 per load *Click for Details</p>
+                  <div className="truncate text-[13px] opacity-90">June 22nd thru 26th, 2026</div>
+                  <div className="truncate text-[15px] font-bold">Current Fuel Surcharge</div>
+                  <div className="text-[12px] leading-tight opacity-90">$30.00 per load *Click for Details</div>
                 </div>
               </div>
             </FoldCard>
