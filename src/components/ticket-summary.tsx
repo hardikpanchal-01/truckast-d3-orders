@@ -38,17 +38,17 @@ function LoadCard({ load, orderId }: { load: DoleseLoad; orderId: number }) {
           )}
         </div>
         <div className="min-w-0 flex-1 leading-tight">
-          <p className="text-[12px] font-semibold">LOAD # {load.load_no}</p>
-          <p className="truncate text-[12px] opacity-95">
+          <div className="text-[12px] font-semibold">LOAD # {load.load_no}</div>
+          <div className="truncate text-[12px] opacity-95">
             TRUCK {load.truck_code ?? "—"}{load.plant_name ? ` - ${load.plant_name}` : ""}
-          </p>
-          <p className="text-[13px] font-bold">
+          </div>
+          <div className="text-[13px] font-bold">
             {load.ticket_code ?? "—"}: {load.load_cy.toFixed(2)} CY
-          </p>
-          <p className="text-[11px] opacity-95">
+          </div>
+          <div className="text-[11px] opacity-95">
             {load.status_time ? `${load.status_time} ` : ""}
             {load.cumulative_cy.toFixed(2)} OF {load.total_cy.toFixed(2)} CY
-          </p>
+          </div>
         </div>
       </div>
     </FoldCard>
