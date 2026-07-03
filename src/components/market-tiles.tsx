@@ -13,7 +13,8 @@ export function MarketTiles({ summary, dateStr }: { summary: DoleseSummary; date
   const [q, setQ] = React.useState("");
   const needle = q.trim().toLowerCase();
 
-  const pct = summary.totalCY > 0 ? summary.usedCY / summary.totalCY : 0;
+  // If total is <= 1, show as 100% complete (blue). Otherwise calculate the delivered percentage.
+  const pct = summary.totalCY > 1 ? summary.usedCY / summary.totalCY : 1;
 
   // Each tile carries searchable text so the box filters them.
   const fuelText = "current fuel surcharge dolese";
@@ -29,8 +30,8 @@ export function MarketTiles({ summary, dateStr }: { summary: DoleseSummary; date
 
       <div className="flex flex-wrap">
         {showFuel && (
-          <Link href="/fuel-surcharges" className="mb-[5px] mr-[5px] block">
-            <FoldCard tone="red" style={{ backgroundColor: "#ED1C24" }} className="w-[274px] cursor-pointer text-white">
+          <Link href="/fuel-surcharges" className="mb-[5px] block w-full sm:mr-[5px] sm:w-[274px]">
+            <FoldCard tone="red" style={{ backgroundColor: "#ED1C24" }} className="w-full cursor-pointer text-white">
               <div className="flex h-[90px] items-center gap-2 py-2 pl-2 pr-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -53,12 +54,12 @@ export function MarketTiles({ summary, dateStr }: { summary: DoleseSummary; date
           <IconTile
             tone="green"
             href={`/orders?date=${dateStr}`}
-            left={<PieGauge pct={pct} size={52} />}
+            left={<div style={{ marginLeft: 20, marginRight: 20 }}><PieGauge pct={pct} size={72} /></div>}
             lines={[
-              { text: summary.name, bold: true, size: 16 },
-              { text: `${fmt(summary.usedCY)} OF ${fmt(summary.totalCY)} CY`, size: 14 },
+              { text: summary.name.split(" ")[0].toUpperCase(), size: 14 },
+              { text: `${fmt(summary.usedCY)} OF ${fmt(summary.totalCY)} CY`, bold: true, size: 16 },
               {
-                text: `Tot ${summary.totalOrders}, Act ${summary.activeOrders}, Can ${summary.cancelledOrders}`,
+                text: `Total ${summary.totalOrders}, Active ${summary.activeOrders}, Cancelled ${summary.cancelledOrders}`,
                 size: 12,
                 dim: true,
               },

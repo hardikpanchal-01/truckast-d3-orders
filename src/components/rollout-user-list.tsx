@@ -17,7 +17,7 @@ function UserCard({ u }: { u: RolloutUser }) {
   const md = loginMd(u.last_login);
   return (
     <Link href={`/rollout/users/${u.id}`} className="block">
-    <FoldCard tone="green" className="h-[90px] w-[274px] cursor-pointer text-white">
+    <FoldCard tone="green" className="h-[90px] w-full cursor-pointer text-white sm:w-[274px]">
       <div className="flex h-full items-center gap-2 p-1">
         <div className="flex h-[82px] w-[72px] shrink-0 items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}

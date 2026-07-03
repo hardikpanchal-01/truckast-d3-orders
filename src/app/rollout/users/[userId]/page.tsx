@@ -35,7 +35,7 @@ interface Tile {
 
 function ActionTile({ t }: { t: Tile }) {
   const card = (
-    <FoldCard tone={t.tone} className={`h-[90px] w-[274px] text-white${t.href ? " cursor-pointer" : ""}`}>
+    <FoldCard tone={t.tone} className={`h-[90px] w-full text-white sm:w-[274px]${t.href ? " cursor-pointer" : ""}`}>
       <div className="flex h-full items-center gap-2 p-1">
         <div className="flex h-[80px] w-[72px] shrink-0 items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
