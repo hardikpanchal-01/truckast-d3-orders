@@ -8,8 +8,11 @@ interface Tenant {
   name: string;
 }
 
+// Bootstrap 2.2.2 select metrics — matches the settings form controls (30px tall).
 const SEL =
-  "w-full rounded-[4px] border border-[#cccccc] bg-white px-3 py-2 text-sm text-[#555] outline-none focus:border-[#66afe9]";
+  "block h-[30px] w-full rounded-[4px] border border-[#ccc] bg-white px-[6px] py-[4px] text-[14px] leading-[20px] text-[#555] " +
+  "shadow-[inset_0_1px_1px_rgba(0,0,0,0.075)] outline-none transition " +
+  "focus:border-[#66afe9] focus:shadow-[inset_0_1px_1px_rgba(0,0,0,0.075),0_0_8px_rgba(102,175,233,0.6)]";
 
 export function TenantSelector({
   tenants,

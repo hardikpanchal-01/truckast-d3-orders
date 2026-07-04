@@ -3,6 +3,9 @@ import { SubHeader } from "@/components/d3-ui";
 
 const btnStyle = {
   width: 250,
+  // content-box (like Bootstrap) so width:250 is the CONTENT width and the padding +
+  // border sit outside it — box model: content 250×20, padding 11/19, border 1.
+  boxSizing: "content-box" as const,
   display: "inline-block",
   padding: "11px 19px",
   fontSize: "17.5px",
@@ -16,8 +19,8 @@ const btnStyle = {
   borderColor: "rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25)",
   borderRadius: "6px",
   boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05)",
-  color: "#ffffff",
-  fontWeight: "bold",
+  color: "#fff",
+  fontWeight: "normal",
   cursor: "pointer",
 };
 
@@ -27,11 +30,11 @@ export default function ProjectsPage() {
       <SubHeader title="INVITE TO" backHref="/" />
 
       <div className="flex flex-col gap-3">
-        <Link href="/projects/company" style={btnStyle} className="block">
+        <Link href="/projects/company" style={btnStyle}>
           COMPANY
         </Link>
 
-        <Link href="/projects/project" style={btnStyle} className="block">
+        <Link href="/projects/project" style={btnStyle}>
           PROJECT
         </Link>
       </div>

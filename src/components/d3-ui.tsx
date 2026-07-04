@@ -11,6 +11,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type LucideIcon } from "lucide-react";
+import { logout } from "@/actions/authActions";
 
 /* ------------------------------------------------------------------ */
 /*  Palette (sampled from the live app)                                */
@@ -103,6 +104,17 @@ export function TopNav() {
       !inMenu ? "hover:text-white" : "",
       inMenu ? "mb-[2px] px-5 py-[9px] leading-5 transition-colors hover:bg-black/25" : "px-[15px] py-[10px]",
     ].join(" ");
+    if (tab === "LOGOUT") {
+      // Submits the logout server action (clears the session cookie → /login).
+      // display:contents so the <button> is the flex item, like the other tabs.
+      return (
+        <form key={tab} action={logout} className="contents">
+          <button type="submit" onClick={() => setOpen(false)} className={`${cls} border-0 bg-transparent [font:inherit]`}>
+            {tab}
+          </button>
+        </form>
+      );
+    }
     return href ? (
       <Link key={tab} href={href} className={cls} onClick={() => setOpen(false)}>
         {tab}
@@ -136,19 +148,21 @@ export function TopNav() {
         color: "#333",
       }}
     >
-      {/* No container padding — the brand + hamburger get their own insets via the
-          brand's padding/margin; content aligns to the full-width dark header bar. */}
-      <div className="mx-auto w-full max-w-[724px] px-0 min-[980px]:max-w-[1170px]">
+      {/* Full-width navbar with a 20px gutter — no max-w cap below desktop, so the
+          brand + hamburger sit near the viewport edges instead of leaving dark
+          corner space from a centered container. Centers at 1170 on wide screens. */}
+      <div className="mx-auto w-full px-5 min-[980px]:max-w-[1170px]">
         <div className="flex min-h-[40px] items-center">
           <Link
             href="/"
+            // py-[15px] on mobile; py-[10px] at ≥980 so the brand is 40px tall and the
+            // desktop navbar matches Bootstrap's 40px (aligned with the 40px tab links).
+            className="block px-5 py-[15px] min-[980px]:py-[10px]"
             style={{
               fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               lineHeight: "20px",
               textDecoration: "none",
-              display: "block",
-              padding: "15px 20px 15px",
-              marginLeft: "-30px",
+              marginLeft: "-20px",
               fontSize: "20px",
               fontWeight: 200,
               textShadow: "0 -1px 0 rgba(0, 0, 0, 0.25)",
@@ -246,7 +260,14 @@ export function SubHeader({
         <img src="/icons/arrow-back.png" alt="Back" className="h-8 w-8" />
       </Link>
       <div className="min-w-0 text-center">
-        <strong className="block truncate text-[16px] font-bold leading-[19px] text-[#333] pb-2">
+        {/* pb-2 only when there's a subtitle (spacing above it); without one the title
+            centers with equal space above/below instead of being pushed up. */}
+        <strong
+          className={[
+            "block truncate text-[16px] font-bold leading-[19px] text-[#333]",
+            subtitle ? "pb-2" : "",
+          ].join(" ")}
+        >
           {title}
         </strong>
         {subtitle ? <div className="text-xs leading-tight text-[#555]">{subtitle}</div> : null}
