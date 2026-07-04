@@ -24,13 +24,13 @@ export function MarketTiles({ summary, dateStr }: { summary: DoleseSummary; date
 
   return (
     <div>
-      <div className="mb-[10px]">
+      <div className="mb-[10px] min-[980px]:mb-5">
         <SearchBox value={q} onChange={setQ} placeholder="Search" />
       </div>
 
       <div className="flex flex-wrap">
         {showFuel && (
-          <Link href="/fuel-surcharges" className="mb-[5px] block w-full sm:mr-[5px] sm:w-[274px]">
+          <Link href="/fuel-surcharges" className="mb-[5px] block w-full no-underline hover:no-underline sm:mr-[5px] sm:w-[279px]">
             <FoldCard tone="red" style={{ backgroundColor: "#ED1C24" }} className="w-full cursor-pointer text-white">
               <div className="flex h-[90px] items-center gap-2 py-2 pl-2 pr-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -40,10 +40,12 @@ export function MarketTiles({ summary, dateStr }: { summary: DoleseSummary; date
                   style={{ width: 72, height: 69 }}
                   className="shrink-0"
                 />
-                <div className="min-w-0 leading-tight">
-                  <div className="truncate text-[13px] opacity-90">June 22nd thru 26th, 2026</div>
-                  <div className="truncate text-[15px] font-bold">Current Fuel Surcharge</div>
-                  <div className="text-[12px] leading-tight opacity-90">$30.00 per load *Click for Details</div>
+                <div className="min-w-0 leading-[20px]">
+                  {/* Hardcoded promo — matches D3's current weekly surcharge. Update weekly
+                      (or wire to a data source) as D3 changes it. */}
+                  <div className="truncate text-[13px] leading-[20px]">June 29th thru July 3rd, 2026</div>
+                  <div className="text-[15px] font-bold leading-[20px]">Current Fuel Surcharge</div>
+                  <div className="text-[12px] leading-[20px]">$25.00 per load *Click for Details</div>
                 </div>
               </div>
             </FoldCard>
@@ -59,7 +61,7 @@ export function MarketTiles({ summary, dateStr }: { summary: DoleseSummary; date
               { text: summary.name.split(" ")[0].toUpperCase(), size: 14 },
               { text: `${fmt(summary.usedCY)} OF ${fmt(summary.totalCY)} CY`, bold: true, size: 16 },
               {
-                text: `Tot ${summary.totalOrders}, Act ${summary.activeOrders}, Can ${summary.cancelledOrders}`,
+                text: `Total ${summary.totalOrders}, Active ${summary.activeOrders}, Cancelled ${summary.cancelledOrders}`,
                 size: 12,
                 dim: true,
               },

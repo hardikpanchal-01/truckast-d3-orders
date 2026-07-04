@@ -19,15 +19,16 @@ export default async function MarketSummaryPage({
   // and includes the correct tenant name
   const summary = await getDoleseSummary(dateStr, dateToStr);
 
+  // Desktop (≥980) gets a roomier vertical rhythm (space-y-6 = 24px) between the
+  // stacked rows; below that it stays compact at space-y-4 (16px). The old inline
+  // marginTop overrides were removed so this responsive spacing actually applies.
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-[980px]:space-y-6">
       <SubHeader title={`${summary.name.split(" ")[0].charAt(0).toUpperCase() + summary.name.split(" ")[0].slice(1).toLowerCase()} Orders`} />
 
-      <div style={{ marginTop: 15 }}>
-        <DateSelect value={dateStr} valueTo={dateToStr} />
-      </div>
+      <DateSelect value={dateStr} valueTo={dateToStr} />
 
-      <div className="flex flex-wrap" style={{ marginTop: 10, marginBottom: 5 }}>
+      <div className="flex flex-wrap">
         <IconTile
           href="/rollout/search"
           left={

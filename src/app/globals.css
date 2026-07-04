@@ -12,6 +12,17 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Gauge hover/focus: a soft round blue glow (NO zoom). Draw-in sweep is JS-driven. */
+.pie-hover {
+  display: inline-flex;
+  border-radius: 50%;
+  transition: box-shadow 0.2s ease;
+}
+.pie-hover:hover,
+a:focus-visible .pie-hover {
+  box-shadow: 0 0 0 2px rgba(124, 181, 236, 0.6), 0 0 8px 2px rgba(124, 181, 236, 0.7);
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -48,7 +59,8 @@ body {
   }
   a:hover {
     color: #005580;
-    text-decoration: underline;
+    /* No hover underline anywhere (D3's tiles/nav never underline on hover). */
+    text-decoration: none;
   }
   strong,
   b {

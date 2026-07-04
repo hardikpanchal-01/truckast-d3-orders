@@ -17,8 +17,9 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       <TopNav />
-      {/* px-5 (20px) matches the header gutter so content lines up with the nav. */}
-      <main className="mx-auto w-full max-w-[724px] pt-5 pb-4 min-[980px]:max-w-[1170px] min-[980px]:px-5 sm:pb-6">
+      {/* Below 980: full-width with a 20px gutter so the content fills the viewport and
+          aligns with the full-width header (no empty strip on the right). Desktop: centered 1170px. */}
+      <main className="w-full px-5 pt-5 pb-4 min-[980px]:mx-auto min-[980px]:max-w-[1170px] min-[980px]:px-0 sm:pb-6">
         {children}
       </main>
     </>
