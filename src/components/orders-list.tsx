@@ -40,16 +40,6 @@ function cyLabel(cy: number): string {
   return (cy < 1 ? 0 : cy).toFixed(2);
 }
 
-/** D3's cancelled-order glyph: a white "no entry" (⊘) circle with a diagonal bar. */
-function BanIcon() {
-  return (
-    <svg viewBox="0 0 100 100" className="h-[64px] w-[64px]" aria-hidden="true">
-      <circle cx="50" cy="50" r="42" fill="none" stroke="#fff" strokeWidth="11" />
-      <line x1="21" y1="21" x2="79" y2="79" stroke="#fff" strokeWidth="11" />
-    </svg>
-  );
-}
-
 function md(dateStr: string): string {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return "";
@@ -107,7 +97,9 @@ export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
                   usePie ? (
                     <PieGauge pct={pct} size={52} tinted />
                   ) : o.status === "CANCELED" ? (
-                    <BanIcon />
+                    // D3's cancelled-tile glyph (white ⊘ on transparent), 72×80.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src="/icons/cancelled.png" alt="Cancelled" width={72} height={80} />
                   ) : !isCompleted ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src="/icons/scheduled.png" alt="" className="h-[64px] w-auto" />

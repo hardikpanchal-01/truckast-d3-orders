@@ -148,10 +148,9 @@ export function TopNav() {
         color: "#333",
       }}
     >
-      {/* Full-width navbar with a 20px gutter — no max-w cap below desktop, so the
-          brand + hamburger sit near the viewport edges instead of leaving dark
-          corner space from a centered container. Centers at 1170 on wide screens. */}
-      <div className="mx-auto w-full px-5 min-[980px]:max-w-[1170px]">
+      {/* No container padding — the brand + hamburger get their own insets via the
+          brand's padding/margin; content aligns to the full-width dark header bar. */}
+      <div className="mx-auto w-full px-[10px] min-[980px]:max-w-[1170px] min-[980px]:px-0">
         <div className="flex min-h-[40px] items-center">
           <Link
             href="/"
@@ -162,6 +161,7 @@ export function TopNav() {
               fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               lineHeight: "20px",
               textDecoration: "none",
+              display: "block",
               marginLeft: "-20px",
               fontSize: "20px",
               fontWeight: 200,
@@ -247,9 +247,11 @@ export function SubHeader({
   return (
     <div
       className={[
-        "flex items-center justify-between gap-3 rounded-md border border-[#c9c9c9] bg-[#FAFAFA] px-5 text-[14px] text-[#333] shadow-sm",
+        "flex items-center justify-between gap-3 rounded-md border border-[#c9c9c9] px-5 text-[14px] text-[#333] shadow-[0_1px_3px_rgba(0,0,0,0.08)]",
         heightClass,
       ].join(" ")}
+      // D3 sub-header shade: subtle top-to-bottom light-gray gradient (near-white → #e9e9e9).
+      style={{ backgroundColor: "#f4f4f4", backgroundImage: "linear-gradient(to bottom, #fbfbfb, #e9e9e9)" }}
     >
       <Link
         href={backHref ?? "/"}
@@ -260,14 +262,9 @@ export function SubHeader({
         <img src="/icons/arrow-back.png" alt="Back" className="h-8 w-8" />
       </Link>
       <div className="min-w-0 text-center">
-        {/* pb-2 only when there's a subtitle (spacing above it); without one the title
+        {/* pb only when there's a subtitle (spacing above it); without one the title
             centers with equal space above/below instead of being pushed up. */}
-        <strong
-          className={[
-            "block truncate text-[16px] font-bold leading-[19px] text-[#333]",
-            subtitle ? "pb-2" : "",
-          ].join(" ")}
-        >
+        <strong className={`block truncate text-[16px] font-bold leading-[19px] text-[#333] ${subtitle ? "pb-1" : ""}`}>
           {title}
         </strong>
         {subtitle ? <div className="text-xs leading-tight text-[#555]">{subtitle}</div> : null}
@@ -306,7 +303,10 @@ export function FoldCard({
   const t = TONES[tone];
   return (
     <div
-      className={["relative overflow-hidden cursor-pointer text-white", className || ""].join(" ")}
+      // overflow-visible (not hidden) so a child's hover glow — e.g. the DOLESE pie's
+      // box-shadow ring — isn't clipped at the card edge. The only absolutely-positioned
+      // child is the dogear, pinned exactly at the corner, so it never spills.
+      className={["relative overflow-visible cursor-pointer text-white", className || ""].join(" ")}
       style={{
         position: "relative",
         backgroundColor: t.bg,
@@ -374,7 +374,7 @@ function TileBody({
     <div className="flex h-full w-full items-center">
       {/* tileIcon — min-w (not fixed w) so an icon's own margins (e.g. the blue tiles'
           marginRight) push the text over instead of being swallowed by a fixed box. */}
-      <div className="flex h-[82px] min-w-[72px] shrink-0 items-center justify-center text-white">
+      <div className="mr-[5px] flex h-[80px] min-w-[72px] shrink-0 items-center justify-center text-white">
         {left ? left : Icon ? <Icon className="h-10 w-10" strokeWidth={1.6} /> : null}
       </div>
       {/* tileInfoSection */}
@@ -384,7 +384,7 @@ function TileBody({
           {lines.map((ln, i) => (
             <div
               key={i}
-              className="truncate leading-[1.2]"
+              className="truncate leading-[20px]"
               style={{
                 // D3's .tile sets color:white for every line (no dimming).
                 color: "#fff",
@@ -424,10 +424,10 @@ export function IconTile({
   const body = <TileBody icon={icon} left={leftContent} lines={lines} />;
 
   // Match D3 .tile CSS exactly; darken slightly on hover (D3's tile hover effect).
-  const tileClass = "relative block cursor-pointer text-white transition duration-150 hover:brightness-90";
+  const tileClass = "relative block cursor-pointer text-white no-underline hover:no-underline";
   const tileStyle: React.CSSProperties = {
     position: "relative",
-    width: 274,
+    width: 279,
     height: 90,
     marginRight: 5,
     marginBottom: 5,
@@ -497,17 +497,49 @@ export function PieGauge({
   const usedFill = tinted ? "rgba(0,0,0,0.32)" : PIE_USED;
   const stroke = tinted ? "rgba(255,255,255,0.65)" : "#fff";
 
+  // Highcharts-style draw-in: a clip wedge sweeps 0 → 360° clockwise on mount.
+  const clipId = "pieclip" + React.useId().replace(/[^a-zA-Z0-9]/g, "");
+  const [sweep, setSweep] = React.useState(0);
+  React.useEffect(() => {
+    let raf = 0;
+    let start = 0;
+    const DUR = 750;
+    const step = (ts: number) => {
+      if (!start) start = ts;
+      const t = Math.min(1, (ts - start) / DUR);
+      setSweep(1 - Math.pow(1 - t, 3)); // easeOutCubic
+      if (t < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const swept = sweep >= 0.999;
+  const sa = sweep * 2 * Math.PI;
+  const sx = Math.round((c + r * Math.sin(sa)) * 10000) / 10000;
+  const sy = Math.round((c - r * Math.cos(sa)) * 10000) / 10000;
+  const sLarge = sweep > 0.5 ? 1 : 0;
+  const clipD = sweep <= 0 ? "M0 0Z" : `M ${c} ${c} L ${c} ${c - r} A ${r} ${r} 0 ${sLarge} 1 ${sx} ${sy} Z`;
+
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden>
-      {/* Base = remainder slice (full circle) */}
-      <circle cx={c} cy={c} r={r} fill={clamped >= 1 ? usedFill : restFill} stroke={stroke} strokeWidth="1" />
-      {/* Used slice on top */}
-      {usedPath ? (
-        <path d={usedPath} fill={usedFill} stroke={stroke} strokeWidth="1" strokeLinejoin="round" />
-      ) : null}
-      {/* Radius seam line at 12 o'clock — D3's pie always shows this, even when full. */}
-      <line x1={c} y1={c} x2={c} y2={c - r} stroke={stroke} strokeWidth="1" />
-    </svg>
+    <span className="pie-hover">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="block" aria-hidden>
+        <defs>
+          <clipPath id={clipId}>
+            <path d={clipD} />
+          </clipPath>
+        </defs>
+        <g clipPath={swept ? undefined : `url(#${clipId})`}>
+          {/* Base = remainder slice (full circle) */}
+          <circle cx={c} cy={c} r={r} fill={clamped >= 1 ? usedFill : restFill} stroke={stroke} strokeWidth="1" />
+          {/* Used slice on top */}
+          {usedPath ? (
+            <path d={usedPath} fill={usedFill} stroke={stroke} strokeWidth="1" strokeLinejoin="round" />
+          ) : null}
+          {/* Radius seam line at 12 o'clock — D3's pie always shows this, even when full. */}
+          <line x1={c} y1={c} x2={c} y2={c - r} stroke={stroke} strokeWidth="1" />
+        </g>
+      </svg>
+    </span>
   );
 }
 
