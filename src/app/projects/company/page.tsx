@@ -73,7 +73,7 @@ export default function CompanySearchPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           placeholder="Enter a Customer Name or Number"
-          className="w-full rounded-[4px] border border-[#cccccc] bg-white px-3 py-2 text-sm text-[#555] outline-none focus:border-[#66afe9] focus:shadow-[0_0_8px_rgba(102,175,233,0.6)]"
+          className="block w-full rounded-[4px] border border-[#ccc] bg-white px-[10px] py-2 text-[14px] leading-[20px] text-[#555] shadow-[inset_0_1px_1px_rgba(0,0,0,0.075)] outline-none transition focus:border-[#66afe9] focus:shadow-[inset_0_1px_1px_rgba(0,0,0,0.075),0_0_8px_rgba(102,175,233,0.6)]"
         />
 
         <div>
@@ -81,7 +81,7 @@ export default function CompanySearchPage() {
             type="button"
             onClick={handleSearch}
             disabled={isPending}
-            className="rounded-[4px] bg-[#d2322d] px-8 py-2 text-sm font-semibold text-white hover:bg-[#c12e2a] disabled:opacity-50"
+            className="rounded-[4px] border border-[rgba(0,0,0,0.1)] border-b-[rgba(0,0,0,0.25)] bg-[#da4f49] bg-[linear-gradient(to_bottom,#ee5f5b,#bd362f)] px-8 py-2 text-[14px] font-normal text-white [text-shadow:0_-1px_0_rgba(0,0,0,0.25)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_1px_2px_rgba(0,0,0,0.05)] transition-[background] hover:bg-none hover:bg-[#bd362f] disabled:opacity-50"
           >
             {isPending ? "SEARCHING..." : "SEARCH"}
           </button>
