@@ -50,6 +50,8 @@ export interface DoleseOrderListItem {
   dispatch_status: string;
   /** Poured speed as a % of planned speed (0–100+), or null. Drives IN_PROCESS/COMPLETE colour. */
   pour_pct: number | null;
+  /** Total CY delivered so far — drives the IN_PROCESS pie fill (poured ÷ ordered). */
+  poured_cy: number;
 }
 
 export interface OrderProductInfo {
@@ -254,28 +256,44 @@ function areAllLoadsTicketed(orderedQty: number, ticketedQty: number): boolean {
   return Math.round((orderedQty - ticketedQty) * 100) / 100 <= 0.02;
 }
 
+/**
+ * Order status per the D3 ORDER HELP spec:
+ *   - Cancelled  → order was removed for any reason.
+ *   - Pre-Pour   → no ticket activity yet.
+ *   - In Process → has some ticket activity.
+ *   - Complete   → "has poured the ordered amount" (poured volume ≥ ordered).
+ * Note: completion is driven by the POURED volume reaching the order — NOT by the
+ * dispatch `current_status` flag (D3 keeps a dispatch-closed order In Process until
+ * the concrete is actually poured) and NOT merely by all loads being ticketed.
+ */
 function deriveStatus(
   order: { current_status: number | null; removed: boolean | null; remove_reason_code: string | null },
   orderedCY: number,
-  ticketedCY: number,
-  lastLoadCompleted: boolean,
+  pouredCY: number,
+  hasActivity: boolean,
 ): OrderStatus {
   if (order.removed === true && (order.remove_reason_code || "").trim() !== "") return "CANCELED";
-  // Dispatch explicitly marked complete — trust it (matches the live D3 system).
-  if (order.current_status === 4) return "COMPLETED";
-  if (ticketedCY > 0) {
-    if (lastLoadCompleted && areAllLoadsTicketed(orderedCY, ticketedCY)) return "COMPLETED";
+  if (hasActivity || pouredCY > 0) {
+    if (areAllLoadsTicketed(orderedCY, pouredCY)) return "COMPLETED"; // poured ≥ ordered (±0.02)
     return "IN_PROCESS";
   }
   return "PRE_POUR";
 }
 
-/** Map dispatch current_status code to D3 production label */
+/**
+ * Map dispatch `current_status` code to the D3 production label.
+ * Verified by joining our per-order current_status to the colours D3 assigned in
+ * the exported JobsForFixedNodeID.htm (Firm→green, Will-Call→yellow, Hold→red):
+ *   0 → Firm (green)    e.g. 40501, 48107, 25507 — all GREEN in D3
+ *   1 → W/C  (yellow)   e.g. 48307, 20301, 24303 — all YELLOW in D3
+ *   3 → Hold (red)      e.g. 22702, 22501        — both ON HOLD/RED in D3
+ * (An earlier mapping had 0/1/3 shifted, which reddened ~116 firm orders.)
+ */
 const DISPATCH_STATUS_LABELS: Record<number, string> = {
-  0: "Hold",
-  1: "Firm",
+  0: "Firm",
+  1: "W/C",
   2: "Active",
-  3: "W/C",
+  3: "Hold",
   4: "Complete",
   5: "Cancelled",
 };
@@ -285,6 +303,7 @@ function getDispatchStatus(currentStatus: number | null, removed: boolean | null
   if (currentStatus == null) return "Unknown";
   return DISPATCH_STATUS_LABELS[currentStatus] || `Status ${currentStatus}`;
 }
+
 
 /* ------------------------------------------------------------------ */
 /*  Ticket helpers                                                    */
@@ -434,6 +453,20 @@ function fmtStamp(ts: string | null): string | null {
   const ap = h >= 12 ? "PM" : "AM";
   h = h % 12 || 12;
   return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()} @ ${h}:${String(m).padStart(2, "0")}${ap} CST`;
+}
+
+/** "Jul 17 @ 12:24PM CST" for a REAL UTC timestamptz (order_notes.note_date), converted
+ *  to America/Chicago — unlike ticket times, note_date is a genuine tz-aware instant. */
+function fmtNoteStamp(ts: string | null): string | null {
+  if (!ts) return null;
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true,
+  }).formatToParts(d);
+  const g = (t: string) => parts.find((p) => p.type === t)?.value || "";
+  return `${g("month")} ${g("day")} @ ${g("hour")}:${g("minute")}${g("dayPeriod").toUpperCase()} CST`;
 }
 
 /** "JUN 29 2026 2:32PM" (UTC parts = CST clock value). */
@@ -662,6 +695,9 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
   // Map to DoleseOrderListItem, only including filtered orders. Also capture each order's
   // planned delivery rate (CY/HR) so we can later compute the poured-speed %.
   const plannedByOrder = new Map<number, number>();
+  // Keep each order's raw dispatch status + ordered CY so we can re-derive the
+  // list status from actual ticket activity below.
+  const metaByOrder = new Map<number, { cs: number | null; ordered: number }>();
   const items: DoleseOrderListItem[] = cyOrders
     .filter((o) => filteredIds.has(o.order_id))
     .map((o) => {
@@ -673,6 +709,10 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
         .flatMap((p) => p.order_product_schedules || [])
         .find((s) => s?.delivery_rate_per_hour != null)?.delivery_rate_per_hour;
       if (planned != null) plannedByOrder.set(Number(o.order_id), Number(planned));
+      metaByOrder.set(Number(o.order_id), {
+        cs: (o as { current_status: number | null }).current_status,
+        ordered,
+      });
       return {
         order_id: o.order_id,
         order_code: o.order_code,
@@ -683,24 +723,28 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
         start_time: earliestStart(products),
         ordered_cy: Math.round(ordered * 100) / 100,
         ticketed_cy: Math.round(ticketed * 100) / 100,
-        // current_status === 4 covers "completed"; no per-order ticket fetch needed here.
-        status: deriveStatus(o, ordered, ticketed, false),
+        // First-pass status from order_products only (no poured volume yet): Pre-Pour
+        // if nothing delivered, else In Process. The ticket pass below refines it and
+        // decides Completion from the actual poured volume.
+        status: deriveStatus(o, ordered, 0, ticketed > 0),
         dispatch_status: getDispatchStatus(o.current_status, o.removed, o.remove_reason_code),
         pour_pct: null as number | null,
+        poured_cy: 0,
       };
     });
 
-  // Poured-speed % for IN_PROCESS / COMPLETE orders (drives their card colour). Batch-fetch
-  // tickets for those orders in one round-trip, then pour rate = poured CY / pour-window hrs.
-  const activeIds = items
-    .filter((i) => i.status === "IN_PROCESS" || i.status === "COMPLETED")
-    .map((i) => Number(i.order_id));
-  if (activeIds.length > 0) {
+  // Status + poured-speed from ACTUAL ticket activity. D3 defines "In Process" as
+  // "an order that has some ticket activity", so we must look at tickets — the
+  // order_products.delv_qty used above is often stale (0) even when trucks have
+  // run, which wrongly leaves started orders as Pre-Pour. Batch-fetch tickets for
+  // EVERY order in the day (not just the ones delv_qty already flagged active).
+  const allIds = items.map((i) => Number(i.order_id));
+  if (allIds.length > 0) {
     const { data: tix } = await supabase
       .from("tickets")
       .select(`${TICKET_FIELDS}, order_id`)
-      .in("order_id", activeIds)
-      .limit(5000);
+      .in("order_id", allIds)
+      .limit(10000);
     const tickets = ((tix || []) as (TicketRow & { order_id: number })[]).filter(isValidTicket);
 
     const cyByTicket = new Map<number, number>();
@@ -709,7 +753,7 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
         .from("ticket_products")
         .select("ticket_id, is_mix, load_qty, order_qty_unit")
         .in("ticket_id", tickets.map((t) => t.ticket_id))
-        .limit(20000);
+        .limit(40000);
       for (const p of tp || []) {
         if (p.is_mix === true && isCubicYardUnit(p.order_qty_unit)) {
           cyByTicket.set(p.ticket_id, (cyByTicket.get(p.ticket_id) || 0) + Number(p.load_qty || 0));
@@ -728,20 +772,46 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
       const d = new Date(ts);
       return Number.isNaN(d.getTime()) ? null : d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
     };
-    const pourEndOf = (t: TicketRow) => t.end_unload || t.wash_time || t.at_plant_time || t.to_plant_time;
+    // Pour completion = actual end-of-pour (end_unload / wash), NOT the drive-back
+    // timestamps (at_plant / to_plant) — those include the truck's return trip and
+    // inflate the pour window, understating the poured speed and wrongly reddening
+    // cards. If an order has no pour-completion data yet, pour_pct stays null and
+    // the card defaults to green (on-pace), matching D3.
+    const pourEndOf = (t: TicketRow) => t.end_unload || t.wash_time;
 
     for (const it of items) {
-      if (it.status !== "IN_PROCESS" && it.status !== "COMPLETED") continue;
+      if (it.status === "CANCELED") continue; // cancelled stays cancelled
       const ot = tByOrder.get(Number(it.order_id)) || [];
-      let poured = 0;
+      if (ot.length === 0) continue; // no ticket activity → keep Pre-Pour
+
+      let poured = 0; // CY that finished pouring (end_unload/wash) — for the pour-speed window
+      let delivered = 0; // CY on all valid tickets (ticketed / delivered)
+      let pouredVol = 0; // CY that has POURED OUT — drives the pie + completion (D3 spec)
       const starts: number[] = [];
       const ends: number[] = [];
       for (const t of ot) {
+        const cy = cyByTicket.get(t.ticket_id) || 0;
+        delivered += cy;
+        if (isPouredOut(t)) pouredVol += cy;
         const ps = minOf(t.unload_time);
         const pe = minOf(pourEndOf(t));
         if (ps != null) starts.push(ps);
-        if (pe != null) { ends.push(pe); poured += cyByTicket.get(t.ticket_id) || 0; }
+        if (pe != null) { ends.push(pe); poured += cy; }
       }
+
+      // Re-derive status from real ticket activity (has tickets ⇒ at least In Process;
+      // Complete only once the POURED volume reaches the ordered amount — D3 spec).
+      const meta = metaByOrder.get(Number(it.order_id));
+      it.status = deriveStatus(
+        { current_status: meta?.cs ?? null, removed: false, remove_reason_code: null },
+        meta?.ordered ?? it.ordered_cy,
+        pouredVol,
+        true,
+      );
+      // Ticket-based delivered is authoritative for the ticketed figure.
+      it.ticketed_cy = Math.max(it.ticketed_cy, Math.round(delivered * 100) / 100);
+      // Pie fill = volume POURED ÷ volume ordered (D3 spec), NOT delivered/ticketed.
+      it.poured_cy = Math.round(pouredVol * 100) / 100;
       const planned = plannedByOrder.get(Number(it.order_id));
       if (starts.length && ends.length && poured > 0 && planned && planned > 0) {
         const durMin = Math.max(...ends) - Math.min(...starts);
@@ -750,11 +820,33 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
     }
   }
 
-  const rank: Record<OrderStatus, number> = { IN_PROCESS: 0, PRE_POUR: 1, COMPLETED: 2, CANCELED: 3 };
+  // D3 board order (reconstructed from the D3 export, where the two In-Process tiles
+  // sit ABOVE the 00:00 Pre-Pour tile — so it is NOT a pure chronological run):
+  //   Group 0 — STARTED orders (In Process + Completed)
+  //   Group 1 — not-started (Pre-Pour + On Hold)
+  //   Group 2 — Cancelled (single trailing block at the very bottom)
+  // Within each group, ascending by scheduled start time (untimed / will-call → after
+  // all timed orders); order_code breaks ties. Colour is a per-tile status cue, not a
+  // sort key, so held/behind (red) tiles fall at their own time slot within a group.
+  const startMinutes = (t: string | null): number => {
+    if (!t) return Number.POSITIVE_INFINITY; // untimed (will-call) → after all timed
+    const d = new Date(t);
+    if (Number.isNaN(d.getTime())) return Number.POSITIVE_INFINITY;
+    return d.getUTCHours() * 60 + d.getUTCMinutes(); // CST clock value stored in a UTC field
+  };
+  const groupRank = (s: OrderStatus): number => {
+    if (s === "CANCELED") return 2; // trailing block
+    if (s === "IN_PROCESS" || s === "COMPLETED") return 0; // started
+    return 1; // pre-pour / on-hold
+  };
   items.sort((a, b) => {
-    const r = rank[a.status] - rank[b.status];
-    if (r !== 0) return r;
-    return (a.start_time || "").localeCompare(b.start_time || "");
+    const g = groupRank(a.status) - groupRank(b.status);
+    if (g !== 0) return g;
+    const ta = startMinutes(a.start_time);
+    const tb = startMinutes(b.start_time);
+    if (ta !== tb) return ta - tb;
+    // Stable, deterministic tiebreak for identical time slots.
+    return String(a.order_code).localeCompare(String(b.order_code));
   });
   return items;
 }
@@ -893,9 +985,12 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
 
   const loads = tickets.length;
 
-  // Count only trucks that are currently active (not back at plant yet)
-  const activeTickets = tickets.filter((t) => isActiveTicket(t));
-  const trucks = new Set(activeTickets.map((t) => t.truck_code).filter(Boolean)).size;
+  // TRUCKS tile = trucks currently "on the map": headed to the job or at the job
+  // and not yet returned to the plant (en-route + on-job). Matches D3's count.
+  const mapTickets = tickets.filter(
+    (t) => (has(t.to_job_time) || has(t.on_job_time)) && !hasLeftJob(t),
+  );
+  const trucks = new Set(mapTickets.map((t) => t.truck_code).filter(Boolean)).size;
 
   // Calculate actual ticketed CY from ticket_products (sum of all delivered loads)
   // This is more accurate than order_products.delv_qty which may not be updated
@@ -904,10 +999,11 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     actualTicketedCY += cy;
   }
 
-  // On job = trucks that have arrived at job site but haven't LEFT yet
-  // (trucks can be pouring or done pouring but still physically at job site)
+  // ON JOB = "total concrete that has ARRIVED at the jobsite" (D3 ORDER HELP).
+  // Every ticket that reached the job (on_job_time set) counts — do NOT subtract
+  // trucks that have since left; their concrete is poured/on the job.
   const onJobCY = tickets
-    .filter((t) => has(t.on_job_time) && !hasLeftJob(t))
+    .filter((t) => has(t.on_job_time))
     .reduce((s, t) => s + (cyByTicket.get(t.ticket_id) || 0), 0);
 
   // --- Chart data ---------------------------------------------------
@@ -922,6 +1018,9 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     return d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
   };
   const r2 = (n: number) => Math.round(n * 100) / 100;
+  // Pour-out = end_unload / wash if present, else fall back to the drive-back stamps
+  // so a truck still eventually leaves the "pouring" count (many tickets have no
+  // end_unload recorded; dropping the fallback left them counted forever).
   const pourOutTime = (t: TicketRow): string | null =>
     t.end_unload || t.wash_time || t.at_plant_time || t.to_plant_time;
 
@@ -998,7 +1097,18 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
       const pourStartTs = t.unload_time;
       const pourEndTs = pourOutTime(t);
       const pourStart = tsMin(pourStartTs);
-      const pourEnd = tsMin(pourEndTs);
+      let pourEnd = tsMin(pourEndTs);
+      // Safeguard: if a truck has no pour-out timestamp yet but is clearly done (its last
+      // activity is over 3h old — isTicketCompleted), retire it at its latest timestamp so
+      // it leaves the count. Without this, trucks whose pour-out data lags never depart and
+      // the Waiting/Pouring areas accumulate instead of oscillating like D3.
+      if (pourEnd == null && isTicketCompleted(t)) {
+        const le = latestTicketEpoch(t);
+        if (le != null) {
+          const d = new Date(le);
+          pourEnd = d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
+        }
+      }
       if (t.on_job_time) tsByT.set(arrive, t.on_job_time);
       if (pourStart != null && pourStartTs) tsByT.set(pourStart, pourStartTs);
       if (pourEnd != null && pourEndTs) tsByT.set(pourEnd, pourEndTs);
@@ -1033,16 +1143,21 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   const tMin = allT.length ? Math.min(...allT) : 0;
   const tMax = allT.length ? Math.max(...allT) : 0;
 
-  // Generate scheduled order points for the "Ordered" line
-  // Each point is spaced by truck_space minutes, all at delivery_rate_per_hour
+  // Generate scheduled order points for the "Ordered" reference line. Each point is
+  // spaced by truck_space minutes at delivery_rate_per_hour. Cap it to the actual
+  // pour-data window (tMax) instead of projecting the entire future schedule —
+  // otherwise the x-axis stretches hours past the real data. Matches D3, which
+  // draws "Ordered" only across the current pour window.
   const scheduledOrderPoints: { t: number; v: number; ts?: string }[] = [];
   if (scheduledTime && spacingMinutes && spacingMinutes > 0 && numberOfLoads && numberOfLoads > 0) {
     const startMin = tsMin(scheduledTime);
     const startMs = new Date(scheduledTime).getTime();
     if (startMin != null && !Number.isNaN(startMs)) {
       for (let i = 0; i < numberOfLoads; i++) {
+        const t = startMin + i * spacingMinutes;
+        if (tMax > 0 && t > tMax && scheduledOrderPoints.length > 0) break;
         scheduledOrderPoints.push({
-          t: startMin + i * spacingMinutes,
+          t,
           v: r2(scheduleRate),
           ts: new Date(startMs + i * spacingMinutes * 60000).toISOString(),
         });
@@ -1122,10 +1237,34 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     })
     .filter((m): m is { text: string; time: string } => m != null);
 
+  // User-entered notes from order_notes = D3's "user generated posts" in the Social
+  // Stream. note_date is a real tz-aware instant → format to CST. (D3 also shows auto
+  // change-events like "Status changed from W/C to Firm" / "Volume changed…"; those are
+  // D3 audit-log entries that aren't synced into our DB, so they can't be reproduced.)
+  const { data: noteRows } = await supabase
+    .from("order_notes")
+    .select("note_description, note_date")
+    .eq("order_id", orderId)
+    .order("note_date", { ascending: false })
+    .limit(200);
+  const noteActivity = (noteRows || [])
+    .filter((n) => (n.note_description || "").toString().trim() !== "")
+    .map((n) => ({ text: String(n.note_description).trim(), time: fmtNoteStamp(n.note_date) || "" }));
+  // Truck-movement messages (recent) first, then user notes — the order-summary card is
+  // appended last by the client, matching D3's newest→oldest feed.
+  const activityFeed = [...activity, ...noteActivity];
+
   const lastTicket = tickets.length
     ? tickets.reduce((a, b) => ((b.ticket_code || "") > (a.ticket_code || "") ? b : a))
     : null;
-  const status = deriveStatus(order, ordered, actualTicketedCY, lastTicket ? isTicketCompleted(lastTicket) : false);
+  // Completion follows the D3 spec: Complete once the POURED-OUT volume reaches the
+  // ordered amount (not the dispatch flag, not merely "all loads ticketed"). Keeps the
+  // detail page in step with the tile list and with D3.
+  const pouredOutCY = tickets.reduce(
+    (s, t) => s + (isPouredOut(t) ? cyByTicket.get(t.ticket_id) || 0 : 0),
+    0,
+  );
+  const status = deriveStatus(order, ordered, pouredOutCY, tickets.length > 0);
 
   // Pour Finish: estimated completion time
   // Use the latest scheduled time if available, otherwise use last ticket's estimated pour time
@@ -1184,60 +1323,86 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
         nextTruck = `${minsUntilArrival} MIN`;
       }
     } else {
-      // No trucks en route, show scheduled time
-      nextTruck = fmtTime(earliestStart(rawProducts), true);
+      // No trucks en route. If loads are currently at the jobsite the next-truck
+      // state is "Waiting" (D3 ORDER HELP); otherwise fall back to the scheduled
+      // first-load time.
+      const onJobNow = tickets.some((t) => has(t.on_job_time) && !hasLeftJob(t));
+      nextTruck = onJobNow ? "Waiting" : fmtTime(earliestStart(rawProducts), true);
     }
   }
 
-  // Weather (JSONB shape varies; best-effort)
+  // Weather (JSONB): our DB stores a "weatherapi" shape (temperature_fahrenheit,
+  // weather_description, pressure_hpa, wind_speed_mph, wind_direction, fetched_at);
+  // older rows use the OpenWeatherMap shape. Handle both.
   let weather: DoleseOrderDetail["weather"] = null;
   let evaporation: DoleseOrderDetail["evaporation"] = null;
   const w = order.weather_data as Record<string, unknown> | null;
   if (w && typeof w === "object") {
-    const temp =
-      (w.temperature as number | string | undefined) ??
-      (w.temp as number | string | undefined) ??
-      ((w.main as Record<string, unknown>)?.temp as number | undefined);
-    const desc =
-      (w.description as string | undefined) ??
-      (Array.isArray(w.weather) ? ((w.weather[0] as Record<string, unknown>)?.description as string) : undefined);
+    const num = (v: unknown): number | undefined => {
+      const n = typeof v === "number" ? v : v != null && v !== "" ? Number(v) : NaN;
+      return Number.isFinite(n) ? n : undefined;
+    };
     const main = (w.main as Record<string, unknown>) || {};
     const wind = (w.wind as Record<string, unknown>) || {};
-    const humidity = (w.humidity ?? main.humidity) as number | undefined;
-    const pressure = (w.pressure ?? main.pressure) as number | undefined;
-    const windSpeed = (w.wind_speed ?? wind.speed) as number | undefined;
-    const windDeg = (w.wind_deg ?? wind.deg) as number | undefined;
-    const dt = (w.dt ?? w.last_update ?? w.updated) as number | string | undefined;
-    const icon =
-      (w.icon as string | undefined) ??
-      (Array.isArray(w.weather) ? ((w.weather[0] as Record<string, unknown>)?.icon as string) : undefined);
-    if (temp != null || desc) {
-      const windVal = windSpeed != null ? Math.round(Number(windSpeed) * 100) / 100 : null;
+
+    const tempF = num(w.temperature_fahrenheit) ?? num(w.temperature) ?? num(w.temp) ?? num(main.temp);
+    const desc =
+      (w.weather_description as string | undefined) ??
+      (w.weather_condition as string | undefined) ??
+      (w.description as string | undefined) ??
+      (Array.isArray(w.weather) ? ((w.weather[0] as Record<string, unknown>)?.description as string) : undefined);
+    const humidity = num(w.humidity) ?? num(main.humidity);
+    const pressure = num(w.pressure_hpa) ?? num(w.pressure) ?? num(main.pressure) ?? num(w.pressure_inhg);
+    const windMph = num(w.wind_speed_mph) ?? num(w.wind_speed) ?? num(wind.speed);
+    // direction is a compass string (weatherapi) or degrees (OWM)
+    const dirStr = typeof w.wind_direction === "string" ? (w.wind_direction as string) : undefined;
+    const windDeg = num(w.wind_direction_degrees) ?? num(w.wind_deg) ?? num(wind.deg);
+    const direction = dirStr ?? (windDeg != null ? compassDir(windDeg) : undefined);
+    const fetchedAt = (w.fetched_at ?? w.dt ?? w.last_update ?? w.updated) as number | string | undefined;
+
+    // Weather "Last Update" — fetched_at is a real UTC timestamp, so convert it to
+    // the plant's LOCAL time (US Central), which the ORDER HELP requires ("All times
+    // are displayed in local time of plant"). Uses the America/Chicago zone so it's
+    // DST-correct (CDT in summer); labelled "CST" to match D3.
+    let updatedDate: Date | null = null;
+    if (typeof fetchedAt === "number") updatedDate = new Date(fetchedAt * 1000);
+    else if (typeof fetchedAt === "string") {
+      const d = new Date(fetchedAt);
+      if (!Number.isNaN(d.getTime())) updatedDate = d;
+    }
+    let updated: string | undefined;
+    if (updatedDate) {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Chicago",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      }).formatToParts(updatedDate);
+      const g = (t: string) => parts.find((p) => p.type === t)?.value || "";
+      updated = `${g("hour")}:${g("minute")}${g("dayPeriod").replace(/\s/g, "")} CST`;
+    } else if (typeof fetchedAt === "string") {
+      updated = fetchedAt;
+    }
+
+    if (tempF != null || desc) {
       weather = {
-        temp: temp != null ? `${temp}°F` : undefined,
+        temp: tempF != null ? `${Math.round(tempF * 10) / 10}°F` : undefined,
         description: desc,
-        place: order.pricing_plant_code || undefined,
-        humidity: humidity != null ? `${humidity}%` : undefined,
-        pressure: pressure != null ? String(pressure) : undefined,
-        wind: windVal != null ? String(windVal) : undefined,
-        direction: windDeg != null ? compassDir(Number(windDeg)) : undefined,
-        updated:
-          typeof dt === "number"
-            ? new Date(dt * 1000).toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-              })
-            : typeof dt === "string"
-              ? dt
-              : undefined,
-        icon: typeof icon === "string" ? icon : undefined,
+        place: plantName || order.pricing_plant_code || undefined,
+        humidity: humidity != null ? `${Math.round(humidity)}%` : undefined,
+        pressure: pressure != null ? String(Math.round(pressure)) : undefined,
+        wind: windMph != null ? String(Math.round(windMph * 100) / 100) : undefined,
+        direction,
+        updated,
+        // The weatherapi icon is an external CDN URL we don't load; the client
+        // falls back to a local cloud glyph.
+        icon: undefined,
       };
 
       // Surface-evaporation estimate (assumes concrete placed at 85°F, as the live app does).
-      const airF = typeof temp === "number" ? temp : Number(temp);
-      if (Number.isFinite(airF) && humidity != null && windVal != null) {
+      if (tempF != null && humidity != null && windMph != null) {
         const CONCRETE_F = 85;
-        const rate = evaporationRate(airF, Number(humidity), windVal, CONCRETE_F);
+        const rate = evaporationRate(tempF, humidity, windMph, CONCRETE_F);
         evaporation = {
           rate,
           concreteTempF: CONCRETE_F,
@@ -1285,7 +1450,7 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     weather,
     evaporation,
     charts,
-    activity,
+    activity: activityFeed,
   };
 }
 
@@ -1362,7 +1527,12 @@ export async function getDoleseTicketSummary(orderId: number): Promise<DoleseTic
     };
   });
 
-  const status = deriveStatus(order, ordered, ticketed, false);
+  // Complete once poured-out volume reaches the ordered amount (D3 spec).
+  const pouredOutCY = tickets.reduce(
+    (s, t) => s + (isPouredOut(t) ? cyByTicket.get(t.ticket_id) || 0 : 0),
+    0,
+  );
+  const status = deriveStatus(order, ordered, pouredOutCY, tickets.length > 0);
 
   return {
     order_id: order.order_id,

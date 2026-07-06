@@ -12,6 +12,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type LucideIcon } from "lucide-react";
 import { logout } from "@/actions/authActions";
+import chrome from "./d3-chrome.module.css";
 
 /* ------------------------------------------------------------------ */
 /*  Palette (sampled from the live app)                                */
@@ -96,20 +97,16 @@ export function TopNav() {
   const renderTab = (tab: string, inMenu = false) => {
     const href = TAB_HREF[tab];
     const isActive = tab === active;
-    const cls = [
-      "cursor-pointer no-underline hover:no-underline",
-      // Text colour = the header logo gray (#999). Desktop turns the active/hovered tab
-      // white; the mobile menu keeps every item gray (only the dark hover bg changes).
-      !inMenu && isActive ? "text-white" : "text-[#999]",
-      !inMenu ? "hover:text-white" : "",
-      inMenu ? "mb-[2px] px-5 py-[9px] leading-5 transition-colors hover:bg-black/25" : "px-[15px] py-[10px]",
-    ].join(" ");
+    // Desktop tabs turn white when active/hovered; mobile-menu items stay gray (only the
+    // dark hover background changes). Colours/spacing live in d3-chrome.module.css.
+    const cls = inMenu ? chrome.menuTab : `${chrome.tab}${isActive ? " " + chrome.tabActive : ""}`;
     if (tab === "LOGOUT") {
       // Submits the logout server action (clears the session cookie → /login).
       // display:contents so the <button> is the flex item, like the other tabs.
+      const btnCls = `${cls} ${inMenu ? chrome.menuTabButton : chrome.tabButton}`;
       return (
-        <form key={tab} action={logout} className="contents">
-          <button type="submit" onClick={() => setOpen(false)} className={`${cls} border-0 bg-transparent [font:inherit]`}>
+        <form key={tab} action={logout} className={chrome.formContents}>
+          <button type="submit" onClick={() => setOpen(false)} className={btnCls}>
             {tab}
           </button>
         </form>
@@ -142,7 +139,7 @@ export function TopNav() {
         paddingRight: "0",
         paddingLeft: "0",
         backgroundColor: "#1b1b1b",
-        backgroundImage: "linear-gradient(to bottom, #242424, #1a1a1a)",
+        backgroundImage: "linear-gradient(to bottom, #222222, #111111)",
         backgroundRepeat: "repeat-x",
         boxShadow: "0 1px 10px rgba(0, 0, 0, 0.1)",
         color: "#333",
@@ -150,18 +147,17 @@ export function TopNav() {
     >
       {/* No container padding — the brand + hamburger get their own insets via the
           brand's padding/margin; content aligns to the full-width dark header bar. */}
-      <div className="mx-auto w-full px-[10px] min-[980px]:max-w-[1170px] min-[980px]:px-0">
-        <div className="flex min-h-[40px] items-center">
+      <div className={chrome.navContainer}>
+        <div className={chrome.navRow}>
           <Link
             href="/"
-            // py-[15px] on mobile; py-[10px] at ≥980 so the brand is 40px tall and the
-            // desktop navbar matches Bootstrap's 40px (aligned with the 40px tab links).
-            className="block px-5 py-[15px] min-[980px]:py-[10px]"
+            // .brand supplies the responsive padding (15px mobile → 10px at ≥980 so the
+            // bar is 40px tall). The dark-nav typography stays inline below.
+            className={chrome.brand}
             style={{
               fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
               lineHeight: "20px",
               textDecoration: "none",
-              display: "block",
               marginLeft: "-20px",
               fontSize: "20px",
               fontWeight: 200,
@@ -172,7 +168,7 @@ export function TopNav() {
             {brand}
           </Link>
           {/* Desktop nav — hidden on small screens */}
-          <nav className="hidden items-center text-[14px] font-normal uppercase lg:flex">
+          <nav className={chrome.desktopNav}>
             {tabs.map((t) => renderTab(t))}
           </nav>
           {/* Mobile hamburger toggle — Bootstrap .btn-navbar (dark box + 3 light bars). */}
@@ -181,7 +177,7 @@ export function TopNav() {
             aria-label="Toggle menu"
             aria-expanded={open}
             onClick={() => setOpen((o) => !o)}
-            className="ml-auto flex flex-col gap-[3px] lg:hidden"
+            className={chrome.hamburger}
             style={{
               padding: "7px 10px",
               borderRadius: "4px",
@@ -203,10 +199,7 @@ export function TopNav() {
       {/* Mobile nav — collapsible & animated, and OVERLAYS the page (absolute) instead
           of pushing the sub-header down. The grid-rows 0fr→1fr trick animates height. */}
       <div
-        className={[
-          "absolute inset-x-0 top-full z-40 -mt-px grid overflow-hidden transition-[grid-template-rows,opacity] duration-300 ease-out lg:hidden",
-          open ? "grid-rows-[1fr] opacity-100" : "pointer-events-none grid-rows-[0fr] opacity-0",
-        ].join(" ")}
+        className={`${chrome.mobileMenu}${open ? " " + chrome.mobileMenuOpen : ""}`}
         style={{
           // Continues the header's gradient (top #1a1a1a = header's bottom colour → #111),
           // so header + menu read as one surface; -mt-px covers the 1px border seam.
@@ -216,8 +209,8 @@ export function TopNav() {
       >
         {/* No horizontal padding here → item hover highlight spans the FULL width (like D3);
             the items' own px provides the text inset. */}
-        <div className="mx-auto min-h-0 w-full max-w-[724px] overflow-hidden min-[980px]:max-w-[1170px]">
-          <nav className="flex flex-col pb-2 text-[14px] font-bold uppercase tracking-wide">
+        <div className={chrome.mobileInner}>
+          <nav className={chrome.mobileNav}>
             {tabs.map((t) => renderTab(t, true))}
           </nav>
         </div>
@@ -235,48 +228,37 @@ export function SubHeader({
   subtitle,
   backHref,
   onRefresh,
-  heightClass = "h-[46px]",
+  heightPx = 44,
 }: {
   title: string;
   subtitle?: React.ReactNode;
   backHref?: string;
   onRefresh?: () => void;
-  /** Override the bar height (e.g. "h-[76px]" for multi-line subtitles). */
-  heightClass?: string;
+  /** Override the bar min-height (e.g. 76 for multi-line subtitles). */
+  heightPx?: number;
 }) {
+  // D3's title bar is 44px: 32px icon + 5px top/bottom margins + 1px top/bottom border.
   return (
-    <div
-      className={[
-        "flex items-center justify-between gap-3 rounded-md border border-[#c9c9c9] px-5 text-[14px] text-[#333] shadow-[0_1px_3px_rgba(0,0,0,0.08)]",
-        heightClass,
-      ].join(" ")}
-      // D3 sub-header shade: subtle top-to-bottom light-gray gradient (near-white → #e9e9e9).
-      style={{ backgroundColor: "#f4f4f4", backgroundImage: "linear-gradient(to bottom, #fbfbfb, #e9e9e9)" }}
-    >
-      <Link
-        href={backHref ?? "/"}
-        aria-label="Back"
-        className="cursor-pointer text-[#1f1f1f]"
-      >
+    <div className={chrome.subHeader} style={{ minHeight: heightPx }}>
+      <Link href={backHref ?? "/"} aria-label="Back" className={chrome.subIcon}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/icons/arrow-back.png" alt="Back" className="h-8 w-8" />
+        <img src="/icons/arrow-back.png" alt="Back" />
       </Link>
-      <div className="min-w-0 text-center">
-        {/* pb only when there's a subtitle (spacing above it); without one the title
-            centers with equal space above/below instead of being pushed up. */}
-        <strong className={`block truncate text-[16px] font-bold leading-[19px] text-[#333] ${subtitle ? "pb-1" : ""}`}>
+      <div className={chrome.subCenter}>
+        {/* subTitlePad adds spacing above the subtitle; without one the title centers. */}
+        <strong className={`${chrome.subTitle}${subtitle ? " " + chrome.subTitlePad : ""}`}>
           {title}
         </strong>
-        {subtitle ? <div className="text-xs leading-tight text-[#555]">{subtitle}</div> : null}
+        {subtitle ? <div className={chrome.subSub}>{subtitle}</div> : null}
       </div>
       <button
         type="button"
         aria-label="Refresh"
         onClick={onRefresh ?? (() => window.location.reload())}
-        className="cursor-pointer text-[#1f1f1f]"
+        className={chrome.subIcon}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/icons/refresh.png" alt="Refresh" className="h-8 w-8" />
+        <img src="/icons/refresh.png" alt="Refresh" />
       </button>
     </div>
   );

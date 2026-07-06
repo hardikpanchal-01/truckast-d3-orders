@@ -1,6 +1,7 @@
 import { SubHeader } from "@/components/d3-ui";
 import { getTenants, getSelectedTenant } from "@/actions/tenantActions";
 import { TenantSelector } from "@/components/tenant-selector";
+import { SettingsForm } from "@/components/settings-form";
 
 export const dynamic = "force-dynamic";
 
@@ -74,29 +75,6 @@ const TDL = `${TD} border-l border-[#ddd]`;
 // Striped odd rows (#f9f9f9), hover (#f5f5f5) — BS2 .table-striped/.table-hover.
 const TR = "bg-white odd:bg-[#f9f9f9] transition-colors hover:bg-[#f5f5f5]";
 
-/* ------------------------------------------------------------------ */
-/*  Bootstrap 2.2.2 buttons — gradient fill, inset highlight + drop    */
-/*  shadow, dark text-shadow, rgba borders. Height 30px (padding       */
-/*  4px 12px + 20px line-height + 1px borders). Hover darkens to the    */
-/*  gradient's bottom colour.                                          */
-/* ------------------------------------------------------------------ */
-// box-content + padding 4px 12px + 1px border ⇒ w-[120px]/w-[150px] are the CONTENT
-// width (matches the live app's box model: content 120×20, padding 4/12, border 1).
-const BTN =
-  "box-content inline-block shrink-0 m-0 rounded-[4px] border border-[rgba(0,0,0,0.1)] border-b-[rgba(0,0,0,0.25)] " +
-  "px-[12px] py-[4px] text-center align-middle text-[14px] font-normal leading-[20px] text-white cursor-pointer transition-[background] " +
-  "[text-shadow:0_-1px_0_rgba(0,0,0,0.25)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2),0_1px_2px_rgba(0,0,0,0.05)] " +
-  // :active — BS2 pressed state: drop the gradient, dim the label, and switch to an
-  // inset shadow so the button reads as pushed in.
-  "focus:outline-none active:outline-none active:bg-none active:text-white/75 " +
-  "active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.15),0_1px_2px_rgba(0,0,0,0.05)]";
-// btn-success: background-color #5bb75b + linear-gradient(#62c462 → #51a351); hover/active solid #51a351.
-const BTN_SUCCESS =
-  "bg-[#5bb75b] bg-[linear-gradient(to_bottom,#62c462,#51a351)] hover:bg-none hover:bg-[#51a351] active:bg-[#51a351]";
-// btn-danger: linear-gradient(#ee5f5b → #bd362f); hover/active solid #bd362f.
-const BTN_DANGER =
-  "bg-[linear-gradient(to_bottom,#ee5f5b,#bd362f)] hover:bg-none hover:bg-[#bd362f] active:bg-[#bd362f]";
-
 function Check() {
   return <input type="checkbox" className="align-middle" />;
 }
@@ -116,6 +94,9 @@ export default async function SettingsPage() {
     >
       <SubHeader title="SETTINGS" backHref="/" />
 
+      {/* Everything below the title bar lives in a client form that tracks unsaved
+          changes and wires the Save button + Ctrl/Cmd+S to one save() path. */}
+      <SettingsForm>
       {/* Top cluster — kept tight like the live app: "Welcome" sits just above the
           tenant select (small 8px gap), and the select has margin-bottom:0 so the
           field table hugs it. Grouping them removes the container's 16px gap here.
@@ -265,16 +246,7 @@ export default async function SettingsPage() {
         </table>
       </div>
 
-      {/* Actions — BS2 .btn-success / .btn-danger. Left-aligned like the live app;
-          mb-5 reproduces the form's margin: 0 0 20px (20px space below). */}
-      <div className="flex gap-3 mb-5">
-        <button type="button" className={`${BTN} ${BTN_SUCCESS} w-[120px]`}>
-          ADMIN Settings
-        </button>
-        <button type="button" className={`${BTN} ${BTN_DANGER} w-[150px]`}>
-          Save
-        </button>
-      </div>
+      </SettingsForm>
     </div>
   );
 }
