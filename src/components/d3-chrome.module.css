@@ -128,42 +128,38 @@
   }
 }
 .mobileInner {
-  margin: 0 auto;
+  margin: 0;
   min-height: 0;
   width: 100%;
-  max-width: 724px;
   overflow: hidden;
-}
-@media (min-width: 980px) {
-  .mobileInner {
-    max-width: 1170px;
-  }
 }
 .mobileNav {
   display: flex;
   flex-direction: column;
-  padding-bottom: 8px;
+  padding: 5px 0 8px;
   font-size: 14px;
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
 .menuTab {
+  display: block;
   margin-bottom: 2px;
-  padding: 9px 20px;
+  padding: 10px 15px;
   line-height: 20px;
   color: #999;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color 0.2s ease-out, color 0.2s ease-out;
 }
 .menuTab:hover,
 .menuTab:focus {
-  background-color: rgba(0, 0, 0, 0.25);
-  color: #999;
+  background-color: #111;
+  color: #fff;
   text-decoration: none;
 }
 .menuTabButton {
+  width: 100%;
   border: 0;
   background: transparent;
   font: inherit;
