@@ -118,13 +118,21 @@
       // D3 encodes the truck-count CSV. This gives crisp vertical steps + thin spikes
       // without relying on Highcharts' `step` (which can smear when stacked).
       var stepify = function (arr, key) {
-        var out = [], prev = null;
+        var out = [], prev = null, prevX = null;
+        // Give each riser a small diagonal ramp (~1 min, clamped to 40% of the gap to
+        // the previous event) so steps LEAN like D3 instead of being a vertical wall.
+        // Tightly-spaced events clamp down so brief spikes stay thin.
+        var RAMP = 60000;
         for (var i = 0; i < arr.length; i++) {
           var x = chartBase + arr[i].t * 60000;
           var y = arr[i][key];
-          if (prev !== null) out.push([x - 1, prev]); // hold previous count up to this event
-          out.push([x, y]); // step to the new count at the event
+          if (prev !== null) {
+            var ramp = Math.min(RAMP, (x - prevX) * 0.4);
+            out.push([x - ramp, prev]); // hold previous count until just before the event
+          }
+          out.push([x, y]); // diagonal (not vertical) to the new count at the event
           prev = y;
+          prevX = x;
         }
         return out;
       };
@@ -140,7 +148,16 @@
         tooltip: TOOLTIP,
         legend: { enabled: true },
         credits: { enabled: false },
-        plotOptions: { area: { stacking: "normal", lineWidth: 1, marker: { enabled: false }, connectNulls: true } },
+        plotOptions: {
+          area: {
+            stacking: "normal",
+            lineWidth: 1,
+            // No point marker, and no bold hover marker / halo ring on the hovered node.
+            marker: { enabled: false, states: { hover: { enabled: false } } },
+            states: { hover: { halo: null } },
+            connectNulls: true,
+          },
+        },
         series: [
           { name: '"Waiting"', data: waiting },
           { name: '"Pouring"', data: pouring },

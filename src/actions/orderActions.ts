@@ -267,16 +267,24 @@ function areAllLoadsTicketed(orderedQty: number, ticketedQty: number): boolean {
  * the concrete is actually poured) and NOT merely by all loads being ticketed.
  */
 function deriveStatus(
-  order: { current_status: number | null; removed: boolean | null; remove_reason_code: string | null },
+  order: { current_status: number | string | null; removed: boolean | null; remove_reason_code: string | null },
   orderedCY: number,
   pouredCY: number,
   hasActivity: boolean,
 ): OrderStatus {
   if (order.removed === true && (order.remove_reason_code || "").trim() !== "") return "CANCELED";
   if (hasActivity || pouredCY > 0) {
+    // Live loads / pour in progress → completion is POURED-based, NOT the dispatch flag:
+    // D3 keeps a dispatch-closed order In Process until the concrete is actually poured
+    // (e.g. 26602 has current_status = 4 yet is still pouring → stays In Process).
     if (areAllLoadsTicketed(orderedCY, pouredCY)) return "COMPLETED"; // poured ≥ ordered (±0.02)
     return "IN_PROCESS";
   }
+  // No live loads in our data. A dispatch-closed order (current_status = 4) whose ticket
+  // rows were removed after it finished is Completed (e.g. 40501, which D3 shows as
+  // Completed); otherwise it simply hasn't started. Coerce — current_status can arrive as
+  // the string "4", so strict === 4 would miss it.
+  if (Number(order.current_status) === 4) return "COMPLETED";
   return "PRE_POUR";
 }
 
@@ -772,35 +780,58 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
       const d = new Date(ts);
       return Number.isNaN(d.getTime()) ? null : d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60;
     };
-    // Pour completion = actual end-of-pour (end_unload / wash), NOT the drive-back
-    // timestamps (at_plant / to_plant) — those include the truck's return trip and
-    // inflate the pour window, understating the poured speed and wrongly reddening
-    // cards. If an order has no pour-completion data yet, pour_pct stays null and
-    // the card defaults to green (on-pace), matching D3.
-    const pourEndOf = (t: TicketRow) => t.end_unload || t.wash_time;
-
     for (const it of items) {
       if (it.status === "CANCELED") continue; // cancelled stays cancelled
       const ot = tByOrder.get(Number(it.order_id)) || [];
-      if (ot.length === 0) continue; // no ticket activity → keep Pre-Pour
+      if (ot.length === 0) {
+        // No ticket activity ⇒ NOT started (D3: "In Process = has ticket activity").
+        // order_products.delv_qty can be non-zero with zero tickets, so don't let it mark
+        // the order In-Process — re-derive via deriveStatus (Pre-Pour, or Completed if
+        // dispatch closed it). Same code path as the detail page, so they stay consistent.
+        const m = metaByOrder.get(Number(it.order_id));
+        it.status = deriveStatus(
+          { current_status: m?.cs ?? null, removed: false, remove_reason_code: null },
+          m?.ordered ?? it.ordered_cy,
+          0,
+          false,
+        );
+        it.ticketed_cy = 0;
+        it.poured_cy = 0;
+        it.pour_pct = null;
+        continue;
+      }
 
-      let poured = 0; // CY that finished pouring (end_unload/wash) — for the pour-speed window
       let delivered = 0; // CY on all valid tickets (ticketed / delivered)
-      let pouredVol = 0; // CY that has POURED OUT — drives the pie + completion (D3 spec)
+      let pouredVol = 0; // CY that has POURED OUT — drives the pie, completion AND pour speed
+      // Pour window (for the speed %) is measured only over loads that have poured out —
+      // each load's pour start (unload) to its pour finish — so the poured VOLUME and the
+      // window come from the SAME loads. Using end_unload/wash alone undercounted the
+      // volume (loads with only at-plant/to-plant stamps were dropped), which halved the
+      // speed and wrongly reddened tiles D3 shows yellow/green.
       const starts: number[] = [];
       const ends: number[] = [];
       for (const t of ot) {
         const cy = cyByTicket.get(t.ticket_id) || 0;
         delivered += cy;
-        if (isPouredOut(t)) pouredVol += cy;
-        const ps = minOf(t.unload_time);
-        const pe = minOf(pourEndOf(t));
-        if (ps != null) starts.push(ps);
-        if (pe != null) { ends.push(pe); poured += cy; }
+        if (isPouredOut(t)) {
+          pouredVol += cy;
+          const ps = minOf(t.unload_time);
+          const pe = minOf(t.end_unload || t.wash_time || t.at_plant_time || t.to_plant_time);
+          if (ps != null) starts.push(ps);
+          if (pe != null) ends.push(pe);
+        }
       }
 
       // Re-derive status from real ticket activity (has tickets ⇒ at least In Process;
-      // Complete only once the POURED volume reaches the ordered amount — D3 spec).
+      // Complete once the FINISHED-load volume reaches the ordered amount). We use the
+      // completed volume (poured-out OR long-idle loads), not just poured-out: a small
+      // order whose only load is on the job but never got a pour-out stamp (e.g. 21804)
+      // is Complete, while an order still actively pouring (e.g. 26602: 105 delivered but
+      // only 32 poured) stays In Process.
+      // Completion = POURED-OUT volume ≥ ordered. An order still actively pouring (26602:
+      // 32 of 105 poured) stays In Process. We can't complete an order whose last load has
+      // no pour-out stamp (same signature as one still pouring) — that needs the stamp our
+      // snapshot sometimes lacks (e.g. 21804 reads In Process here vs Complete in D3).
       const meta = metaByOrder.get(Number(it.order_id));
       it.status = deriveStatus(
         { current_status: meta?.cs ?? null, removed: false, remove_reason_code: null },
@@ -813,18 +844,27 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
       // Pie fill = volume POURED ÷ volume ordered (D3 spec), NOT delivered/ticketed.
       it.poured_cy = Math.round(pouredVol * 100) / 100;
       const planned = plannedByOrder.get(Number(it.order_id));
-      if (starts.length && ends.length && poured > 0 && planned && planned > 0) {
-        const durMin = Math.max(...ends) - Math.min(...starts);
-        if (durMin > 0) it.pour_pct = Math.round(((poured / (durMin / 60)) / planned) * 100);
+      if (starts.length && pouredVol > 0 && planned && planned > 0) {
+        // Poured-speed % (drives the tile colour) = poured throughput ÷ planned rate.
+        // The throughput window is the SPREAD OF POUR-START times — how fast loads are
+        // being poured through the job — which matches D3's colour band. The full
+        // first-start→last-end span additionally counted each truck's discharge tail,
+        // reading systematically slow and turning too many tiles red vs D3. A single
+        // poured load falls back to its own pour duration so the rate stays defined.
+        const durMin = starts.length > 1
+          ? Math.max(...starts) - Math.min(...starts)
+          : (ends.length ? Math.max(...ends) - Math.min(...starts) : 0);
+        if (durMin > 0) it.pour_pct = Math.round(((pouredVol / (durMin / 60)) / planned) * 100);
       }
     }
   }
 
-  // D3 board order (reconstructed from the D3 export, where the two In-Process tiles
-  // sit ABOVE the 00:00 Pre-Pour tile — so it is NOT a pure chronological run):
-  //   Group 0 — STARTED orders (In Process + Completed)
-  //   Group 1 — not-started (Pre-Pour + On Hold)
-  //   Group 2 — Cancelled (single trailing block at the very bottom)
+  // Board order: In-Process first, then Completed, then Upcoming (Pre-Pour / On-Hold),
+  // then Cancelled at the very bottom.
+  //   Group 0 — In Process
+  //   Group 1 — Completed
+  //   Group 2 — not-started (Pre-Pour + On Hold)
+  //   Group 3 — Cancelled (single trailing block at the very bottom)
   // Within each group, ascending by scheduled start time (untimed / will-call → after
   // all timed orders); order_code breaks ties. Colour is a per-tile status cue, not a
   // sort key, so held/behind (red) tiles fall at their own time slot within a group.
@@ -835,9 +875,10 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
     return d.getUTCHours() * 60 + d.getUTCMinutes(); // CST clock value stored in a UTC field
   };
   const groupRank = (s: OrderStatus): number => {
-    if (s === "CANCELED") return 2; // trailing block
-    if (s === "IN_PROCESS" || s === "COMPLETED") return 0; // started
-    return 1; // pre-pour / on-hold
+    if (s === "IN_PROCESS") return 0; // active pours first
+    if (s === "COMPLETED") return 1; // then finished
+    if (s === "CANCELED") return 3; // cancelled last
+    return 2; // upcoming: pre-pour / on-hold
   };
   items.sort((a, b) => {
     const g = groupRank(a.status) - groupRank(b.status);
