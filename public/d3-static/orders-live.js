@@ -148,8 +148,9 @@
   // ---- In-process pies: rendered with Highcharts, using D3's OWN pie config verbatim
   //      (tileInitTPie in d3_complete_nohc.js) so colour, border, size and hover match
   //      exactly. Key details copied from D3:
-  //        - colours assigned by the `colors` array (NOT per-point): data[0]=remaining
-  //          → 0.2 white, data[1]=poured → 0.4 white (poured is the paler slice).
+  //        - colours assigned by the `colors` array (NOT per-point): data[0]=remaining →
+  //          0.2 white (darker), data[1]=poured → 0.4 white (lighter). Remaining slice is
+  //          drawn first — matches D3 exactly, so a mostly-poured order reads mostly-light.
   //        - no borderColor/borderWidth/shadow/hover overrides → Highcharts 4.1.9
   //          defaults (white 1px border + default hover halo, i.e. D3's "blur ring").
   //        - size 60, default centre → the (36, 37.5) seat seen in D3's export.
@@ -186,6 +187,8 @@
           exporting: { enabled: false },
           legend: { enabled: false },
           credits: { enabled: false },
+          // Fill colours (swapped per request): slice 0 = 0.2 (darker poured wedge),
+          // slice 1 = 0.4 (lighter remaining).
           colors: [
             "rgba(255, 255, 255, 0.2)",
             "rgba(255, 255, 255, 0.4)",
@@ -200,12 +203,14 @@
               showInLegend: false,
             },
           },
+          // Data order reversed per request: poured slice drawn FIRST from 12 o'clock
+          // (clockwise), so the poured wedge sits top-right and grows clockwise.
           series: [
             {
               type: "pie",
               data: [
-                ["T", remain],
                 ["O", poured],
+                ["T", remain],
               ],
             },
           ],
