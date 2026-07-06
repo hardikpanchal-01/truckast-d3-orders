@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<!-- saved from url=(0096)https://d3.truckast.com/dv/v1/dolese/truckast/Order?OrderID=335810CB-BF73-F111-82CC-9F6F49760254 -->
+<html xmlns="http://www.w3.org/1999/xhtml" class="k-webkit k-webkit149"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="format-detection" content="telephone=no">
+        <title></title>
+
+        <!-- Required javascript and css all rolled up in one -->
+        <script src="./Order_files/d3_complete_nohc.js"></script>
+        
+        <link href="./Order_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+        <!-- Highcharts -->
+        <script src="./Order_files/highcharts.js"></script>
+        <script src="./Order_files/highcharts-more.js"></script>
+        <script src="./Order_files/data.js"></script>
+        
+        <!-- need to rollup into d3_complete upon approval -->
+        <script src="./Order_files/jquery.rateit.min.js"></script>
+        <link href="./Order_files/rateit.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/hopscotch.min.js"></script>
+        <link href="./Order_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/chardinjs.min.js"></script>
+        <link href="./Order_files/chardinjs.css" rel="stylesheet" type="text/css">
+                   
+        <link href="./Order_files/bootstrap2-toggle.min.css" rel="stylesheet">
+        <script src="./Order_files/bootstrap2-toggle.min.js"></script>
+                     
+        <!-- Google Analytics -->
+        
+
+        <style media="print" type="text/css">
+            a:after { content:''; }
+            a[href]:after { content: none !important; }
+        </style>
+    </head>
+    <body>
+        <script>
+            // document load initialization
+            $(document).ready(function () {
+                hideLoadingIndicator();
+                loadLogin();
+            });
+            $(window).unload(function () {
+                hideLoadingIndicator();
+                saveLogin();
+            });
+        </script>
+        
+<script type="text/javascript">
+    $(document).ready(function () {
+        var errormsg = getParameterByName("pageerror");
+        if (errormsg != null && errormsg.length > 0) {
+            displayError('ERROR', trimString(errormsg));
+        }
+        Highcharts.setOptions({
+            colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+        });
+    });
+</script>
+<div class="d3-page">
+
+<div class="navbar navbar-fixed-top navbar-inverse">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+
+            <a id="header-bar-title" class="brand">TRUCKAST</a>
+
+            <div class="nav-collapse collapse">
+                <ul class="nav">
+                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/truckast/MarketSummary">MARKETS</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/truckast/Settings">SETTINGS</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/Announcements/AnnouncementForm">PUBLISH</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/TKAdmin/UserSearch">ADMIN</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/OrderRequest/DoleseOrderRequestDashboardV2">ORDER</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/Rollout/Search">ROLLOUT</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/Project/InviteTo">PROJECTS</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/Truckast/Help?App=truckast&amp;HelpPage=Order">HELP</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/d3/Accounts/Logout">LOGOUT</a></li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+                <div class="container"> 
+                    <div id="error-box" class="alert alert-error" style="display: none">
+                        <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                        <p id="error-text"></p>
+                    </div>
+                    <div id="warning-box" class="alert alert-block" style="display: none">
+                        <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                        <p id="warning-text"></p>
+                    </div>
+                    <div id="success-box" class="alert alert-success" style="display: none">
+                        <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                        <p id="success-text"></p>
+                    </div>
+                    <div id="information-box" class="alert alert-info" style="display: none">
+                        <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                        <p id="information-text"></p>
+                    </div>
+
+<form id="order" method="POST">
+
+<div class="navbar">
+    <div class="navbar-inner">
+        <div class="container">
+            <table style="width:100%">
+                <tbody><tr>
+                    <td style="width:38px">
+                        <a onclick="history.back();hideLoadingIndicator();">
+                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./Order_files/arrow-big-01@2x.png">
+                            
+                        </a>                    
+                    </td>
+                    <td>
+                    <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                        <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                            <span style="font-size: 16px"><strong id="d3-title">ORDER</strong></span><br>
+                            <span style="font-size: 11px; padding: 0"><strong id="d3-subtitle"></strong></span>
+                        </div>
+                    </div>                    
+                    </td>
+                    <td style="width:38px">
+                        <a href="https://d3.truckast.com/dv/v1/dolese/truckast/Order?OrderID=335810CB-BF73-F111-82CC-9F6F49760254">
+                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./Order_files/arrow-small-27@2x.png">
+                            
+                        </a>                    
+                    </td>
+                </tr>
+            </tbody></table>
+        </div>
+    </div>
+</div>
+            <div id="Header" class="d3-label" style="width: 100%;"></div>
+
+                <div id="04009ee4-39a6-4a4d-8ef6-54ff118296ed" class="d3-label" style="width: 100%;"><h4 id="d3-status"></h4></div>
+
+                <div id="66759ce4-950d-4270-97df-1d7f7529bd03" class="d3-label" style="width: 100%;"><h4></h4></div>
+
+            <a id="Relese-button" href="https://d3.truckast.com/dv/v1/dolese/truckast/Order?OrderID=335810CB-BF73-F111-82CC-9F6F49760254&amp;IsRelese=1" class="btn btn-danger " style="width: 60px; display: none">Relese</a>
+
+            <a id="Confirm-button" href="https://d3.truckast.com/dv/v1/dolese/truckast/Order?OrderID=335810CB-BF73-F111-82CC-9F6F49760254&amp;IsConfirm=1" class="btn btn-danger " style="width: 60px; display: none">Confirm</a>
+
+            <a id="5e196f27-b3c4-4bd3-b8e6-53cf1adb166a" href="https://d3.truckast.com/export/pdf?url=https%3A%2F%2Fd3.truckast.com%2Fdv%2Fv1%2Fdolese%2Ftruckast%2FOrderExport%3FOrderID%3D335810CB%2DBF73%2DF111%2D82CC%2D9F6F49760254%26giid%3DD4E3FA38%2DE744%2DE411%2DBE57%2DA5D86181E080&amp;inline=false&amp;viewwidth=1024" class="btn btn-danger btn-small " style="width: 100px; display: none">Download PDF</a>
+
+        <br>
+        <br>
+
+
+
+
+
+<div id="f71ef739-e95b-49f1-b0a2-0c73342e0664" style="display: none; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 95%">
+
+
+    <div class="toggle btn btn-default off" data-toggle="toggle" style="width: 13px; height: 0px;"><input id="335810CB-BF73-F111-82CC-9F6F49760254" type="checkbox" data-toggle="toggle"><div class="toggle-group"><label class="btn btn-primary toggle-on">On</label><label class="btn btn-default active toggle-off">Off</label><span class="toggle-handle btn btn-default"></span></div></div>
+<script>
+  $(function() {
+      $('#335810CB-BF73-F111-82CC-9F6F49760254').change(function ()
+      {
+          var asyncurl = '';
+          if(asyncurl != '') {
+              var checked = $(this).prop('checked');
+              updateServer(asyncurl, '#335810CB-BF73-F111-82CC-9F6F49760254', '335810CB-BF73-F111-82CC-9F6F49760254', checked);
+          }
+      })
+  })
+    function updateServer(url, toggleid, safeid, checked)
+    {
+        var checkedTitle = 'on';
+        if(!checked)
+            checkedTitle = 'off';
+
+        var fullurl = url + '?toggleid=' + safeid + '&togglestate=' + checkedTitle;
+        console.log(fullurl);
+
+        var jqxhr = $.getJSON(fullurl, function(data) {
+
+            var records = [];
+            var index = 1;
+            $.each( data.Rows, function( i, item ) {
+                var toggleid = '#' + item.Fields[0];
+                var instruction = item.Fields[1];
+
+                if(instruction.indexOf("disable") >= 0)
+                {
+                    $(toggleid).bootstrapToggle('disable');
+                }
+                if(instruction.indexOf("enable") >= 0)
+                {
+                    $(toggleid).bootstrapToggle('enable');
+                }
+                if(instruction.indexOf("hide") >= 0)
+                {
+                    $(toggleid).hide();
+                }
+                if(instruction.indexOf("show") >= 0)
+                {
+                    $(toggleid).show();
+                }
+                if(instruction.indexOf("off") >= 0)
+                {
+                    $(toggleid).bootstrapToggle('off');
+                }
+                if(instruction.indexOf("on") >= 0)
+                {
+                    $(toggleid).bootstrapToggle('on');
+                }
+            });
+        })
+        .success(function () {
+        })
+        .fail(function() {
+            console.log( "error" );
+        })
+        .always(function() {
+        });
+    }
+</script>
+
+
+
+    
+            </td>
+
+    </tr></tbody>
+</table>
+</div>                <div style="float:right;padding:5px;visibility:visible"><a href="https://d3.truckast.com/export/pdf?url=https://d3.truckast.com/dv/v1/dolese/truckast/OrderExport?OrderID=335810CB-BF73-F111-82CC-9F6F49760254&amp;inline=false&amp;viewwidth=1024"><img alt="Download" src="./Order_files/pdf-icon.48x48pixel.png"></a></div>
+
+                
+
+        <br>
+        <br>
+
+
+
+
+ 
+
+<div id="676fc600-5041-4263-acb2-f8220f794daa" style="width: 100%; display: block">
+    <input id="676fc600-5041-4263-acb2-f8220f794daa-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="676fc600-5041-4263-acb2-f8220f794daa-tiles" style="display: inline-block;"></div>
+</div>
+
+ 
+
+<div id="82ae8b6f-0fb6-4e6e-8404-7c8faba04710" style="width: 100%; display: block">
+    <input id="82ae8b6f-0fb6-4e6e-8404-7c8faba04710-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="82ae8b6f-0fb6-4e6e-8404-7c8faba04710-tiles" style="display: inline-block;"></div>
+</div>
+
+ 
+
+<div id="c29ee3a8-c774-4887-9deb-5b9998de2a7a" style="width: 100%; display: block">
+    <input id="c29ee3a8-c774-4887-9deb-5b9998de2a7a-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="d3-header-tiles" style="display: inline-block;"></div>
+</div>
+
+ 
+
+<div id="16c7138c-5f74-41aa-9533-541b88212248" style="width: 100%; display: block">
+    <input id="16c7138c-5f74-41aa-9533-541b88212248-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="d3-detail-tiles" style="display: inline-block;"></div>
+</div>
+
+<script>
+    // ---------- Searching Functionality ---------- //
+    (function($) {
+        jQuery.expr[':'].Contains = function(a, i, m) {
+            return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        function listFilter() {
+            $('#f3dfc820-3f23-495a-9e88-bb80f5809587-search').change(function () {
+                var filter = $(this).val();
+                if (filter) {
+                    $('#f3dfc820-3f23-495a-9e88-bb80f5809587-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+                    $('#f3dfc820-3f23-495a-9e88-bb80f5809587-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+                }
+                else {
+                    $('#f3dfc820-3f23-495a-9e88-bb80f5809587-tiles .tile').css('display', 'block');
+                }
+                return false;
+            }).keyup(function () { $(this).change(); });
+        }
+
+        $(function() {
+            listFilter();
+        });
+    }(jQuery));
+
+    // ---------- Pageshow Event Handler (to restore previous pages search text on Back button) ---------- //
+    window.addEventListener("pageshow", function(evt){
+        var filter = $('#f3dfc820-3f23-495a-9e88-bb80f5809587-search').val();
+        if (filter) {
+            $('#f3dfc820-3f23-495a-9e88-bb80f5809587-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#f3dfc820-3f23-495a-9e88-bb80f5809587-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#f3dfc820-3f23-495a-9e88-bb80f5809587-tiles .tile').css('display', 'block');
+        }
+    }, false);
+
+    // ---------- Set the Ajax Timer for Callbacks ---------- //
+</script> 
+
+<div id="f3dfc820-3f23-495a-9e88-bb80f5809587" style="width: 100%; display: block">
+    <input id="f3dfc820-3f23-495a-9e88-bb80f5809587-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="f3dfc820-3f23-495a-9e88-bb80f5809587-tiles" style="display: inline-block;">
+    </div>
+</div>
+
+<script>
+    // ---------- Searching Functionality ---------- //
+    (function($) {
+        jQuery.expr[':'].Contains = function(a, i, m) {
+            return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        function listFilter() {
+            $('#2f8b30e3-11b5-41dc-b6d3-8ccbfbbffc7d-search').change(function () {
+                var filter = $(this).val();
+                if (filter) {
+                    $('#2f8b30e3-11b5-41dc-b6d3-8ccbfbbffc7d-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+                    $('#2f8b30e3-11b5-41dc-b6d3-8ccbfbbffc7d-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+                }
+                else {
+                    $('#2f8b30e3-11b5-41dc-b6d3-8ccbfbbffc7d-tiles .tile').css('display', 'block');
+                }
+                return false;
+            }).keyup(function () { $(this).change(); });
+        }
+
+        $(function() {
+            listFilter();
+        });
+    }(jQuery));
+
+    // ---------- Pageshow Event Handler (to restore previous pages search text on Back button) ---------- //
+    window.addEventListener("pageshow", function(evt){
+        var filter = $('#2f8b30e3-11b5-41dc-b6d3-8ccbfbbffc7d-search').val();
+        if (filter) {
+            $('#2f8b30e3-11b5-41dc-b6d3-8ccbfbbffc7d-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#2f8b30e3-11b5-41dc-b6d3-8ccbfbbffc7d-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#2f8b30e3-11b5-41dc-b6d3-8ccbfbbffc7d-tiles .tile').css('display', 'block');
+        }
+    }, false);
+
+    // ---------- Set the Ajax Timer for Callbacks ---------- //
+</script> 
+
+<div id="2f8b30e3-11b5-41dc-b6d3-8ccbfbbffc7d" style="width: 100%; display: block">
+    <input id="2f8b30e3-11b5-41dc-b6d3-8ccbfbbffc7d-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="2f8b30e3-11b5-41dc-b6d3-8ccbfbbffc7d-tiles" style="display: inline-block;">
+    </div>
+</div>
+
+<script>
+    // ---------- Searching Functionality ---------- //
+    (function($) {
+        jQuery.expr[':'].Contains = function(a, i, m) {
+            return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        function listFilter() {
+            $('#76dbc5b1-41cb-4d87-9757-43fe9e10c003-search').change(function () {
+                var filter = $(this).val();
+                if (filter) {
+                    $('#76dbc5b1-41cb-4d87-9757-43fe9e10c003-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+                    $('#76dbc5b1-41cb-4d87-9757-43fe9e10c003-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+                }
+                else {
+                    $('#76dbc5b1-41cb-4d87-9757-43fe9e10c003-tiles .tile').css('display', 'block');
+                }
+                return false;
+            }).keyup(function () { $(this).change(); });
+        }
+
+        $(function() {
+            listFilter();
+        });
+    }(jQuery));
+
+    // ---------- Pageshow Event Handler (to restore previous pages search text on Back button) ---------- //
+    window.addEventListener("pageshow", function(evt){
+        var filter = $('#76dbc5b1-41cb-4d87-9757-43fe9e10c003-search').val();
+        if (filter) {
+            $('#76dbc5b1-41cb-4d87-9757-43fe9e10c003-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#76dbc5b1-41cb-4d87-9757-43fe9e10c003-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#76dbc5b1-41cb-4d87-9757-43fe9e10c003-tiles .tile').css('display', 'block');
+        }
+    }, false);
+
+    // ---------- Set the Ajax Timer for Callbacks ---------- //
+</script> 
+
+<div id="76dbc5b1-41cb-4d87-9757-43fe9e10c003" style="width: 100%; display: block">
+    <input id="76dbc5b1-41cb-4d87-9757-43fe9e10c003-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="76dbc5b1-41cb-4d87-9757-43fe9e10c003-tiles" style="display: inline-block;">
+    </div>
+</div>
+                <div id="pour-speed-chart" style="width: 100%; height: 250px; margin: 0 auto; display: block; float:left; padding-top:5px; padding-bottom:5px" data-highcharts-chart="1"></div>
+
+	
+
+
+<div id="job-inventory-chart1" style="width: 100%; height: 300px; margin: 0 auto; display: block; float:left; padding-top:5px; padding-bottom:5px" data-highcharts-chart="2"></div>
+
+                <div id="cf1ca495-111d-462b-98df-35ad1add5417" class="d3-label" style="width: 100%;display: none;"><h4>Delay Overview</h4></div>
+
+
+        <div style="display: none; width: 100%">
+        <div id="ec5a0662-5c12-4b1d-8808-546ae80f7700_wrapper" class="dataTables_wrapper form-inline" role="grid"><div class="row"><div class="span6"></div><div class="span6"></div></div><table cellpadding="0" cellspacing="0" border="0" class="table table-striped dataTable" id="ec5a0662-5c12-4b1d-8808-546ae80f7700" style="width: 100%; ">
+            <thead><tr role="row"><th class="sorting_asc" role="columnheader" tabindex="0" aria-controls="ec5a0662-5c12-4b1d-8808-546ae80f7700" rowspan="1" colspan="1" aria-sort="ascending" aria-label="Load Order: activate to sort column descending" style="width: 0px;">Load Order</th><th class="sorting" role="columnheader" tabindex="0" aria-controls="ec5a0662-5c12-4b1d-8808-546ae80f7700" rowspan="1" colspan="1" aria-label="Truck: activate to sort column ascending" style="width: 0px;">Truck</th><th class="sorting" role="columnheader" tabindex="0" aria-controls="ec5a0662-5c12-4b1d-8808-546ae80f7700" rowspan="1" colspan="1" aria-label="Prod Delay: activate to sort column ascending" style="width: 0px;">Prod Delay</th><th class="sorting" role="columnheader" tabindex="0" aria-controls="ec5a0662-5c12-4b1d-8808-546ae80f7700" rowspan="1" colspan="1" aria-label="Wait To Pour: activate to sort column ascending" style="width: 0px;">Wait To Pour</th><th class="sorting" role="columnheader" tabindex="0" aria-controls="ec5a0662-5c12-4b1d-8808-546ae80f7700" rowspan="1" colspan="1" aria-label="Contractor Delay: activate to sort column ascending" style="width: 0px;">Contractor Delay</th></tr></thead>
+        
+        <tbody role="alert" aria-live="polite" aria-relevant="all"><tr class="gradeA odd">
+                <td style="border-top:0" class="  sorting_1">1</td>
+                <td style="border-top:0" class=" ">205494</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">39</td>
+                <td style="border-top:0" class=" "><font color="red">46</font></td>
+            </tr><tr class="gradeA even">
+                <td style="border-top:0" class="  sorting_1">2</td>
+                <td style="border-top:0" class=" ">205225</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">27</td>
+                <td style="border-top:0" class=" "><font color="red">24</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">3</td>
+                <td style="border-top:0" class=" ">205461</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">22</td>
+                <td style="border-top:0" class=" "><font color="red">23</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">4</td>
+                <td style="border-top:0" class=" ">205487</td>
+                <td style="border-top:0" class=" "><font color="red">4</font></td>
+                <td style="border-top:0" class=" ">1</td>
+                <td style="border-top:0" class=" "><font color="green">-10</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">5</td>
+                <td style="border-top:0" class=" ">205460</td>
+                <td style="border-top:0" class=" "><font color="red">9</font></td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="green">-11</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">6</td>
+                <td style="border-top:0" class=" ">205231</td>
+                <td style="border-top:0" class=" "><font color="red">15</font></td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="green">-11</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">7</td>
+                <td style="border-top:0" class=" ">205494</td>
+                <td style="border-top:0" class=" "><font color="red">13</font></td>
+                <td style="border-top:0" class=" ">10</td>
+                <td style="border-top:0" class=" "><font color="red">7</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">8</td>
+                <td style="border-top:0" class=" ">205487</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">2</td>
+                <td style="border-top:0" class=" "><font color="green">-5</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">9</td>
+                <td style="border-top:0" class=" ">205225</td>
+                <td style="border-top:0" class=" "><font color="red">7</font></td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="green">-5</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">10</td>
+                <td style="border-top:0" class=" ">205231</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="green">-7</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">11</td>
+                <td style="border-top:0" class=" ">205206</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="green">-7</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">12</td>
+                <td style="border-top:0" class=" ">205461</td>
+                <td style="border-top:0" class=" "><font color="red">6</font></td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="green">-5</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">13</td>
+                <td style="border-top:0" class=" ">205460</td>
+                <td style="border-top:0" class=" "><font color="red">11</font></td>
+                <td style="border-top:0" class=" ">2</td>
+                <td style="border-top:0" class=" "><font color="green">-5</font></td>
+            </tr></tbody></table><div class="row"><div class="span6"></div><div class="span6"></div></div></div>
+        </div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table {  margin-bottom: 8px; }
+</style>
+<script>
+            $(document).ready(function () {
+                $('#ec5a0662-5c12-4b1d-8808-546ae80f7700').dataTable({
+                    "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'><'span6'p>>",
+                    "sPaginationType": "bootstrap",
+                    "bPaginate": false,
+                    "bFilter": false,
+                    "bSort": true,
+                    "oLanguage": {
+                        "sLengthMenu": "_MENU_ records per page"
+                    }
+                });
+            });
+
+</script>
+            <a id="269b094d-7ac6-4b7f-a421-bd8d34f84433" href="https://d3.truckast.com/dv/v1/dolese/truckast/TicketStatusDetails?OrderID=335810CB-BF73-F111-82CC-9F6F49760254&amp;ShowDetail=1" class="btn btn-success " style="width: 100px; display: none">Delay Details</a>
+
+        <br>
+        <br>
+
+
+
+            <a id="73c7bcea-97a4-4ead-ad2f-ef5e6992c0cd" href="https://d3.truckast.com/dv/v1/dolese/truckast/homebuilder?OrderID=335810CB-BF73-F111-82CC-9F6F49760254" class="btn btn-success " style="width: 100px; display: none">POUR LOG</a>
+
+        <br>
+        <br>
+
+
+
+            <a id="qc" href="https://d3.truckast.com/dv/v1/dolese/truckast/QCTest?OrderID=335810CB-BF73-F111-82CC-9F6F49760254" class="btn btn-danger " style="width: 63px; display: none">QC Test</a>
+
+
+
+<div id="social-table" style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 10%">
+            <div id="ee10d749-a62f-4a20-aed9-4fddb4051199" class="d3-label" style="width: 100%;"><a href="https://d3.truckast.com/dv/v1/d3/features/photo?tenant=dolese&amp;topicid=AppID%3D000-00000-0000-0001,OrderID%3D335810CB-BF73-F111-82CC-9F6F49760254,UserID%3DD4E3FA38-E744-E411-BE57-A5D86181E080"><img src="./Order_files/photography-camera@2x.png" alt="Photo"></a></div>
+
+            </td>
+            <td style="vertical-align: middle; width: 80%">
+        <input id="messagedetails" name="messagedetails" value="" style="margin-bottom: 0; width: 95%; display: block; " type="text" placeholder="Enter your message">
+
+            </td>
+            <td style="vertical-align: middle; width: 10%">
+        <button id="messagetxtbtn" class="btn btn-primary " type="button" onclick="onSubmit_order()" style="width: 75px">Send</button>
+
+            </td>
+        </tr>
+
+    </tbody>
+</table>
+</div>                
+	<script>
+	$("#messagetxtbtn").click(function(){
+	    $(this).attr("disabled", "disabled");
+	});
+	</script>
+	
+
+
+<div id="chat1" class="chat-list" style="width:100%; display: block"></div>
+
+</form>
+
+<script>
+    function onValidate__order() {
+        // these are necessary instantiations, do not remove
+        var message = "";
+        var regex;
+        var input;
+
+        return message;
+    }
+    function onSubmit_order() {
+   
+        // validate the form content
+        var validationMessage = onValidate__order();
+        if (validationMessage != null && validationMessage.length > 0) {
+            $('#error-box').css('display', 'block');
+            $('#error-title').html('One or more fields were not properly filled out');
+            $('#error-text').html(validationMessage);
+            goToByScroll('error-box');
+            return;
+        }
+
+        // If there is a CodeScript component in this form, we need to url encode the values
+        if ($('#CodeScript').length > 0 && $('#ActualScript').length > 0) {
+            if (codeMirrorEditor != null)
+                codeMirrorEditor.save();
+            var origtext = $('#CodeScript').val();
+            var enctext = $('<div/>').text(origtext).html();
+            $('#ActualScript').val(enctext);
+            $('#CodeScript').remove();
+        }
+        // if there is an ORGANIZATION control on the page, grab its value for postback
+        if (typeof generateValueForComponent_ORGANIZATION == 'function') {
+            var orglist = generateValueForComponent_ORGANIZATION();
+            if (orglist != null) {
+                var form = document.forms['order'];
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'organization';
+                input.value = orglist;
+                form.appendChild(input);
+            }
+        }
+
+        // create a hidden form field to hold the postback type
+        var docform = document.forms['order'];
+        var typeInput = document.createElement('input');
+        typeInput.type = 'hidden';
+        typeInput.name = 'd3-form-type';
+        typeInput.value = 'Normal';
+        docform.appendChild(typeInput);
+
+        // save the login info (if at the login screen)
+        saveLogin();
+        
+        // gray out the screen while the postback occurs...
+        showLoadingIndicator();
+        
+        // submit the specified form now
+        $('#order').submit();
+    }
+</script>                </div>
+
+</div>
+<script type="text/javascript">
+
+
+
+</script>
+
+    
+
+<script src="/d3-static/order-live.js"></script>
+</body></html>

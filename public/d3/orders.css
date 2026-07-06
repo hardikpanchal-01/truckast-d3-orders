@@ -1,0 +1,147 @@
+/* ==========================================================================
+   D3 orders page — the exact Bootstrap 2.2.2 rules used by the live
+   JobsForFixedNodeID page, copied verbatim from d3_complete.css, plus the
+   custom .tile block. Served to the isolated <iframe> so the page renders
+   1:1 with D3 without touching the host app's Tailwind styles.
+   ========================================================================== */
+
+/* ---- reset / base ---- */
+article,aside,details,figcaption,figure,footer,header,hgroup,nav,section{display:block}
+html{font-size:100%;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+img{width:auto\9;height:auto;max-width:100%;vertical-align:middle;border:0;-ms-interpolation-mode:bicubic}
+body{margin:0;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-size:14px;line-height:20px;color:#333;background-color:#fff}
+a{color:#08c;text-decoration:none;cursor:pointer}
+a:hover{color:#005580;text-decoration:underline}
+button,input,select,textarea{margin:0;font-size:100%;vertical-align:middle}
+button,input{*overflow:visible;line-height:normal}
+label,select,button,input[type="button"],input[type="reset"],input[type="submit"],input[type="radio"],input[type="checkbox"]{cursor:pointer}
+p{margin:0 0 10px}
+strong{font-weight:bold}
+
+/* ---- container ---- */
+.container{margin-right:auto;margin-left:auto;*zoom:1}
+.container:before,.container:after{display:table;line-height:0;content:""}
+.container:after{clear:both}
+.container,.navbar-static-top .container,.navbar-fixed-top .container,.navbar-fixed-bottom .container{width:940px}
+
+/* ---- form controls (selects / search input) ---- */
+select,textarea,input[type="text"],input[type="password"],input[type="search"]{
+  display:inline-block;height:20px;padding:4px 6px;margin-bottom:10px;font-size:14px;line-height:20px;
+  color:#555;vertical-align:middle;-webkit-border-radius:4px;-moz-border-radius:4px;border-radius:4px}
+input,textarea{width:206px}
+textarea,input[type="text"],input[type="password"],input[type="search"]{
+  background-color:#fff;border:1px solid #ccc;
+  -webkit-box-shadow:inset 0 1px 1px rgba(0,0,0,0.075);-moz-box-shadow:inset 0 1px 1px rgba(0,0,0,0.075);box-shadow:inset 0 1px 1px rgba(0,0,0,0.075);
+  -webkit-transition:border linear .2s,box-shadow linear .2s;-moz-transition:border linear .2s,box-shadow linear .2s;-o-transition:border linear .2s,box-shadow linear .2s;transition:border linear .2s,box-shadow linear .2s}
+textarea:focus,input[type="text"]:focus,input[type="password"]:focus,input[type="search"]:focus{
+  border-color:rgba(82,168,236,0.8);outline:0;
+  -webkit-box-shadow:inset 0 1px 1px rgba(0,0,0,0.075),0 0 8px rgba(82,168,236,0.6);
+  -moz-box-shadow:inset 0 1px 1px rgba(0,0,0,0.075),0 0 8px rgba(82,168,236,0.6);
+  box-shadow:inset 0 1px 1px rgba(0,0,0,0.075),0 0 8px rgba(82,168,236,0.6)}
+select,input[type="file"]{height:30px;*margin-top:4px;line-height:30px}
+select{width:220px;background-color:#fff;border:1px solid #ccc}
+select:focus{outline:thin dotted #333;outline:5px auto -webkit-focus-ring-color;outline-offset:-2px}
+
+/* ---- buttons (btn-navbar base) ---- */
+.btn{display:inline-block;*display:inline;padding:4px 12px;margin-bottom:0;font-size:14px;line-height:20px;color:#333;
+  text-align:center;text-shadow:0 1px 1px rgba(255,255,255,0.75);vertical-align:middle;cursor:pointer;
+  -webkit-border-radius:4px;-moz-border-radius:4px;border-radius:4px}
+
+/* ---- navbar ---- */
+.navbar{*position:relative;*z-index:2;margin-bottom:20px;overflow:visible}
+.navbar-inner{min-height:40px;padding-right:20px;padding-left:20px;background-color:#fafafa;
+  background-image:-webkit-linear-gradient(top,#fff,#f2f2f2);background-image:-o-linear-gradient(top,#fff,#f2f2f2);background-image:linear-gradient(to bottom,#fff,#f2f2f2);
+  background-repeat:repeat-x;border:1px solid #d4d4d4;-webkit-border-radius:4px;-moz-border-radius:4px;border-radius:4px;*zoom:1;
+  -webkit-box-shadow:0 1px 4px rgba(0,0,0,0.065);-moz-box-shadow:0 1px 4px rgba(0,0,0,0.065);box-shadow:0 1px 4px rgba(0,0,0,0.065)}
+.navbar-inner:before,.navbar-inner:after{display:table;line-height:0;content:""}
+.navbar-inner:after{clear:both}
+.navbar .container{width:auto}
+.nav-collapse.collapse{height:auto;overflow:visible}
+.navbar .brand{display:block;float:left;padding:10px 20px 10px;margin-left:-20px;font-size:20px;font-weight:200;color:#777;text-shadow:0 1px 0 #fff}
+.navbar .brand:hover{text-decoration:none}
+
+/* nav */
+.nav{margin-bottom:20px;margin-left:0;list-style:none}
+.nav>li>a{display:block}
+.nav>li>a:hover{text-decoration:none;background-color:#eee}
+.navbar .nav{position:relative;left:0;display:block;float:left;margin:0 10px 0 0}
+.navbar .nav.pull-right{float:right;margin-right:0}
+.navbar .nav>li{float:left}
+.navbar .nav>li>a{float:none;padding:10px 15px 10px;color:#777;text-decoration:none;text-shadow:0 1px 0 #fff}
+.navbar .nav>li>a:focus,.navbar .nav>li>a:hover{color:#333;text-decoration:none;background-color:transparent}
+
+/* hamburger */
+.navbar .btn-navbar{display:none;float:right;padding:7px 10px;margin-right:5px;margin-left:5px;color:#fff;
+  text-shadow:0 -1px 0 rgba(0,0,0,0.25);background-color:#ededed;
+  background-image:-webkit-linear-gradient(top,#f2f2f2,#e5e5e5);background-image:-o-linear-gradient(top,#f2f2f2,#e5e5e5);background-image:linear-gradient(to bottom,#f2f2f2,#e5e5e5);
+  background-repeat:repeat-x;border-color:#e5e5e5 #e5e5e5 #bfbfbf;border-color:rgba(0,0,0,0.1) rgba(0,0,0,0.1) rgba(0,0,0,0.25);border-style:solid;border-width:1px;
+  -webkit-border-radius:4px;-moz-border-radius:4px;border-radius:4px;
+  -webkit-box-shadow:inset 0 1px 0 rgba(255,255,255,0.1),0 1px 0 rgba(255,255,255,0.075);box-shadow:inset 0 1px 0 rgba(255,255,255,0.1),0 1px 0 rgba(255,255,255,0.075)}
+.navbar .btn-navbar .icon-bar{display:block;width:18px;height:2px;background-color:#f5f5f5;
+  -webkit-border-radius:1px;-moz-border-radius:1px;border-radius:1px;
+  -webkit-box-shadow:0 1px 0 rgba(0,0,0,0.25);box-shadow:0 1px 0 rgba(0,0,0,0.25)}
+.btn-navbar .icon-bar+.icon-bar{margin-top:3px}
+
+/* fixed-top */
+.navbar-fixed-top,.navbar-fixed-bottom{position:fixed;right:0;left:0;z-index:1030;margin-bottom:0}
+.navbar-fixed-top{top:0}
+.navbar-fixed-top .navbar-inner,.navbar-static-top .navbar-inner{border-width:0 0 1px}
+.navbar-fixed-top .navbar-inner,.navbar-static-top .navbar-inner{
+  -webkit-box-shadow:0 1px 10px rgba(0,0,0,0.1);-moz-box-shadow:0 1px 10px rgba(0,0,0,0.1);box-shadow:0 1px 10px rgba(0,0,0,0.1)}
+
+/* inverse (dark) */
+.navbar-inverse .navbar-inner{background-color:#1b1b1b;
+  background-image:-webkit-linear-gradient(top,#222,#111);background-image:-o-linear-gradient(top,#222,#111);background-image:linear-gradient(to bottom,#222,#111);
+  background-repeat:repeat-x;border-color:#252525}
+.navbar-inverse .brand,.navbar-inverse .nav>li>a{color:#999;text-shadow:0 -1px 0 rgba(0,0,0,0.25)}
+.navbar-inverse .brand:hover,.navbar-inverse .nav>li>a:hover{color:#fff}
+.navbar-inverse .brand{color:#999}
+.navbar-inverse .nav>li>a:focus,.navbar-inverse .nav>li>a:hover{color:#fff;background-color:transparent}
+.navbar-inverse .btn-navbar{color:#fff;text-shadow:0 -1px 0 rgba(0,0,0,0.25);background-color:#0e0e0e;
+  background-image:-webkit-linear-gradient(top,#151515,#040404);background-image:-o-linear-gradient(top,#151515,#040404);background-image:linear-gradient(to bottom,#151515,#040404);
+  background-repeat:repeat-x;border-color:#040404 #040404 #000;border-color:rgba(0,0,0,0.1) rgba(0,0,0,0.1) rgba(0,0,0,0.25)}
+
+/* ---- responsive (verbatim breakpoints) ---- */
+@media(min-width:1200px){
+  .container,.navbar-static-top .container,.navbar-fixed-top .container,.navbar-fixed-bottom .container{width:1170px}
+}
+@media(min-width:768px) and (max-width:979px){
+  .container,.navbar-static-top .container,.navbar-fixed-top .container,.navbar-fixed-bottom .container{width:724px}
+}
+@media(max-width:767px){
+  body{padding-right:20px;padding-left:20px}
+  .navbar-fixed-top,.navbar-fixed-bottom,.navbar-static-top{margin-right:-20px;margin-left:-20px}
+  .container{width:auto}
+}
+@media(max-width:979px){
+  .navbar-fixed-top,.navbar-fixed-bottom{position:static}
+  .navbar-fixed-top{margin-bottom:20px}
+  .navbar-fixed-top .navbar-inner,.navbar-fixed-bottom .navbar-inner{padding:5px}
+  .navbar .container{width:auto;padding:0}
+  .navbar .brand{padding-right:10px;padding-left:10px;margin:0 0 0 -5px}
+  .nav-collapse{clear:both}
+  .nav-collapse .nav{float:none;margin:0 0 10px}
+  .nav-collapse .nav>li{float:none}
+  .nav-collapse .nav>li>a{margin-bottom:2px;padding:9px 15px;font-weight:bold;color:#777;
+    -webkit-border-radius:3px;-moz-border-radius:3px;border-radius:3px}
+  .navbar-inverse .nav-collapse .nav>li>a{color:#999}
+  .navbar-inverse .nav-collapse .nav>li>a:hover{background-color:#111}
+  .nav-collapse .nav>li>a:hover{background-color:#f2f2f2}
+  .nav-collapse,.nav-collapse.collapse{height:0;overflow:hidden}
+  .navbar .btn-navbar{display:block}
+}
+@media(min-width:980px){
+  .nav-collapse.collapse{height:auto!important;overflow:visible!important}
+}
+
+/* ==========================================================================
+   Custom tile block — verbatim from d3_complete.css
+   ========================================================================== */
+.tile{width:274px;height:90px;margin-right:5px;margin-bottom:5px;background-color:#c43926;float:left;color:white;cursor:pointer}
+.tileContainer{padding:5px}
+.tileIcon{width:72px;height:80px;margin-right:5px;float:left}
+.tileInfoSection{width:185px;height:80px;float:left;display:table;overflow:hidden;vertical-align:middle}
+.tileCell{display:table-cell;vertical-align:middle}
+.tileSuperTitle{width:185px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tileTitle{width:185px;font-size:16px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tileSubTitle{width:185px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

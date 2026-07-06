@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import styles from "./order-tiles.module.css";
 
 function mdy(iso: string) {
   // Zero-padded MM/DD/YYYY like D3 ("07/03/2026"); the ISO parts are already padded.
@@ -177,8 +178,7 @@ export function DateSelect({ value, valueTo }: { value: string; valueTo?: string
     <select
       value={displayValue}
       onChange={(e) => navigate(e.target.value)}
-      className="block h-[30px] w-full cursor-pointer rounded-[4px] border border-[#ccc] bg-white px-[6px] py-[4px] align-middle text-[14px] font-normal leading-[30px] text-[#555] outline-none focus:border-[#2f7ed8]"
-      style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
+      className={styles.select}
     >
       {/* Show custom date/range if not in presets */}
       {!currentOption && <option value={displayValue}>{displayLabel}</option>}

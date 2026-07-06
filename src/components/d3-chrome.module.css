@@ -1,0 +1,225 @@
+/* ------------------------------------------------------------------
+   D3 chrome — plain CSS (CSS Module, NO Tailwind) for the shared
+   top nav bar, the gray sub-header (title bar) and the content
+   <main> wrapper. Breakpoints mirror the previous Tailwind ones:
+   desktop nav at ≥1024px (lg), centered container at ≥980px.
+   ------------------------------------------------------------------ */
+
+/* ---- Content wrapper (AppChrome <main>) ---- */
+.main {
+  width: 100%;
+  padding: 20px 20px 16px;
+}
+@media (min-width: 640px) {
+  .main {
+    padding-bottom: 24px;
+  }
+}
+@media (min-width: 980px) {
+  .main {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 1170px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* ---- Top nav (dark TRUCKAST bar) — layout only; the dark gradient /
+       shadows stay as inline styles on the elements themselves. ---- */
+.navContainer {
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 10px;
+}
+@media (min-width: 980px) {
+  .navContainer {
+    max-width: 1170px;
+    padding: 0;
+  }
+}
+.navRow {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+}
+.brand {
+  display: block;
+  padding: 15px 20px;
+}
+@media (min-width: 980px) {
+  .brand {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+}
+.desktopNav {
+  display: none;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+@media (min-width: 1024px) {
+  .desktopNav {
+    display: flex;
+  }
+}
+.hamburger {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: pointer;
+}
+@media (min-width: 1024px) {
+  .hamburger {
+    display: none;
+  }
+}
+
+/* Tab links */
+.tab {
+  padding: 10px 15px;
+  color: #999;
+  text-decoration: none;
+  cursor: pointer;
+}
+.tab:hover,
+.tab:focus {
+  color: #fff;
+  text-decoration: none;
+}
+.tabActive {
+  color: #fff;
+}
+.tabButton {
+  border: 0;
+  background: transparent;
+  font: inherit;
+}
+.formContents {
+  display: contents;
+}
+
+/* Mobile collapsible menu (0fr → 1fr height animation) */
+.mobileMenu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 40;
+  margin-top: -1px;
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+  transition: grid-template-rows 0.3s ease-out, opacity 0.3s ease-out;
+}
+.mobileMenuOpen {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (min-width: 1024px) {
+  .mobileMenu {
+    display: none;
+  }
+}
+.mobileInner {
+  margin: 0 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 724px;
+  overflow: hidden;
+}
+@media (min-width: 980px) {
+  .mobileInner {
+    max-width: 1170px;
+  }
+}
+.mobileNav {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.menuTab {
+  margin-bottom: 2px;
+  padding: 9px 20px;
+  line-height: 20px;
+  color: #999;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.menuTab:hover,
+.menuTab:focus {
+  background-color: rgba(0, 0, 0, 0.25);
+  color: #999;
+  text-decoration: none;
+}
+.menuTabButton {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+}
+
+/* ---- Sub-header (gray rounded title bar: back | title | refresh) ----
+   Exact Bootstrap 2.2 .navbar-inner values from d3_complete.css. */
+.subHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 20px;
+  color: #333;
+  font-size: 14px;
+  line-height: 20px;
+  border: 1px solid #d4d4d4;
+  border-radius: 4px;
+  background-color: #fafafa;
+  background-image: linear-gradient(to bottom, #ffffff, #f2f2f2);
+  background-repeat: repeat-x;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.065);
+}
+.subIcon {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 0;
+  color: #1f1f1f;
+  cursor: pointer;
+}
+.subIcon img {
+  display: block;
+  width: 32px;
+  height: 32px;
+}
+.subCenter {
+  min-width: 0;
+  text-align: center;
+}
+.subTitle {
+  display: block;
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 20px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.subTitlePad {
+  padding-bottom: 4px;
+}
+.subSub {
+  font-size: 12px;
+  line-height: 1.2;
+  color: #555;
+}
