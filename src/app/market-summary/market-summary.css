@@ -1,0 +1,273 @@
+/* ============================================================
+   Market Summary Page Styles
+   Based on D3 MarketSummary.htm + Bootstrap 2.2.2
+   This is a separate file that does NOT affect other pages
+   ============================================================ */
+
+/* -------------------- BOOTSTRAP 2.2.2 BASE RESET -------------------- */
+/* Override Tailwind's border-box with Bootstrap 2's content-box */
+.d3-page {
+    margin: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 20px;
+    color: #333333;
+    background-color: #ffffff;
+}
+
+.d3-page *,
+.d3-page *:before,
+.d3-page *:after {
+    -webkit-box-sizing: border-box !important;
+    -moz-box-sizing: border-box !important;
+    box-sizing: border-box !important;
+}
+
+/* -------------------- CONTAINER -------------------- */
+/* Remove padding - AppChrome already provides it */
+.d3-page .container {
+    margin-right: auto;
+    margin-left: auto;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+/* -------------------- NAVBAR STYLES -------------------- */
+.d3-page .navbar {
+    margin-bottom: 20px;
+    overflow: visible;
+}
+
+.d3-page .navbar-inner {
+    min-height: 40px;
+    padding-right: 20px;
+    padding-left: 20px;
+    background-color: #fafafa;
+    background-image: -moz-linear-gradient(top, #ffffff, #f2f2f2);
+    background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#ffffff), to(#f2f2f2));
+    background-image: -webkit-linear-gradient(top, #ffffff, #f2f2f2);
+    background-image: -o-linear-gradient(top, #ffffff, #f2f2f2);
+    background-image: linear-gradient(to bottom, #ffffff, #f2f2f2);
+    background-repeat: repeat-x;
+    border: 1px solid #d4d4d4;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+    -webkit-box-shadow: 0 1px 4px rgba(0, 0, 0, 0.065);
+    -moz-box-shadow: 0 1px 4px rgba(0, 0, 0, 0.065);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.065);
+}
+
+.d3-page .navbar-inner:before,
+.d3-page .navbar-inner:after {
+    display: table;
+    line-height: 0;
+    content: "";
+}
+
+.d3-page .navbar-inner:after {
+    clear: both;
+}
+
+/* -------------------- SELECT DROPDOWN (Bootstrap 2.2.2) -------------------- */
+/* With border-box: height includes padding (8px) + border (2px) = 30px total */
+.d3-page select {
+    display: inline-block;
+    width: 220px;
+    height: 30px;
+    padding: 4px 6px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 20px;
+    color: #555555;
+    vertical-align: middle;
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    -webkit-transition: border linear .2s, box-shadow linear .2s;
+    -moz-transition: border linear .2s, box-shadow linear .2s;
+    -o-transition: border linear .2s, box-shadow linear .2s;
+    transition: border linear .2s, box-shadow linear .2s;
+}
+
+.d3-page select:focus {
+    border-color: rgba(82, 168, 236, 0.8);
+    outline: 0;
+    outline: thin dotted \9;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(82,168,236,.6);
+    -moz-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(82,168,236,.6);
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(82,168,236,.6);
+}
+
+/* -------------------- SEARCH INPUT (Bootstrap 2.2.2) -------------------- */
+/* With border-box: height includes padding (8px) + border (2px) = 30px total */
+.d3-page input[type="text"] {
+    display: inline-block;
+    height: 30px;
+    padding: 4px 6px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 20px;
+    color: #555555;
+    vertical-align: middle;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    -webkit-transition: border linear .2s, box-shadow linear .2s;
+    -moz-transition: border linear .2s, box-shadow linear .2s;
+    -o-transition: border linear .2s, box-shadow linear .2s;
+    transition: border linear .2s, box-shadow linear .2s;
+}
+
+.d3-page input[type="text"]:focus {
+    border-color: rgba(82, 168, 236, 0.8);
+    outline: 0;
+    outline: thin dotted \9;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(82,168,236,.6);
+    -moz-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(82,168,236,.6);
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(82,168,236,.6);
+}
+
+/* -------------------- TILE STYLES (from D3) -------------------- */
+.d3-page .tile {
+    width: 274px;
+    height: 90px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    background-color: #c43926;
+    float: left;
+    color: white;
+    cursor: pointer;
+}
+
+.d3-page .tileContainer {
+    padding: 5px;
+}
+
+.d3-page .tileIcon {
+    width: 72px;
+    height: 80px;
+    margin-right: 5px;
+    float: left;
+}
+
+.d3-page .tileIcon img {
+    max-width: 72px;
+    max-height: 80px;
+}
+
+.d3-page .tileInfoSection {
+    width: 185px;
+    height: 80px;
+    float: left;
+    display: table;
+    overflow: hidden;
+    vertical-align: middle;
+}
+
+.d3-page .tileCell {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.d3-page .tileSuperTitle {
+    width: 185px;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.d3-page .tileTitle {
+    width: 185px;
+    font-size: 16px;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.d3-page .tileSubTitle {
+    width: 185px;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* -------------------- HIGHCHARTS PIE CHART -------------------- */
+.d3-page .highcharts-container {
+    position: relative;
+    overflow: hidden;
+    width: 72px;
+    height: 80px;
+    text-align: left;
+    line-height: normal;
+    z-index: 0;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+/* -------------------- D3 LABEL -------------------- */
+.d3-page .d3-label {
+    font-size: 14px;
+}
+
+.d3-page .d3-label h4 {
+    margin: 10px 0;
+    font-family: inherit;
+    font-weight: bold;
+    line-height: 20px;
+    color: inherit;
+    text-rendering: optimizelegibility;
+    font-size: 18px;
+}
+
+/* -------------------- TABLE STYLES -------------------- */
+.d3-page table {
+    max-width: 100%;
+    background-color: transparent;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.d3-page td {
+    padding: 0;
+}
+
+/* -------------------- LINK STYLES -------------------- */
+.d3-page a {
+    color: #0088cc;
+    text-decoration: none;
+}
+
+.d3-page a:hover,
+.d3-page a:focus {
+    color: #005580;
+    text-decoration: underline;
+}
+
+/* -------------------- STRONG -------------------- */
+.d3-page strong {
+    font-weight: bold;
+}
+
+/* -------------------- BR CLEAR -------------------- */
+.d3-page br {
+    clear: both;
+}
+
+/* -------------------- IMG -------------------- */
+.d3-page img {
+    vertical-align: middle;
+    border: 0;
+}
