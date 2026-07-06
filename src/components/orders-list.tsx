@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { SearchBox, IconTile, PieGauge, type ToneName } from "@/components/d3-ui";
+import Link from "next/link";
 import type { DoleseOrderListItem, OrderStatus } from "@/actions/orderActions";
+import styles from "./order-tiles.module.css";
 
 const STATUS_LABEL: Record<OrderStatus, string> = {
   IN_PROCESS: "IN PROCESS",
@@ -12,27 +13,28 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
 };
 
 /**
- * Card colour rules (from the live app):
- *  Green  – Firm order while PRE-POUR; or IN_PROCESS/COMPLETE with poured speed ≥ 90% of plan.
- *  Yellow – Will-Call order while PRE-POUR; or IN_PROCESS/COMPLETE with poured speed 60–89%.
- *  Red    – Cancelled or on-hold order; or IN_PROCESS/COMPLETE with poured speed < 60%.
+ * D3's exact tile background colours (from the exported JobsForFixedNodeID markup):
+ *  green  rgb(69,139,0)   – firm pre-pour; on-plan in-process/complete
+ *  yellow rgb(247,187,0)  – will-call pre-pour; behind-plan in-process/complete
+ *  red    rgb(196,57,38)  – on-hold and cancelled orders
  */
-function cardTone(o: DoleseOrderListItem): ToneName {
+const TILE_GREEN = "rgb(69, 139, 0)";
+const TILE_YELLOW = "rgb(247, 187, 0)";
+const TILE_RED = "rgb(196, 57, 38)";
+
+function tileColor(o: DoleseOrderListItem): string {
   const ds = o.dispatch_status;
-  if (o.status === "CANCELED" || ds === "Cancelled" || ds === "Hold") return "red";
+  if (o.status === "CANCELED" || ds === "Cancelled" || ds === "Hold") return TILE_RED;
   if (o.status === "PRE_POUR") {
-    // D3 paints pre-pour orders yellow (Will-Call) unless dispatch has firmed them.
-    // In DOLESE's data every pre-pour order comes back current_status = 1, which D3
-    // treats as Will-Call → yellow. A firmed order is flagged current_status = 2 ("Active").
-    // (We can't confirm the exact code table without prod-DB access, but this matches D3.)
-    return ds === "Active" ? "green" : "yellow";
+    // Firmed (dispatch "Active") → green; otherwise Will-Call → yellow (matches D3).
+    return ds === "Active" ? TILE_GREEN : TILE_YELLOW;
   }
   // IN_PROCESS / COMPLETE → poured speed vs planned speed.
   const pct = o.pour_pct;
-  if (pct == null) return "green"; // no pour data yet → treat as on-plan
-  if (pct >= 90) return "green";
-  if (pct >= 60) return "yellow";
-  return "red";
+  if (pct == null) return TILE_GREEN;
+  if (pct >= 90) return TILE_GREEN;
+  if (pct >= 60) return TILE_YELLOW;
+  return TILE_RED;
 }
 
 /** D3 shows CY as 0.00 until an order reaches a full 1 CY (sub-1 values display as zero). */
@@ -57,8 +59,9 @@ function startLabel(t: string | null): string {
 export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
   const [filter, setFilter] = React.useState("");
 
+  const q = filter.trim().toLowerCase();
+
   const visible = React.useMemo(() => {
-    const q = filter.trim().toLowerCase();
     if (!q) return orders;
     return orders.filter(
       (o) =>
@@ -67,54 +70,82 @@ export function OrdersList({ orders }: { orders: DoleseOrderListItem[] }) {
         o.delivery_addr1?.toLowerCase().includes(q) ||
         o.project_name?.toLowerCase().includes(q),
     );
-  }, [orders, filter]);
+  }, [orders, q]);
 
-  // space-y-3 keeps the search → tiles gap tight (matching D3).
+  // D3 pins a red "Current Fuel Surcharge" promo as the first grid cell; it filters
+  // out of the grid like any other tile when the search query excludes it.
+  const showFuel = !q || "current fuel surcharge dolese".includes(q);
+
   return (
-    <div className="space-y-3 pt-2">
-      <SearchBox value={filter} onChange={setFilter} placeholder="Search" />
+    <div>
+      <div className={styles.searchWrap}>
+        <input
+          type="text"
+          className={styles.search}
+          placeholder="Search"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+      </div>
 
-      {visible.length === 0 ? (
-        <p className="py-10 text-center text-sm text-slate-400">No orders for this day.</p>
+      {visible.length === 0 && !showFuel ? (
+        <p className={styles.empty}>No orders for this day.</p>
       ) : (
-        <div className="flex flex-wrap">
+        <div className={styles.tiles}>
+          {showFuel && (
+            <Link href="/fuel-surcharges" className={`${styles.tile} ${styles.fuelTile}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/icons/dogear.png" alt="" aria-hidden className={styles.dogear} />
+              <div className={styles.tileContainer}>
+                <div className={`${styles.tileIcon} ${styles.fuelIcon}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="https://d3.truckast.com/Images/logos/dolesepublish.png" alt="" />
+                </div>
+                <div className={styles.tileInfoSection}>
+                  <div className={styles.tileCell}>
+                    {/* Hardcoded weekly promo — mirrors D3's current surcharge. */}
+                    <div className={styles.fuelDate}>June 29th thru July 3rd, 2026</div>
+                    <div className={styles.fuelTitle}>Current Fuel Surcharge</div>
+                    <div className={styles.fuelSub}>$25.00 per load *Click for Details</div>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          )}
           {visible.map((o) => {
-            const tone = cardTone(o);
-            const isCompleted = o.status === "COMPLETED";
-            const usePie = o.status === "IN_PROCESS";
-            const pct = o.ordered_cy > 0 ? o.ticketed_cy / o.ordered_cy : 0;
-            // Only PRE-POUR tiles lead with the scheduled time (matches the live app).
-            const start = o.status === "PRE_POUR" ? startLabel(o.start_time) : "";
-            // D3 renders the address + customer lines UPPERCASE on the tiles.
-            const boldLine = [start, o.delivery_addr1 || o.project_name || "—"].filter(Boolean).join(" ").toUpperCase();
+            const isCancelled = o.status === "CANCELED";
+            // D3 SuperTitle: "48307-7/6: 0.00 CY (PRE-POUR)"
+            const superTitle = `${o.order_code}-${md(o.order_date)}: ${cyLabel(o.ordered_cy)} CY (${STATUS_LABEL[o.status]})`;
+            // D3 Title (bold): "02:00 201 DOLLAR TREE WAY" — time+address; cancelled tiles omit the time.
+            const start = isCancelled ? "" : startLabel(o.start_time);
+            const addr = o.delivery_addr1 || o.project_name || "";
+            const title = `${start} ${addr}`.trim().toUpperCase();
+            // D3 SubTitle: customer name.
+            const subTitle = (o.customer_name || "").toUpperCase();
+
             return (
-              <IconTile
+              <Link
                 key={o.order_id}
                 href={`/orders/${o.order_id}`}
-                tone={tone}
-                completed={isCompleted}
-                left={
-                  usePie ? (
-                    <PieGauge pct={pct} size={52} tinted />
-                  ) : o.status === "CANCELED" ? (
-                    // D3's cancelled-tile glyph (white ⊘ on transparent), 72×80.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src="/icons/cancelled.png" alt="Cancelled" width={72} height={80} />
-                  ) : !isCompleted ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src="/icons/scheduled.png" alt="" className="h-[64px] w-auto" />
-                  ) : undefined
-                }
-                lines={[
-                  {
-                    text: `${o.order_code}-${md(o.order_date)}: ${cyLabel(o.ordered_cy)} CY (${STATUS_LABEL[o.status]})`,
-                    size: 14,
-                    dim: true,
-                  },
-                  { text: boldLine, bold: true, size: 16 },
-                  { text: (o.customer_name || "—").toUpperCase(), size: 12, dim: true },
-                ]}
-              />
+                className={styles.tile}
+                style={{ backgroundColor: tileColor(o) }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/icons/dogear.png" alt="" aria-hidden className={styles.dogear} />
+                <div className={styles.tileContainer}>
+                  <div className={styles.tileIcon}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={isCancelled ? "/icons/cancelled.png" : "/icons/scheduled.png"} alt="" />
+                  </div>
+                  <div className={styles.tileInfoSection}>
+                    <div className={styles.tileCell}>
+                      <div className={styles.tileSuperTitle}>{superTitle}</div>
+                      <div className={styles.tileTitle}>{title}</div>
+                      <div className={styles.tileSubTitle}>{subTitle}</div>
+                    </div>
+                  </div>
+                </div>
+              </Link>
             );
           })}
         </div>

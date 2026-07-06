@@ -1,7 +1,12 @@
 "use client";
 
-import { FoldCard } from "@/components/d3-ui";
+import styles from "./order-tiles.module.css";
 
+/**
+ * D3's download tile — a green .tile (rgb(69,139,0)) with the XLS badge and
+ * SuperTitle = date, Title = "ORDERS", SubTitle = "Download".
+ * Plain D3 CSS (no Tailwind), same tile structure as the order tiles.
+ */
 export function DownloadTile({ date }: { date: string }) {
   const handleDownload = () => {
     window.location.href = `/api/orders/export?date=${date}`;
@@ -12,27 +17,29 @@ export function DownloadTile({ date }: { date: string }) {
   const shown = mm && dd && yy ? `${mm}/${dd}/${yy}` : date;
 
   return (
-    <div className="flex">
-      <FoldCard
-        tone="green"
-        className="mb-[5px] w-full cursor-pointer text-white sm:mr-[5px] sm:w-[279px]"
+    <div className={styles.tiles}>
+      <button
+        type="button"
+        onClick={handleDownload}
+        className={`${styles.tile} ${styles.downloadReset}`}
+        style={{ backgroundColor: "rgb(69, 139, 0)" }}
       >
-        {/* D3 .tileContainer: 5px padding; icon in a 72×80 box (mr 5) with the badge
-            centered; info section 185×80 with the text vertically centered. */}
-        <div className="flex h-[90px] items-center p-[5px]" onClick={handleDownload}>
-          <div className="flex h-[80px] w-[72px] shrink-0 items-start justify-start self-start" style={{ marginRight: "5px" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icons/dogear.png" alt="" aria-hidden className={styles.dogear} />
+        <div className={styles.tileContainer}>
+          <div className={styles.tileIcon}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icons/excel-xls.png" alt="Export to Excel" className="h-[64px] w-[64px]" />
+            <img src="/icons/excel-xls.png" alt="Export to Excel" width={64} height={64} />
           </div>
-          <div className="flex h-[80px] min-w-0 flex-1 flex-col justify-center overflow-hidden leading-[1.4] [&>p]:m-0">
-            <p className="truncate text-[14px]">{shown}</p>
-            <p className="truncate text-[16px] font-bold">ORDERS</p>
-            <p className="truncate text-[12px]" style={{ lineHeight: "1.4" }}>
-              Download
-            </p>
+          <div className={styles.tileInfoSection}>
+            <div className={styles.tileCell}>
+              <div className={styles.tileSuperTitle}>{shown}</div>
+              <div className={styles.tileTitle}>ORDERS</div>
+              <div className={styles.tileSubTitle}>Download</div>
+            </div>
           </div>
         </div>
-      </FoldCard>
+      </button>
     </div>
   );
 }

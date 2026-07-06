@@ -18,7 +18,7 @@ export default async function CustomerDelayPage({
     <div className="space-y-5">
       <SubHeader
         title={`${data.customer_name || "—"} - DELAY MINUTES`}
-        heightClass="h-[76px]"
+        heightPx={76}
         subtitle={
           <>
             {data.order_line ? <p>{data.order_line}</p> : null}

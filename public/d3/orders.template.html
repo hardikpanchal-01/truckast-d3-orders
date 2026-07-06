@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/d3/orders.css">
+<style>
+  html,body{background:#fff}
+  /* static (non-fixed) dark bar at the top of the flow */
+  .navbar-fixed-top{position:static}
+  #tiles{display:inline-block}
+  select{cursor:pointer}
+</style>
+</head>
+<body>
+<div class="navbar navbar-fixed-top navbar-inverse">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="btn btn-navbar" onclick="toggleNav()">
+        <span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
+      </a>
+      <a class="brand" href="/" target="_top">TRUCKAST</a>
+      <div class="nav-collapse collapse" id="navc"><ul class="nav">
+        <li><a href="/" target="_top">MARKETS</a></li>
+        <li><a href="/settings" target="_top">SETTINGS</a></li>
+        <li><a href="/publish" target="_top">PUBLISH</a></li>
+        <li><a href="/admin" target="_top">ADMIN</a></li>
+        <li><a href="/order-request" target="_top">ORDER</a></li>
+        <li><a href="/rollout/search" target="_top">ROLLOUT</a></li>
+        <li><a href="/projects" target="_top">PROJECTS</a></li>
+        <li><a href="/help" target="_top">HELP</a></li>
+        <li><a href="/logout" target="_top">LOGOUT</a></li>
+      </ul></div>
+    </div>
+  </div>
+</div>
+<div class="container">
+  <div class="navbar">
+    <div class="navbar-inner">
+      <div class="container">
+        <table style="width:100%"><tbody><tr>
+          <td style="width:38px">
+            <a href="{{BACK}}" target="_top">
+              <img width="32" height="32" style="margin-top:5px;margin-bottom:5px" src="/icons/arrow-back.png" alt="Back">
+            </a>
+          </td>
+          <td>
+            <div style="width:100%;float:left;text-align:center;vertical-align:central">
+              <div style="display:inline-block;margin:5px">
+                <span style="font-size:16px"><strong>{{TITLE}}</strong></span>
+              </div>
+            </div>
+          </td>
+          <td style="width:38px">
+            <a onclick="location.reload()">
+              <img width="32" height="32" style="margin-top:5px;margin-bottom:5px" src="/icons/refresh.png" alt="Refresh">
+            </a>
+          </td>
+        </tr></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <select onchange="if(this.value)window.top.location.href=this.value" style="width:100%;margin-bottom:0;display:block">{{DATE_OPTIONS}}</select><br>
+
+  <select style="width:100%;margin-bottom:0;display:block"><option>{{PLANT}} ({{PLANT_CY}} CY)</option></select><br>
+
+  <select style="width:100%;margin-bottom:0;display:block"><option>Default</option><option>Volume</option></select><br>
+
+  <div style="width:100%;display:block">
+    <div style="display:inline-block">
+      <a class="tile" target="_top" href="{{DL_HREF}}"
+         style="position:relative;background-color:rgb(69, 139, 0);color:#fff;text-decoration:none;display:block">
+        <img src="/icons/dogear.png" style="position:absolute;right:0;bottom:0;display:block" alt="">
+        <div class="tileContainer">
+          <div class="tileIcon"><img src="/icons/excel-xls.png" alt=""></div>
+          <div class="tileInfoSection"><div class="tileCell">
+            <div class="tileSuperTitle">{{DL_DATE}}</div>
+            <div class="tileTitle">ORDERS</div>
+            <div class="tileSubTitle">Download</div>
+          </div></div>
+        </div>
+      </a>
+    </div>
+  </div><br>
+
+  <div style="width:100%;display:block">
+    <input id="search" type="text" placeholder="Search" style="width:260px;display:block" oninput="filterTiles()">
+    <div style="width:100%;height:1px;clear:both"></div>
+    <div id="tiles">{{TILES}}</div>
+  </div>
+</div>
+<script>
+  function toggleNav(){var n=document.getElementById('navc');var open=n.getAttribute('data-open')==='1';n.style.height=open?'0':'auto';n.style.overflow=open?'hidden':'visible';n.setAttribute('data-open',open?'0':'1');}
+  function filterTiles(){var f=(document.getElementById('search').value||'').toUpperCase();var t=document.getElementById('tiles').children;for(var i=0;i<t.length;i++){var el=t[i];var txt=(el.textContent||el.innerText||'').toUpperCase();el.style.display=(!f||txt.indexOf(f)>=0)?'block':'none';}}
+</script>
+</body>
+</html>
