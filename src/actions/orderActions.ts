@@ -81,6 +81,11 @@ export interface DoleseOrderDetail {
   dispatch_status: string;
   /** Scheduled time on job (from order_product_schedules) */
   scheduled_time: string | null;
+  /** Raw scheduled start (CST-clock in a UTC field) — drives the Pre-Pour ON JOB tile. */
+  scheduled_time_raw: string | null;
+  /** Requested delivery rate CY/HR (order_product_schedules.delivery_rate_per_hour) —
+   *  the Pre-Pour RATE tile. Null when the order has no scheduled rate. */
+  delivery_rate: number | null;
   /** Load spacing in minutes */
   spacing_minutes: number | null;
   /** Purchase order number */
@@ -105,6 +110,26 @@ export interface DoleseOrderDetail {
   dolese_delay_min: number;
   /** Job-site truck wait before unloading, minutes — red status tile. */
   job_delay_min: number;
+  /** Customer delay (COMPLETE spec): on-site time beyond the allotted pour, minutes. */
+  customer_delay_min: number;
+  /** Per-load delay breakdown (D3 "Delay Overview" + "Delay Details"), arrival order. */
+  delay_loads: {
+    order: number;
+    ticket: string;
+    ticket_id: string;
+    truck: string;
+    planned_on_job: string;
+    actual_on_job: string;
+    prod_delay: number;
+    begin_pour: string;
+    end_pour: string;
+    scheduled_end_pour: string;
+    spacing: number;
+    wait_to_pour: number;
+    pour_min_over: number;
+    contractor_delay: number;
+    plus_load: string;
+  }[];
   next_truck: string | null;
   pour_finish: string | null;
   weather: {
@@ -194,7 +219,7 @@ export interface TicketEventCard {
   title: string;
   value: string;
   sub?: string;
-  badge: string;
+  badge?: string;
   /** dark Verifi sensor card vs. blue truck-status card. */
   dark: boolean;
 }
@@ -866,7 +891,9 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
   //   Group 2 — not-started (Pre-Pour + On Hold)
   //   Group 3 — Cancelled (single trailing block at the very bottom)
   // Within each group, ascending by scheduled start time (untimed / will-call → after
-  // all timed orders); order_code breaks ties. Colour is a per-tile status cue, not a
+  // all timed orders); the order's internal id breaks ties. Verified against the live D3
+  // board: within one time slot the order is NOT by CY and NOT by order_code (both are
+  // unsorted) — it follows the entry/id sequence. Colour is a per-tile status cue, not a
   // sort key, so held/behind (red) tiles fall at their own time slot within a group.
   const startMinutes = (t: string | null): number => {
     if (!t) return Number.POSITIVE_INFINITY; // untimed (will-call) → after all timed
@@ -886,8 +913,11 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
     const ta = startMinutes(a.start_time);
     const tb = startMinutes(b.start_time);
     if (ta !== tb) return ta - tb;
-    // Stable, deterministic tiebreak for identical time slots.
-    return String(a.order_code).localeCompare(String(b.order_code));
+    // Same time slot → internal order id / entry sequence (matches D3).
+    const ia = Number(a.order_id);
+    const ib = Number(b.order_id);
+    if (!Number.isNaN(ia) && !Number.isNaN(ib) && ia !== ib) return ia - ib;
+    return String(a.order_id).localeCompare(String(b.order_id));
   });
   return items;
 }
@@ -969,18 +999,18 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     .limit(1)
     .maybeSingle();
 
-  if (firstTicket?.plant_name) {
-    plantName = firstTicket.plant_name;
-  } else if (firstTicket?.plant_code || firstSchedule?.plant_code || order.pricing_plant_code) {
-    // Fallback: look up from plants table
-    const plantCode = firstTicket?.plant_code || firstSchedule?.plant_code || order.pricing_plant_code;
+  // Prefer the plants-table full description ("Moore Batch Plant") over the ticket's
+  // short plant_name ("Moore") — D3 shows the full plant name on the weather tile.
+  const plantCode = firstTicket?.plant_code || firstSchedule?.plant_code || order.pricing_plant_code;
+  if (plantCode) {
     const { data: plant } = await supabase
       .from("plants")
       .select("description, short_description")
       .eq("code", plantCode)
       .maybeSingle();
-    plantName = plant?.description || plant?.short_description || plantCode;
+    plantName = plant?.description || plant?.short_description || null;
   }
+  if (!plantName) plantName = firstTicket?.plant_name || null;
 
   // Build instructions from instruction_addr fields
   const instrOrder = order as {
@@ -1026,10 +1056,14 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
 
   const loads = tickets.length;
 
-  // TRUCKS tile = trucks currently "on the map": headed to the job or at the job
-  // and not yet returned to the plant (en-route + on-job). Matches D3's count.
+  // TRUCKS tile = trucks currently "on the map": headed to the job or at the job and
+  // not yet BACK at the plant. A truck that is driving back (to_plant_time set but no
+  // at_plant_time yet) is still on the road / on the map, so it must keep counting —
+  // we retire it only once it has actually arrived at the plant (at_plant_time). Using
+  // the broader hasLeftJob() here (which also fires on to_plant) retired trucks a leg
+  // too early and under-counted vs D3.
   const mapTickets = tickets.filter(
-    (t) => (has(t.to_job_time) || has(t.on_job_time)) && !hasLeftJob(t),
+    (t) => (has(t.to_job_time) || has(t.on_job_time)) && !has(t.at_plant_time),
   );
   const trucks = new Set(mapTickets.map((t) => t.truck_code).filter(Boolean)).size;
 
@@ -1216,11 +1250,14 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     trucks: trucks_series,
   };
 
-  // --- Production stat tiles ---------------------------------------
-  // Poured = cumulative CY that has finished unloading (falls back to delivered).
-  const pouredCY = poured.length ? poured[poured.length - 1].v : r2(ticketed);
+  // --- Production stat tiles (D3 COMPLETE spec) --------------------
+  // Volume poured (D3 "POURED") = cumulative CY that has finished unloading. cumP is
+  // the real poured-out VOLUME accumulated in the poured-chart loop above (the old
+  // code used poured[last].v, which is a RATE, not a volume — that's why POURED read
+  // ~40 instead of the full 84 on completed orders).
+  const pouredCY = poured.length ? r2(cumP) : r2(ticketed);
 
-  // Pour rate (CY/HR) over the pour window (first unload → last pour-out).
+  // Pour-window rate (kept for reference).
   const pourStarts = tickets.map((t) => tsMin(t.unload_time)).filter((x): x is number => x != null);
   const pourEnds = tickets.map((t) => tsMin(pourOutTime(t))).filter((x): x is number => x != null);
   let pourRate = 0;
@@ -1229,33 +1266,113 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     if (durMin > 0) pourRate = pouredCY / (durMin / 60);
   }
 
-  // Arrivals (sorted) drive on-time % and Dolese (delivery) delay.
+  // Arrivals (sorted) drive On-Time % and Producer (Dolese) delay.
   const arrivals = deliveredTickets
     .map((t) => tsMin(t.on_job_time))
     .filter((x): x is number => x != null)
     .sort((a, b) => a - b);
   const gaps: number[] = [];
   for (let i = 1; i < arrivals.length; i++) gaps.push(arrivals[i] - arrivals[i - 1]);
-  const targetGap = median(gaps);
-  const TOL = 5; // minutes of slack before a load counts as late
+  const gapFallback = median(gaps);
+
+  // Planned arrival for the i-th load = scheduled start + i × cadence, where the cadence
+  // is D3's pour window: (load CY ÷ delivery rate) × 60, NOT the raw truck_space. This
+  // order = 60 × 10.5 CY ÷ 32 CY/hr = 19.69 min, which reproduces D3's Planned On Job
+  // column exactly (03:00:00, 03:19:41, 03:39:22 …). Falls back to truck_space, then the
+  // observed arrival gap, when the rate/loads aren't known.
+  const schedStartMin = scheduledTime ? tsMin(scheduledTime) : null;
+  const loadCY = numberOfLoads && numberOfLoads > 0 ? ordered / numberOfLoads : 0;
+  const cadence =
+    deliveryRatePerHour && deliveryRatePerHour > 0 && loadCY > 0
+      ? (loadCY / deliveryRatePerHour) * 60
+      : spacingMinutes && spacingMinutes > 0
+        ? spacingMinutes
+        : null;
+  const plannedArrival = (i: number): number | null => {
+    if (schedStartMin != null && cadence != null) return schedStartMin + i * cadence;
+    if (arrivals.length) return arrivals[0] + i * gapFallback;
+    return null;
+  };
+
+  // On Time (spec): % of loads that arrived at/before their planned time (the client
+  // colours the tile Green ≥90 / Yellow 60–90 / Red <60). Producer Delay (spec):
+  // Σ max(0, actualAtJob − plannedAtJob); no credit for early arrival; plus loads = 0.
+  const TOL = 5;
+  const orderedLoadCount = numberOfLoads && numberOfLoads > 0 ? numberOfLoads : arrivals.length;
   let onTimeLoads = 0;
   let doleseDelay = 0;
   for (let i = 0; i < arrivals.length; i++) {
-    const expected = arrivals[0] + i * targetGap;
-    if (arrivals[i] <= expected + TOL) onTimeLoads++;
-    doleseDelay += Math.max(0, arrivals[i] - expected);
+    const planned = plannedArrival(i);
+    if (planned == null) { onTimeLoads++; continue; }
+    if (arrivals[i] <= planned + TOL) onTimeLoads++;
+    if (i < orderedLoadCount) doleseDelay += Math.max(0, arrivals[i] - planned); // plus load → 0
   }
   const onTimePct = arrivals.length ? Math.round((100 * onTimeLoads) / arrivals.length) : 0;
   doleseDelay = Math.round(doleseDelay);
 
-  // Job-site delay = total truck wait on site before unloading begins.
-  let jobDelay = 0;
-  for (const t of tickets) {
-    const arr = tsMin(t.on_job_time);
-    const start = tsMin(t.unload_time);
-    if (arr != null && start != null && start > arr) jobDelay += start - arr;
-  }
-  jobDelay = Math.round(jobDelay);
+  // Per-load Delay Overview (D3's "Delay Overview" table), in arrival order. Columns
+  // per the D3 spec:
+  //   Prod Delay       = max(0, At Job − planned At Job)             (producer; plus load = 0)
+  //   Wait To Pour     = max(0, Begin Pour − At Job)                 (on-site wait to pour)
+  //   Contractor Delay = (End Pour − Begin Pour) − planned pour min  (SIGNED; the spec's
+  //                      calculation line — measured from BEGIN POUR, not At Job)
+  // End Pour uses end_unload → wash_time → to_plant_time; planned pour = truck_space.
+  // (Validated against D3's own completed export: this reproduces 6/8 loads exactly and
+  // the net tile; the 2 misses are loads that waited — D3 folds the wait in there, but
+  // our on_job stamps run early, so we follow the spec's Begin-Pour calculation line.)
+  // Pour allotment = whole-minute part of the cadence (D3's "Spacing" column). This
+  // order: floor(19.69) = 19. A pour only counts as "over" past this window.
+  const allotment = cadence != null ? Math.floor(cadence) : 0;
+  // Format a minute-of-day value (fractional, seconds precision) as D3's "HH:MM:SS".
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+  const minToClock = (m: number | null): string => {
+    if (m == null || !Number.isFinite(m)) return "";
+    let total = Math.round(m * 60); // → seconds
+    total = ((total % 86400) + 86400) % 86400;
+    return `${pad2(Math.floor(total / 3600))}:${pad2(Math.floor((total % 3600) / 60))}:${pad2(total % 60)}`;
+  };
+  const loadDelays = deliveredTickets.map((t, i) => {
+    const onJob = tsMin(t.on_job_time);
+    const begin = tsMin(t.unload_time);
+    const endPour = tsMin(t.end_unload || t.wash_time || t.to_plant_time);
+    const planned = plannedArrival(i);
+    const prod = planned != null && onJob != null && i < orderedLoadCount
+      ? Math.max(0, Math.round(onJob - planned)) : 0;
+    // D3 "Waiting To Pour" = max(0, Begin Pour − Planned On Job): the truck sat on site
+    // past its planned slot before pouring began (always ≥ 0).
+    const wait = begin != null && planned != null ? Math.max(0, Math.round(begin - planned)) : 0;
+    // D3 "Pour Min Over" = (End Pour − Begin Pour) − allotment, SIGNED — negative when the
+    // pour finished inside the allotted window. End Pour = end_unload → wash_time → to_plant.
+    const over = endPour != null && begin != null && allotment > 0
+      ? Math.round(endPour - begin - allotment) : 0;
+    // D3 "Contractor Delay" per load = Waiting To Pour + Pour Min Over (signed).
+    return {
+      order: i + 1,
+      ticket: t.ticket_code || "",
+      ticket_id: String(t.ticket_id ?? ""),
+      truck: t.truck_code || "",
+      planned_on_job: minToClock(planned),
+      actual_on_job: minToClock(onJob),
+      prod_delay: prod,
+      begin_pour: minToClock(begin),
+      end_pour: minToClock(endPour),
+      scheduled_end_pour: planned != null ? minToClock(planned + allotment) : "",
+      spacing: allotment,
+      wait_to_pour: wait,
+      pour_min_over: over,
+      contractor_delay: wait + over,
+      // Plus Load = a load beyond the base ordered quantity (call-back/add-on). We can't
+      // reliably tell the base-vs-plus split from our synced data, so it's left blank.
+      plus_load: "",
+    };
+  });
+  // Tile totals (match D3's completed tiles). Producer (Dolese) = Σ per-load Prod Delay
+  // (each already floored at 0). Customer (ROSE) = max(0, Σ Contractor Delay) — the NET
+  // over/under the allotment across all loads, floored at 0: loads that ran long are
+  // offset by loads that poured fast, so 23302 nets −45 → tile shows 0, exactly like D3.
+  doleseDelay = loadDelays.reduce((s, l) => s + Math.max(0, l.prod_delay), 0);
+  const customerDelay = Math.max(0, loadDelays.reduce((s, l) => s + l.contractor_delay, 0));
+  const jobDelay = customerDelay; // back-compat alias for the existing field
 
   // Activity feed: truck-movement messages derived from ticket timestamps
   // (newest first). Status/product-change history isn't available in the data.
@@ -1307,22 +1424,127 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   );
   const status = deriveStatus(order, ordered, pouredOutCY, tickets.length > 0);
 
-  // Pour Finish: estimated completion time
-  // Use the latest scheduled time if available, otherwise use last ticket's estimated pour time
+  // Pour Finish (D3 ORDER HELP): "Estimated time the last truck will finish
+  // pouring based on CURRENT PROGRESS." We compute two candidates and take the
+  // LATER of them:
+  //   (1) schedule projection  = start + number_of_loads × truck_space (the plan)
+  //   (2) progress projection  = pour-start + ordered ÷ current pour throughput
+  // Taking the later means a job running BEHIND slips its finish out (the spec's
+  // intent), while noisy early data — the first few trucks always arrive fast, which
+  // would otherwise project an unrealistically EARLY finish — can't pull it in ahead
+  // of the plan. NOTE: an exact match to D3 also needs each load's pour-finish stamp
+  // (end_unload); those are absent from our mirror, so the progress rate is derived
+  // from the pour-out fallback (wash/plant) and is an approximation.
   const allScheduleTimes = rawProducts
     .flatMap((p) => (p.order_product_schedules || []) as { start_time: string | null; number_of_loads?: number | null; truck_space?: number | null }[])
     .filter((s) => s.start_time);
 
-  let pourFinish: string | null = null;
+  // Candidate 1: scheduled finish (ms in the CST-as-UTC frame).
+  let scheduleFinishMs: number | null = null;
   if (allScheduleTimes.length > 0 && allScheduleTimes[0].number_of_loads && allScheduleTimes[0].truck_space) {
-    // Calculate estimated finish based on schedule: start_time + (number_of_loads * truck_space)
     const schedule = allScheduleTimes[0];
     const startTime = new Date(schedule.start_time!);
     const totalMinutes = (schedule.number_of_loads || 0) * (schedule.truck_space || 0);
-    const finishTime = new Date(startTime.getTime() + totalMinutes * 60 * 1000);
-    pourFinish = fmtTime(finishTime.toISOString(), true);
+    scheduleFinishMs = startTime.getTime() + totalMinutes * 60 * 1000;
+  }
+
+  // Candidate 2: progress projection from the site's DEMONSTRATED pour throughput.
+  // We don't have per-load pour-finish stamps (end_unload), so — using the columns
+  // we DO have — a load counts as "poured out" via its wash/plant stamps (see
+  // isPouredOut → pouredOutCY), and we measure throughput as poured-out VOLUME ÷
+  // ELAPSED time since pouring began. Using elapsed wall-time (not just the span
+  // between pour events) captures the real on-site pace INCLUDING trucks waiting to
+  // pour — which is exactly why D3's estimate runs hours past the ideal schedule.
+  // Pour Finish = pour-start + ordered ÷ that throughput.
+  // Effective pour rate per D3's Pour Speed definition: total poured-out VOLUME ÷
+  // the TOTAL time trucks spent on the job — each poured-out load's on_job →
+  // pour-finish (using wash/plant as the pour-finish proxy, since end_unload is
+  // absent from our data). That job-time INCLUDES the on-site waiting before each
+  // truck pours, which is exactly why the real pace — and the finish — trail the
+  // ideal schedule, the way D3's estimate does.
+  // Per-load pour rate (CY/HR) = load volume ÷ that load's on-job time (on_job →
+  // pour-finish, using wash_time as the proxy since end_unload is absent; NOT the
+  // plant stamps, which include the drive home). We AVERAGE these per-load rates
+  // rather than summing job-times: a mean stays stable as more loads finish, whereas
+  // summing over parallel pours over-counts time and makes the estimate drift ever
+  // later. The on-job time includes each truck's on-site WAIT, so the mean rate lands
+  // well below the scheduled rate — the reason the finish trails the ideal plan, as
+  // in D3.
+  const loadRates: number[] = [];
+  let sumPourVol = 0; // Σ poured CY over loads with a pour-finish stamp
+  let sumPourTimeHr = 0; // Σ on-job pour time (on_job → finish-pour) for those loads
+  let sumPourOnlyVol = 0; // Σ poured CY (loads with begin+end pour stamps)
+  let sumPourOnlyHr = 0; // Σ PURE pour time (begin_pour → finish-pour), excludes waiting
+  for (const t of tickets) {
+    // Pour-finish stamp: end_unload if present, else wash_time, else to_plant_time.
+    const finStamp = t.end_unload || t.wash_time || t.to_plant_time;
+    if (!finStamp) continue;
+    const arr = tsMin(t.on_job_time);
+    const begin = tsMin(t.unload_time);
+    const fin = tsMin(finStamp);
+    const cyv = cyByTicket.get(t.ticket_id) || 0;
+    if (arr != null && fin != null && fin > arr && cyv > 0) {
+      loadRates.push(cyv / ((fin - arr) / 60));
+      sumPourVol += cyv;
+      sumPourTimeHr += (fin - arr) / 60;
+    }
+    // Pure pour rate: measured from Begin Pour (unload), not At Job — excludes the
+    // between-load waiting so the Pour-Finish projection isn't dragged out by delays.
+    if (begin != null && fin != null && fin > begin && cyv > 0) {
+      sumPourOnlyVol += cyv;
+      sumPourOnlyHr += (fin - begin) / 60;
+    }
+  }
+  // Mean of per-load rates — drives the Pour-Finish projection (stable, doesn't drift).
+  const avgPourSpeed = loadRates.length
+    ? loadRates.reduce((a, b) => a + b, 0) / loadRates.length
+    : 0;
+  // D3 "Pour Rate" tile = MEAN of per-load pour speeds (load ÷ At Job→Finish Pour),
+  // EXCLUDING outlier loads. A plus/add-on load — or one whose Finish Pour is stamped
+  // seconds after At Job — yields a wild rate that skews the mean, and D3 leaves it out.
+  // Drop any per-load rate above 2× the median before averaging. For 23302 this drops the
+  // plus load (load 8, ~132 CY/HR) and the remaining 7 average to 26.97 ≈ D3's 27.00.
+  // (The plain aggregate total÷total = 28.15; the un-trimmed mean = 40 — both off.)
+  const medRate = median(loadRates);
+  const keptRates = medRate > 0 ? loadRates.filter((r) => r <= 2 * medRate) : loadRates;
+  const pourRateTile = keptRates.length
+    ? keptRates.reduce((a, b) => a + b, 0) / keptRates.length
+    : (sumPourTimeHr > 0 ? sumPourVol / sumPourTimeHr : 0);
+  const arrivalMins = deliveredTickets
+    .map((t) => tsMin(t.on_job_time))
+    .filter((x): x is number => x != null);
+  const firstArrivalMin = arrivalMins.length
+    ? Math.min(...arrivalMins)
+    : (pourStarts.length ? Math.min(...pourStarts) : null);
+  // Pour-Finish projection (D3): project only the REMAINING volume forward from where
+  // the pour actually stands now, at the PURE pour rate (begin→end, no inter-load wait).
+  // Anchoring at the latest recorded pour-end (not first arrival) and using the pour-only
+  // rate keeps a delayed order from projecting artificially late — e.g. 26405 lands at
+  // ~11:21 (D3) instead of ~11:51 when the on-job rate + whole-order projection is used.
+  let progressFinishMs: number | null = null;
+  if (loadRates.length && ordered > 0) {
+    const effRate = sumPourOnlyHr > 0 ? sumPourOnlyVol / sumPourOnlyHr : avgPourSpeed;
+    const remainingCY = Math.max(0, ordered - pouredCY);
+    const endMins = tickets
+      .map((t) => tsMin(t.end_unload || t.wash_time || t.to_plant_time))
+      .filter((x): x is number => x != null);
+    const anchorMin = endMins.length ? Math.max(...endMins) : firstArrivalMin;
+    if (effRate > 0 && anchorMin != null) {
+      const od = new Date(order.order_date as string);
+      const base = Date.UTC(od.getUTCFullYear(), od.getUTCMonth(), od.getUTCDate());
+      progressFinishMs = base + anchorMin * 60000 + (remainingCY / effRate) * 3600000;
+    }
+  }
+
+  let pourFinish: string | null = null;
+  const finishMs =
+    scheduleFinishMs != null && progressFinishMs != null
+      ? Math.max(scheduleFinishMs, progressFinishMs) // running behind → push later
+      : (progressFinishMs ?? scheduleFinishMs);
+  if (finishMs != null) {
+    pourFinish = fmtTime(new Date(finishMs).toISOString(), true);
   } else {
-    // Fallback: use last pour end time
+    // Last resort: the latest recorded pour-end time.
     const pourFinishRaw = tickets
       .map((t) => t.end_unload || t.wash_time)
       .filter((x): x is string => !!x)
@@ -1363,10 +1585,15 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
       } else {
         nextTruck = `${minsUntilArrival} MIN`;
       }
+    } else if (actualTicketedCY >= ordered - 0.02) {
+      // Every ordered load has been dispatched and none is en route → there is no next
+      // truck at all. D3 shows "None" (not "Waiting", which is only for the gap between
+      // deliveries while more loads are still to come).
+      nextTruck = "None";
     } else {
-      // No trucks en route. If loads are currently at the jobsite the next-truck
-      // state is "Waiting" (D3 ORDER HELP); otherwise fall back to the scheduled
-      // first-load time.
+      // No trucks en route but more loads are still to come. If loads are currently at
+      // the jobsite the next-truck state is "Waiting" (D3 ORDER HELP); otherwise fall
+      // back to the scheduled first-load time.
       const onJobNow = tickets.some((t) => has(t.on_job_time) && !hasLeftJob(t));
       nextTruck = onJobNow ? "Waiting" : fmtTime(earliestStart(rawProducts), true);
     }
@@ -1469,6 +1696,8 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     status,
     dispatch_status: getDispatchStatus(order.current_status, order.removed, order.remove_reason_code),
     scheduled_time: scheduledTime ? fmtDateTimeUpper(scheduledTime) : null,
+    scheduled_time_raw: scheduledTime,
+    delivery_rate: deliveryRatePerHour,
     spacing_minutes: spacingMinutes,
     purchase_order: (order as { purchase_order?: string | null }).purchase_order || null,
     instructions,
@@ -1483,9 +1712,11 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     loads,
     trucks,
     on_time_pct: onTimePct,
-    pour_rate: Math.round(pourRate * 100) / 100,
+    pour_rate: Math.round(pourRateTile),
     dolese_delay_min: doleseDelay,
     job_delay_min: jobDelay,
+    customer_delay_min: customerDelay,
+    delay_loads: loadDelays,
     next_truck: nextTruck,
     pour_finish: pourFinish,
     weather,
@@ -1640,70 +1871,85 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
   const truck = t.truck_code || "";
   const events: TicketEventCard[] = [];
 
-  // --- Blue truck-status timeline (from ticket timestamps) ---------
-  const stage = (
-    icon: string,
-    label: string,
-    badge: string,
-    ts: string | null,
-    verifiClock: string | null,
-  ) => {
+  // Verifi field getters — the JSON nests each reading as a small object
+  // ({slump:"5.75"}, {temperatureUnitsValue:"94"}, {volumeValue:"1.2"} …).
+  const slumpV = (k: string) => vVal(v?.[k], "slump");
+  const tempV = (k: string) => vVal(v?.[k], "temperatureUnitsValue");
+  const ageV = (k: string) => vVal(v?.[k], "age");
+  const volV = (k: string) => vVal(v?.[k], "volumeValue");
+  const revsV = (k: string) => {
+    const r = v?.[k];
+    return r == null || r === "" ? null : String(r);
+  };
+
+  // Blue truck-status card. verifi === false → no VERIFI sub-line; a string/null
+  // renders "VERIFI: {clock}" / "VERIFI: N/A" (D3 shows N/A when the sensor missed it).
+  const stage = (icon: string, label: string, ts: string | null, verifi: string | null | false) => {
     if (!has(ts)) return;
     events.push({
       icon,
       title: `TRUCK ${truck} ${label}:`,
       value: (fmtTime(ts, true) || "").replace(/\s+/g, ""),
-      sub: verifiClock ? `VERIFI: ${verifiClock}` : undefined,
-      badge,
+      sub: verifi === false ? undefined : `VERIFI: ${verifi || "N/A"}`,
       dark: false,
     });
   };
-  stage("ticketed", "Ticketed", "TICKETED", t.printed_time, fmtClock(v?.ticketSent as string));
-  stage("loading", "Loading", "LOADING", t.load_time, fmtClock(v?.loading as string));
-  stage("loaded", "Loaded", "LOADED", t.loaded_time, fmtClock(v?.loaded as string));
-  stage("to_job", "To Job", "TO JOB", t.to_job_time, fmtClock(v?.leavePlant as string));
-  stage("at_job", "At Job", "AT JOB", t.on_job_time, fmtClock((v?.arriveSite as string) || (v?.calculatedArriveSite as string)));
-  stage("pouring", "Pouring", "POURING", t.unload_time, fmtClock(v?.beginPour as string));
-  stage("poured", "End Pour", "POURED", t.end_unload, fmtClock(v?.endPour as string));
-  stage("washing", "Washing", "WASHING", t.wash_time, null);
-  stage("to_plant", "To Plant", "TO PLANT", t.to_plant_time, fmtClock(v?.leaveSite as string));
-  stage("at_plant", "At Plant", "AT PLANT", t.at_plant_time, fmtClock(v?.returnPlant as string));
+  // Dark Verifi sensor card: mix name + "LABEL: value" + a stage sub-line.
+  const metric = (label: string, value: string | null, unit: string, sub: string) =>
+    events.push({ icon: "verifi", title: mix, value: `${label}: ${value != null ? `${value}${unit}` : "NA"}`, sub, dark: true });
 
-  // --- Dark Verifi sensor cards (per delivery stage) ---------------
+  // ---- D3's exact 34-card delivery timeline ----------------------
+  stage("ticketed", "Ticketed", t.printed_time, false);
+  stage("loading", "Loading", t.load_time, fmtClock(v?.loading as string));
+  if (v) metric("SLUMP", slumpV("slumpAtInitialSlump"), " IN", "LOADING");
+  stage("loaded", "Loaded", t.loaded_time, fmtClock(v?.loaded as string));
+  stage("to_job", "To Job", t.to_job_time, fmtClock(v?.leavePlant as string));
   if (v) {
-    // suffix matches the Verifi JSON key tail, e.g. slump + "AtArrival" = slumpAtArrival.
-    const STAGES: { badge: string; suffix: string }[] = [
-      { badge: "TO JOB", suffix: "AtLeavePlant" },
-      { badge: "AT JOB", suffix: "AtArrival" },
-      { badge: "AT JOB", suffix: "AtDischarge" },
-    ];
-    for (const s of STAGES) {
-      const slump = vVal(v[`slump${s.suffix}`], "slump");
-      const temp = vVal(v[`temperature${s.suffix}`], "temperatureUnitsValue");
-      const age = vVal(v[`age${s.suffix}Minutes`], "age");
-      const revsRaw = v[`totalRevs${s.suffix}`];
-      const revs = revsRaw == null || revsRaw === "" ? null : String(revsRaw);
-      const water = vVal(v[`verifiWater${s.suffix}`], "volumeValue");
-      const admix = vVal(v[`admix${s.suffix}`], "volumeValue");
-
-      const metric = (label: string, value: string | null, unit: string, sub: string) =>
-        events.push({
-          icon: "verifi",
-          title: mix,
-          value: `${label}: ${value != null ? `${value}${unit}` : label === "SLUMP" ? "NM" : "NA"}`,
-          sub,
-          badge: s.badge,
-          dark: true,
-        });
-
-      metric("AGE", age, " min", s.badge);
-      metric("SLUMP", slump, " IN", s.badge);
-      metric("TEMP", temp, "°F", s.badge);
-      metric("REVS", revs, "", s.badge);
-      metric("WATER", water ?? "0.0", " GAL/CY", `${s.badge} - VERIFI WATER ADD`);
-      metric("ADMIX", admix ?? "0.0", " OZ/CY", s.badge);
-    }
+    metric("AGE", ageV("ageAtLeavePlantMinutes"), " min", "TO JOB");
+    metric("SLUMP", slumpV("slumpAtLeavePlant"), " IN", "TO JOB");
+    metric("TEMP", tempV("temperatureAtLeavePlant"), " F", "TO JOB");
+    metric("REVS", revsV("totalRevsSinceLoadedAtLeavePlant"), "", "TO JOB");
+    metric("WATER", volV("verifiWaterAtLeavePlant") ?? "0.0", " GAL/CY", "TO JOB - VERIFI WATER ADD");
   }
+  stage("at_job", "At Job", t.on_job_time, fmtClock(v?.arriveSite as string));
+  if (v) {
+    metric("AGE", ageV("ageAtArrivalMinutes"), " min", "AT JOB");
+    metric("REVS", revsV("totalRevsAtArrival"), "", "AT JOB");
+    metric("ADMIX", volV("admixTotalVolumeAtArrival") ?? "0.0", " OZ/CY", "AT JOB");
+    metric("TIME", vVal(v?.timeOnSiteMinutes, "time"), " min", "AT JOB");
+    metric("WATER", volV("verifiWaterAtArrival") ?? "0.0", " GAL/CY", "AT JOB - VERIFI WATER ADD");
+    metric("SLUMP", slumpV("slumpAtArrival"), " IN", "AT JOB");
+    metric("TEMP", tempV("temperatureAtArrival"), " F", "AT JOB");
+  }
+  stage("pouring", "Pouring", t.unload_time, fmtClock(v?.beginPour as string));
+  if (v) {
+    metric("AGE", ageV("ageAtDischargeMinutes"), " min", "POURING");
+    metric("REVS", revsV("totalRevsSinceLoadedAtDischarge"), "", "POURING");
+    metric("ADD WATER", volV("verifiWaterAtDischarge") ?? "0.0", " GAL/CY", "POURING - MANUAL WATER ADD");
+    metric("ADMIX", volV("admixTotalVolumeAtDischarge") ?? "0.0", " OZ/CY", "POURING");
+    metric("SLUMP", slumpV("slumpAtDischarge"), " IN", "POURING");
+    metric("TEMP", tempV("temperatureAtDischarge"), " F", "POURING");
+  }
+  // End Pour lives in wash_time when end_unload isn't synced (D3 labels it "Finish Pour").
+  stage("poured", "Finish Pour", t.end_unload || t.wash_time, fmtClock(v?.endPour as string));
+  if (v) {
+    const poured = vVal(v.loadSize, "loadSize") || (products.find((p) => p.is_mix)?.qty != null ? String(products.find((p) => p.is_mix)?.qty) : null);
+    if (poured != null) events.push({ icon: "verifi", title: mix, value: `${poured} CY`, sub: "VOLUME POURED", dark: true });
+  }
+  stage("washing", "Washing", t.wash_time, false);
+  // D3 uses a distinct END WASH glyph (3 drops) for End Washing, not the WASHING one.
+  stage("end_wash", "End Washing", t.to_plant_time, false);
+  stage("to_plant", "To Plant", t.to_plant_time, fmtClock(v?.leaveSite as string));
+  stage("at_plant", "At Plant", t.at_plant_time, fmtClock(v?.returnPlant as string));
+  if (v) {
+    const manual = volV("verifiWaterAtDischarge");
+    if (manual != null) events.push({ icon: "verifi", title: mix, value: `MANUAL ADD: ${manual} GAL/CY`, sub: "MANUAL ADDITION OF WATER", dark: true });
+    const total = volV("verifiWaterTotal");
+    if (total != null) events.push({ icon: "verifi", title: mix, value: `TOTAL WATER: ${total} GAL/CY`, sub: "ADDED TO LOAD", dark: true });
+  }
+  const roundTrip = typeof v?.startToEndTotalMinutes === "string" ? v.startToEndTotalMinutes : null;
+  // D3 renders ROUND TRIP TIME as a Verifi (dark) tile, not a blue truck-status tile.
+  if (roundTrip) events.push({ icon: "verifi", title: `TRUCK ${truck}`, value: roundTrip, sub: "ROUND TRIP TIME", dark: true });
 
   const statusLabel =
     t.current_status === 4 || t.order_current_status === 4
