@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<!-- saved from url=(0014)about:internet -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no">
+    <title></title>
+
+    <!-- Required javascript and css all rolled up in one -->
+    <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
+    <link href="./JobsForFixedNodeID_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+    <!-- Highcharts -->
+    <script src="./JobsForFixedNodeID_files/highcharts.js"></script>
+    <script src="./JobsForFixedNodeID_files/highcharts-more.js"></script>
+    <script src="./JobsForFixedNodeID_files/data.js"></script>
+
+    <!-- need to rollup into d3_complete upon approval -->
+    <script src="./JobsForFixedNodeID_files/jquery.rateit.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/rateit.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/hopscotch.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/chardinjs.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/chardinjs.css" rel="stylesheet" type="text/css">
+
+    <link href="./JobsForFixedNodeID_files/bootstrap2-toggle.min.css" rel="stylesheet">
+    <script src="./JobsForFixedNodeID_files/bootstrap2-toggle.min.js"></script>
+
+    <!-- Google Analytics -->
+
+    <style media="print" type="text/css">
+        a:after { content:''; }
+        a[href]:after { content: none !important; }
+    </style>
+</head>
+
+<body>
+    <script>
+        // document load initialization
+        $(document).ready(function () {
+            hideLoadingIndicator();
+            loadLogin();
+        });
+        $(window).unload(function () {
+            hideLoadingIndicator();
+            saveLogin();
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var errormsg = getParameterByName("pageerror");
+            if (errormsg != null && errormsg.length > 0) {
+                displayError('ERROR', trimString(errormsg));
+            }
+            Highcharts.setOptions({
+                colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+            });
+        });
+    </script>
+    <div class="d3-page">
+
+        <div class="navbar navbar-fixed-top navbar-inverse">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+
+                    <a id="header-bar-title" class="brand">TRUCKAST</a>
+
+                    <div class="nav-collapse collapse">
+                        <ul class="nav">
+                            <li><a href="/publish">PUBLISH</a></li>
+                            <li><a href="#">CAMPAIGNS</a></li>
+                            <li><a href="/admin">ADMIN</a></li>
+                            <li><a href="/">TRUCKAST</a></li>
+                            <li><a href="/order-request">ORDER</a></li>
+                            <li><a href="/rollout/search">ROLLOUT</a></li>
+                            <li><a href="#">HELP</a></li>
+                            <li><a href="/settings">SETTINGS</a></li>
+                            <li><a href="/login">LOGOUT</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="error-box" class="alert alert-error" style="display: none">
+                <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                <p id="error-text"></p>
+            </div>
+            <div id="warning-box" class="alert alert-block" style="display: none">
+                <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                <p id="warning-text"></p>
+            </div>
+            <div id="success-box" class="alert alert-success" style="display: none">
+                <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                <p id="success-text"></p>
+            </div>
+            <div id="information-box" class="alert alert-info" style="display: none">
+                <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                <p id="information-text"></p>
+            </div>
+
+            <form id="announcement-form" method="POST">
+
+                <div class="navbar">
+                    <div class="navbar-inner">
+                        <div class="container">
+                            <table style="width:100%">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:38px">
+                                            <a onclick="window.top.location.href='/'; return false;" style="cursor:pointer">
+                                                <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png">
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                                                <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                                    <span style="font-size: 16px"><strong>ANNOUNCEMENT FORM</strong></span><br>
+                                                    <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="width:38px">
+                                            <a href="javascript:location.reload();">
+                                                <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-small-27@2x.png">
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div id="049786e2-f1c7-47b0-8b18-6f16632c95a3" class="d3-label" style="width: 100%;"><h4></h4></div>
+
+<script>
+    // ---------- Searching Functionality ---------- //
+    (function($) {
+        jQuery.expr[':'].Contains = function(a, i, m) {
+            return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        function listFilter() {
+            $('#preview-tiles-search').change(function () {
+                var filter = $(this).val();
+                if (filter) {
+                    $('#preview-tiles-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+                    $('#preview-tiles-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+                }
+                else {
+                    $('#preview-tiles-tiles .tile').css('display', 'block');
+                }
+                return false;
+            }).keyup(function () { $(this).change(); });
+        }
+
+        $(function() {
+            listFilter();
+        });
+    }(jQuery));
+
+    // ---------- Pageshow Event Handler ---------- //
+    window.addEventListener("pageshow", function(evt){
+        var filter = $('#preview-tiles-search').val();
+        if (filter) {
+            $('#preview-tiles-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#preview-tiles-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#preview-tiles-tiles .tile').css('display', 'block');
+        }
+    }, false);
+</script>
+
+<div id="preview-tiles" style="width: 100%; display: block">
+    <input id="preview-tiles-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="preview-tiles-tiles" style="display: inline-block;">
+        <div class="tile" onclick="openDetailPage()" style="position: relative; background-color: rgb(47, 126, 216); cursor: pointer; display: block;">
+            <img src="./JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px;">
+            <div class="tileContainer">
+                <div class="tileIcon"><img id="preview-icon" src="./JobsForFixedNodeID_files/Completed.png"></div>
+                <div class="tileInfoSection">
+                    <div class="tileCell">
+                        <div class="tileSuperTitle" id="preview-tagline">Tagline</div>
+                        <div class="tileTitle" id="preview-title">Title</div>
+                        <div class="tileSubTitle" id="preview-subtitle">Subtitle</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="form-container" style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">Announcement</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <select id="templateannouncementurl" name="templateannouncementurl" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="" selected="selected">HERE ARE THE AVAILABLE ANNOUNCEMENTS</option>
+                    <option value="orders-blue">NEW!!! ORDERS IN REVIEW STATUS ARE BLUE (PUBLISHED)</option>
+                    <option value="covid-19">COVID-19 (NOT PUBLISHED)</option>
+                    <option value="welcome">WELCOME TO TRUCKAST MOBILE APP (NOT PUBLISHED)</option>
+                    <option value="technical-issue">TECHNICAL ISSUE (NOT PUBLISHED)</option>
+                    <option value="technical-resolved">TECHNICAL ISSUE RESOLVED (NOT PUBLISHED)</option>
+                    <option value="monitoring">MONITORING UPDATES (PUBLISHED)</option>
+                    <option value="fuel-surcharges">FUEL SURCHARGES (PUBLISHED)</option>
+                    <option value="order-concrete">NEW FEATURE - ORDER CONCRETE (NOT PUBLISHED)</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">Name (*)</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <input id="name" name="name" value="" style="margin-bottom: 0; width: 95%; display: block; " type="text" placeholder="Name this announcement">
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">Campaign (*)</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <select id="campaign" name="campaign" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">HERE ARE THE AVAILABLE CAMPAIGNS</option>
+                    <option value="general">GENERAL (GENERAL COMPANY NEWS)</option>
+                    <option value="maintenance">MAINTENANCE (MESSAGES INDICATING SYSTEM ISSUES OR PLANNED MAINTENANCE)</option>
+                    <option value="truckast">TRUCKAST ANNOUNCEMENTS ()</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">Start Date (*)</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <div id="startdate" style="width: 120px;">
+                    <input id="startdate-input" name="startdate" value="" style="width: 100%;" type="text">
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">End Date (*)</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <div id="enddate" style="width: 120px;">
+                    <input id="enddate-input" name="enddate" value="" style="width: 100%;" type="text">
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">Tile Type (*)</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <select id="tiletype" name="tiletype" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="3x1Icon" selected="selected">3x1Icon (Tile with room for an image as in icon)</option>
+                    <option value="3x1Pie">3x1Pie (Tile that uses a pie chart in the icon space)</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">Tagline</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <input id="tagline" name="tagline" value="" style="margin-bottom: 0; width: 95%; display: block; " type="text" placeholder="This is the Tag line on the tile">
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">Title</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <input id="tiletitle" name="tiletitle" value="" style="margin-bottom: 0; width: 95%; display: block; " type="text" placeholder="This is the Title line on the tile">
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">Subtitle</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <input id="subtitle" name="subtitle" value="" style="margin-bottom: 0; width: 95%; display: block; " type="text" placeholder="This is the Subtitle line on the tile">
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">Icon or Percent</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <input id="icon" name="icon" value="" style="margin-bottom: 0; width: 95%; display: block; " type="text" placeholder="This is the Icon (Icon) or Percent (Pie) on the tile">
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">Color</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <input id="color" name="color" value="" style="margin-bottom: 0; width: 95%; display: block; " type="text" placeholder="The Hex color of the tile">
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">Published</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <label class="checkbox" style="display: block"><input name="publish" type="checkbox">&nbsp;Is this published?</label>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div class="d3-label" style="width: 100%;">What parts of your company should see this?</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <div class="d3-label" style="width: 100%;">What screens do you want to show this on?</div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+                <div style="height:125px; overflow:hidden; margin:0; padding: 0; border:1px solid #d3d3d3; position:relative;">
+                    <div style="height:100%; width:100%; overflow:auto; ">
+                        <div>
+                            <ul id="organization-list" style="height:100px; padding:0; list-style-type: none;">
+                                <li>Loading...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+                <div style="height:125px; overflow:hidden; margin:0; padding: 0; border:1px solid #d3d3d3; position:relative;">
+                    <div style="height:100%; width:100%; overflow:auto; ">
+                        <div>
+                            <ul id="screen-list" style="height:100px; padding:0; list-style-type: none;">
+                                <li>Loading...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+</div>
+
+<div class="d3-label" style="width: 100%;">Message Details Code</div>
+
+<style>
+.code-editor-wrapper {
+    position: relative;
+    width: 95%;
+    height: 180px;
+    min-height: 180px;
+    max-height: 180px;
+    border: 1px solid #eee;
+    overflow: hidden;
+}
+.code-editor-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 10px;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow: hidden;
+    color: #000;
+    background: #fff;
+    pointer-events: none;
+}
+.code-editor-backdrop .cm-error {
+    color: #f00;
+}
+.code-editor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 10px;
+    resize: none;
+    background: transparent;
+    color: transparent;
+    caret-color: #000;
+    overflow: auto;
+}
+</style>
+<div class="code-editor-wrapper">
+    <div id="CodeScript-backdrop" class="code-editor-backdrop"></div>
+    <textarea id="CodeScript" name="CodeScript" class="code-editor" style="margin-bottom: 0px;">HELLO WORLD</textarea>
+</div>
+<input type="hidden" name="ActualScript" id="ActualScript" value="">
+<br>
+
+<div class="d3-label" style="width: 100%;"></div>
+
+<button id="submit-button" class="btn btn-primary" type="button" onclick="onSubmit_announcement_form()" style="width: 75px">Submit</button>
+
+<br>
+<br>
+
+<div class="d3-label" style="width: 100%;">Message Details Preview</div>
+
+<div id="message-preview">Hello World</div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+<script type="text/javascript">
+    // Store loaded data
+    var formData = { campaigns: [], organizations: [], screens: [], announcements: [] };
+    var editingId = null;
+
+    // Format date as M/D/YYYY
+    function formatDate(date) {
+        if (typeof date === 'string') {
+            var parts = date.split('-');
+            if (parts.length === 3) {
+                return parseInt(parts[1]) + '/' + parseInt(parts[2]) + '/' + parts[0];
+            }
+        }
+        return (date.getMonth() + 1) + '/' + date.getDate() + '/' + date.getFullYear();
+    }
+
+    // Parse date from M/D/YYYY to YYYY-MM-DD
+    function parseDate(dateStr) {
+        if (!dateStr) return null;
+        var parts = dateStr.split('/');
+        if (parts.length !== 3) return dateStr;
+        return parts[2] + '-' + parts[0].padStart(2, '0') + '-' + parts[1].padStart(2, '0');
+    }
+
+    // Load form data from API
+    function loadFormData() {
+        $.ajax({
+            url: '/api/announcements',
+            method: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    formData = response.data;
+                    populateDropdowns();
+
+                    // Check if we came back from detail page - restore selected announcement
+                    var savedId = sessionStorage.getItem('selectedAnnouncementId');
+                    if (savedId) {
+                        sessionStorage.removeItem('selectedAnnouncementId');
+                        $('#templateannouncementurl').val(savedId);
+                        loadAnnouncement(savedId);
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading form data:', error);
+            }
+        });
+    }
+
+    // Populate dropdowns and checkboxes
+    function populateDropdowns() {
+        // Campaigns
+        var campaignSelect = $('#campaign');
+        campaignSelect.empty().append('<option value="">HERE ARE THE AVAILABLE CAMPAIGNS</option>');
+        formData.campaigns.forEach(function(c) {
+            var desc = c.description ? ' (' + c.description + ')' : '';
+            campaignSelect.append('<option value="' + c.id + '">' + c.name + desc + '</option>');
+        });
+
+        // Announcements
+        var annSelect = $('#templateannouncementurl');
+        annSelect.empty().append('<option value="">HERE ARE THE AVAILABLE ANNOUNCEMENTS</option>');
+        formData.announcements.forEach(function(a) {
+            var status = a.is_published ? ' (PUBLISHED)' : ' (NOT PUBLISHED)';
+            annSelect.append('<option value="' + a.id + '">' + a.name + status + '</option>');
+        });
+
+        // Organizations
+        var orgList = $('#organization-list');
+        orgList.empty();
+        formData.organizations.forEach(function(o) {
+            orgList.append('<li><label class="checkbox"><input name="organization-' + o.id + '" type="checkbox">' + o.name + '</label></li>');
+        });
+
+        // Screens
+        var screenList = $('#screen-list');
+        screenList.empty();
+        formData.screens.forEach(function(s) {
+            screenList.append('<li><label class="checkbox"><input name="screens-' + s.id + '" type="checkbox">' + s.name + '</label></li>');
+        });
+    }
+
+    // Load announcement for editing
+    function loadAnnouncement(id) {
+        if (!id) { clearForm(); return; }
+        $.ajax({
+            url: '/api/announcements/' + id,
+            method: 'GET',
+            success: function(response) {
+                if (response.success && response.data) {
+                    var a = response.data;
+                    editingId = a.id;
+                    $('#name').val(a.name || '');
+                    $('#campaign').val(a.campaign_id || '');
+
+                    // Set dates using Kendo DatePicker if available
+                    var startPicker = $('#startdate-input').data('kendoDatePicker');
+                    var endPicker = $('#enddate-input').data('kendoDatePicker');
+                    if (startPicker && a.start_date) {
+                        startPicker.value(new Date(a.start_date));
+                    } else {
+                        $('#startdate-input').val(formatDate(a.start_date));
+                    }
+                    if (endPicker && a.end_date) {
+                        endPicker.value(new Date(a.end_date));
+                    } else {
+                        $('#enddate-input').val(formatDate(a.end_date));
+                    }
+                    $('#tiletype').val(a.tile_type || '3x1Icon');
+                    $('#tagline').val(a.tagline || '');
+                    $('#tiletitle').val(a.title || '');
+                    $('#subtitle').val(a.subtitle || '');
+                    $('#icon').val(a.icon_or_percent || '');
+                    $('#color').val(a.color || '');
+                    $('input[name="publish"]').prop('checked', a.is_published);
+                    $('#CodeScript').val(a.message_details || '').trigger('input');
+
+                    // Update checkboxes
+                    $('input[name^="organization-"]').prop('checked', false);
+                    $('input[name^="screens-"]').prop('checked', false);
+                    if (a.announcement_organizations) {
+                        a.announcement_organizations.forEach(function(ao) {
+                            $('input[name="organization-' + ao.zone_name + '"]').prop('checked', true);
+                        });
+                    }
+                    if (a.announcement_screens) {
+                        a.announcement_screens.forEach(function(as) {
+                            $('input[name="screens-' + as.plant_code + '"]').prop('checked', true);
+                        });
+                    }
+
+                    // Update preview
+                    updatePreview(a);
+                    $('#submit-button').text('Update');
+                }
+            }
+        });
+    }
+
+    // Map color names to hex values
+    var colorMap = {
+        'red': '#FF0000',
+        'green': '#00FF00',
+        'blue': '#2F7ED8',
+        'yellow': '#FFFF00',
+        'orange': '#FFA500',
+        'purple': '#800080',
+        'black': '#000000',
+        'white': '#FFFFFF',
+        'gray': '#808080',
+        'grey': '#808080'
+    };
+
+    function updatePreview(a) {
+        $('#preview-tagline').text(a.tagline || 'Tagline');
+        $('#preview-title').text(a.title || 'Title');
+        $('#preview-subtitle').text(a.subtitle || 'Subtitle');
+
+        // Update color
+        if (a.color) {
+            var colorVal = a.color.toLowerCase().trim();
+            var c = colorMap[colorVal] || (colorVal.charAt(0) === '#' ? colorVal : '#' + colorVal);
+            $('#preview-tiles-tiles .tile').css('background-color', c);
+        }
+
+        // Update icon/image
+        if (a.icon_or_percent) {
+            var iconUrl = a.icon_or_percent.trim();
+            if (iconUrl.startsWith('http') || iconUrl.startsWith('/')) {
+                $('#preview-icon').attr('src', iconUrl);
+            }
+        } else {
+            $('#preview-icon').attr('src', './JobsForFixedNodeID_files/Completed.png');
+        }
+
+        // Convert </br> to <br> for proper HTML rendering
+        var msgHtml = (a.message_details || 'Hello World').replace(/<\/br>/gi, '<br>');
+        $('#message-preview').html(msgHtml);
+    }
+
+    // Get selected organizations
+    function getSelectedOrganizations() {
+        var selected = [];
+        $('input[name^="organization-"]:checked').each(function() {
+            var name = $(this).attr('name');
+            var id = name.replace('organization-', '');
+            selected.push(id);
+        });
+        return selected;
+    }
+
+    // Get selected screens
+    function getSelectedScreens() {
+        var selected = [];
+        $('input[name^="screens-"]:checked').each(function() {
+            var name = $(this).attr('name');
+            var id = name.replace('screens-', '');
+            selected.push(id);
+        });
+        return selected;
+    }
+
+    $(document).ready(function() {
+        loadFormData();
+
+        // Initialize Kendo DatePickers
+        var today = new Date();
+        var tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        if (typeof kendo !== 'undefined' && kendo.ui && kendo.ui.DatePicker) {
+            $("#startdate-input").kendoDatePicker({
+                value: today,
+                format: "M/d/yyyy"
+            });
+            $("#enddate-input").kendoDatePicker({
+                value: tomorrow,
+                format: "M/d/yyyy"
+            });
+        } else {
+            // Fallback if Kendo is not available
+            $('#startdate-input').val(formatDate(today));
+            $('#enddate-input').val(formatDate(tomorrow));
+        }
+
+        // Handle announcement selection
+        $('#templateannouncementurl').change(function() {
+            var id = $(this).val();
+            if (id) { loadAnnouncement(id); }
+            else { clearForm(); }
+        });
+
+        // Live preview
+        $('#tagline').on('input', function() { $('#preview-tagline').text($(this).val() || 'Tagline'); });
+        $('#tiletitle').on('input', function() { $('#preview-title').text($(this).val() || 'Title'); });
+        $('#subtitle').on('input', function() { $('#preview-subtitle').text($(this).val() || 'Subtitle'); });
+        $('#color').on('input', function() {
+            var val = $(this).val();
+            if (val) {
+                var colorVal = val.toLowerCase().trim();
+                var c = colorMap[colorVal] || (colorVal.charAt(0) === '#' ? colorVal : '#' + colorVal);
+                $('#preview-tiles-tiles .tile').css('background-color', c);
+            }
+        });
+        $('#icon').on('input', function() {
+            var iconUrl = $(this).val().trim();
+            if (iconUrl && (iconUrl.startsWith('http') || iconUrl.startsWith('/'))) {
+                $('#preview-icon').attr('src', iconUrl);
+            } else {
+                $('#preview-icon').attr('src', './JobsForFixedNodeID_files/Completed.png');
+            }
+        });
+        // Sync textarea with highlighted backdrop
+        function updateCodeHighlight() {
+            var text = $('#CodeScript').val() || '';
+            // Escape HTML but preserve structure, then highlight </br> tags
+            var highlighted = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/&lt;\/br&gt;/gi, '<span class="cm-error">&lt;/br&gt;</span>')
+                .replace(/&lt;br&gt;/gi, '<span class="cm-error">&lt;br&gt;</span>')
+                .replace(/&lt;br\/&gt;/gi, '<span class="cm-error">&lt;br/&gt;</span>');
+            $('#CodeScript-backdrop').html(highlighted + '\n');
+        }
+
+        $('#CodeScript').on('input scroll', function() {
+            updateCodeHighlight();
+            // Sync scroll position
+            $('#CodeScript-backdrop').scrollTop($(this).scrollTop());
+            $('#CodeScript-backdrop').scrollLeft($(this).scrollLeft());
+            // Update preview
+            var msgHtml = ($(this).val() || 'Hello World').replace(/<\/br>/gi, '<br>');
+            $('#message-preview').html(msgHtml);
+        });
+
+        // Initialize backdrop
+        updateCodeHighlight();
+    });
+
+    function onValidate__announcement_form() {
+        var msg = "";
+        if (!$('#name').val()) msg += "Name is required.<br>";
+        if (!$('#campaign').val()) msg += "Campaign is required.<br>";
+        if (!$('#startdate-input').val()) msg += "Start Date is required.<br>";
+        if (!$('#enddate-input').val()) msg += "End Date is required.<br>";
+        return msg;
+    }
+
+    function onSubmit_announcement_form() {
+        $('#error-box, #success-box').hide();
+
+        var validationMessage = onValidate__announcement_form();
+        if (validationMessage) {
+            $('#error-box').show();
+            $('#error-title').html('One or more fields were not properly filled out');
+            $('#error-text').html(validationMessage);
+            window.scrollTo(0, 0);
+            return;
+        }
+
+        // Get dates from Kendo DatePicker or input
+        var startPicker = $('#startdate-input').data('kendoDatePicker');
+        var endPicker = $('#enddate-input').data('kendoDatePicker');
+        var startDate = startPicker ? startPicker.value() : null;
+        var endDate = endPicker ? endPicker.value() : null;
+
+        // Format dates for database
+        function formatDateForDB(date) {
+            if (!date) return null;
+            if (typeof date === 'string') return parseDate(date);
+            var y = date.getFullYear();
+            var m = (date.getMonth() + 1).toString().padStart(2, '0');
+            var d = date.getDate().toString().padStart(2, '0');
+            return y + '-' + m + '-' + d;
+        }
+
+        var data = {
+            name: $('#name').val(),
+            campaign_id: $('#campaign').val() || null,
+            start_date: formatDateForDB(startDate) || parseDate($('#startdate-input').val()),
+            end_date: formatDateForDB(endDate) || parseDate($('#enddate-input').val()),
+            tile_type: $('#tiletype').val(),
+            tagline: $('#tagline').val(),
+            title: $('#tiletitle').val(),
+            subtitle: $('#subtitle').val(),
+            icon_or_percent: $('#icon').val(),
+            color: $('#color').val(),
+            is_published: $('input[name="publish"]').is(':checked'),
+            message_details: $('#CodeScript').val(),
+            organizations: getSelectedOrganizations(),
+            screens: getSelectedScreens()
+        };
+
+        var isEditing = editingId !== null;
+        var url = isEditing ? '/api/announcements/' + editingId : '/api/announcements';
+        var method = isEditing ? 'PUT' : 'POST';
+
+        $('#submit-button').prop('disabled', true).text(isEditing ? 'Updating...' : 'Saving...');
+
+        $.ajax({
+            url: url,
+            type: method,
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function(response) {
+                if (response.success) {
+                    loadFormData();
+                    clearForm();
+                } else {
+                    $('#error-box').show();
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error || 'Failed to save.');
+                }
+                window.scrollTo(0, 0);
+            },
+            error: function(xhr, status, error) {
+                $('#error-box').show();
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to save: ' + error);
+                window.scrollTo(0, 0);
+            },
+            complete: function() {
+                $('#submit-button').prop('disabled', false).text(editingId ? 'Update' : 'Submit');
+            }
+        });
+    }
+
+    // Open detail page - navigate to announcements.html with ID
+    function openDetailPage() {
+        if (editingId) {
+            // Save the announcement ID to sessionStorage so we can restore it when coming back
+            sessionStorage.setItem('selectedAnnouncementId', editingId);
+            // Navigate to announcements page with announcement ID
+            window.location.href = '/d3-static/announcements.html?id=' + editingId;
+        } else {
+            alert('Please select an announcement first.');
+        }
+    }
+
+    function clearForm() {
+        editingId = null;
+        $('#templateannouncementurl').val('');
+        $('#name, #tagline, #tiletitle, #subtitle, #icon, #color').val('');
+        $('#CodeScript').val('').trigger('input');
+        $('#campaign').val('');
+        $('input[name="publish"]').prop('checked', false);
+        $('input[name^="organization-"], input[name^="screens-"]').prop('checked', false);
+
+        var today = new Date();
+        var tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // Reset Kendo DatePickers or fallback to input
+        var startPicker = $('#startdate-input').data('kendoDatePicker');
+        var endPicker = $('#enddate-input').data('kendoDatePicker');
+        if (startPicker) {
+            startPicker.value(today);
+        } else {
+            $('#startdate-input').val(formatDate(today));
+        }
+        if (endPicker) {
+            endPicker.value(tomorrow);
+        } else {
+            $('#enddate-input').val(formatDate(tomorrow));
+        }
+
+        $('#preview-tagline').text('Tagline');
+        $('#preview-title').text('Title');
+        $('#preview-subtitle').text('Subtitle');
+        $('#preview-tiles-tiles .tile').css('background-color', 'rgb(47, 126, 216)');
+        $('#preview-icon').attr('src', './JobsForFixedNodeID_files/Completed.png');
+        $('#message-preview').html('Hello World');
+        $('#submit-button').text('Submit');
+    }
+</script>
+
+</body>
+
+</html>

@@ -80,19 +80,81 @@
     };
   }
 
-  // ---- Fuel-surcharge promo tile (static, like the orders board) ----
-  function fuelTile() {
+  // ---- Announcement tiles (dynamic from API) ----
+  var colorMap = {
+    'red': '#FF0000', 'green': '#00FF00', 'blue': '#2F7ED8', 'yellow': '#FFFF00',
+    'orange': '#FFA500', 'purple': '#800080', 'black': '#000000', 'white': '#FFFFFF',
+    'gray': '#808080', 'grey': '#808080'
+  };
+
+  function getColor(color) {
+    if (!color) return 'red';
+    var c = color.toLowerCase();
+    return colorMap[c] || color;
+  }
+
+  function announcementTile(a) {
+    var bgColor = getColor(a.color);
+    var icon = a.icon_or_percent || (ASSET + '/dolesepublish.png');
+    var tagline = esc(a.tagline || '');
+    var title = esc(a.title || a.name || '');
+    var subtitle = esc(a.subtitle || '');
+
     return (
-      '<div class="tile" style="position: relative; background-color: red; cursor: pointer; display: block;" ' +
-      "onclick=\"window.top.location.href='/fuel-surcharges'\">" +
+      '<div class="tile" style="position: relative; background-color: ' + bgColor + '; cursor: pointer; display: block;" ' +
+      "onclick=\"window.top.location.href='/d3-static/announcements.html?id=" + a.id + "'\">" +
       '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px;">' +
-      '<div class="tileContainer"><div class="tileIcon"><img src="' + ASSET + '/dolesepublish.png"></div>' +
+      '<div class="tileContainer"><div class="tileIcon"><img src="' + esc(icon) + '"></div>' +
       '<div class="tileInfoSection"><div class="tileCell">' +
-      '<div class="tileSuperTitle">July 6th thru July 10th 2026</div>' +
-      '<div class="tileTitle">Current Fuel Surcharge</div>' +
-      '<div class="tileSubTitle">$25.00 per load *Click for Details</div>' +
+      '<div class="tileSuperTitle">' + tagline + '</div>' +
+      '<div class="tileTitle">' + title + '</div>' +
+      '<div class="tileSubTitle">' + subtitle + '</div>' +
       "</div></div></div></div>"
     );
+  }
+
+  var cachedAnnouncements = [];
+  function loadAnnouncements(callback) {
+    console.log('[Announcements] Fetching active announcements...');
+    $.ajax({
+      url: '/api/announcements/active',
+      type: 'GET',
+      success: function(response) {
+        console.log('[Announcements] API Response:', response);
+        if (response.success && response.data) {
+          cachedAnnouncements = response.data;
+          console.log('[Announcements] Found ' + cachedAnnouncements.length + ' active announcement(s):');
+          cachedAnnouncements.forEach(function(a, i) {
+            console.log('[Announcements] Tile ' + (i+1) + ':', {
+              id: a.id,
+              name: a.name,
+              tagline: a.tagline,
+              title: a.title,
+              subtitle: a.subtitle,
+              color: a.color,
+              icon: a.icon_or_percent,
+              start_date: a.start_date,
+              end_date: a.end_date
+            });
+          });
+        } else {
+          console.log('[Announcements] No active announcements found');
+        }
+        if (callback) callback();
+      },
+      error: function(xhr, status, error) {
+        console.error('[Announcements] Error fetching:', error);
+        if (callback) callback();
+      }
+    });
+  }
+
+  function announcementTiles() {
+    var html = '';
+    for (var i = 0; i < cachedAnnouncements.length; i++) {
+      html += announcementTile(cachedAnnouncements[i]);
+    }
+    return html;
   }
 
   // ---- DOLESE business-unit summary tile (pie mount + used-of-total + counts) ----
@@ -162,17 +224,22 @@
     var t = document.getElementById("tiles-tiles");
     if (!t) return;
     var qs = "date=" + encodeURIComponent(D) + (DT ? "&dateTo=" + encodeURIComponent(DT) : "");
-    fetch("/api/market-summary?" + qs, { cache: "no-store" })
-      .then(function (x) { return x.ok ? x.json() : null; })
-      .then(function (s) {
-        if (!s || s.error) return;
-        var html = fuelTile() + summaryTile(s);
-        if (html === lastHtml) return; // unchanged → don't re-render the pie
-        lastHtml = html;
-        t.innerHTML = html;
-        renderPies();
-      })
-      .catch(function () {});
+
+    // Load announcements first, then market summary
+    loadAnnouncements(function() {
+      $.ajax({
+        url: "/api/market-summary?" + qs,
+        type: 'GET',
+        success: function(s) {
+          if (!s || s.error) return;
+          var html = announcementTiles() + summaryTile(s);
+          if (html === lastHtml) return;
+          lastHtml = html;
+          t.innerHTML = html;
+          renderPies();
+        }
+      });
+    });
   }
   function refresh() { lastHtml = null; load(); }
   window.d3Refresh = refresh;
