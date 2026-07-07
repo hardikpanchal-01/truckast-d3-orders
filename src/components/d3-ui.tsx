@@ -78,6 +78,7 @@ const TAB_HREF: Record<string, string> = {
   MARKETS: "/",
   TRUCKAST: "/",
   SETTINGS: "/settings",
+  PUBLISH: "/publish",
   ADMIN: "/admin",
   PROJECTS: "/projects",
   ROLLOUT: "/rollout/search",
