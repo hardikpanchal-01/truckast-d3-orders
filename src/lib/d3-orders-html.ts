@@ -1,6 +1,6 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { DoleseOrderListItem, OrderStatus } from "@/actions/orderActions";
+import type { DoleseOrderListItem, OrderStatus, DoleseAnnouncement } from "@/actions/orderActions";
 
 /* ------------------------------------------------------------------ */
 /*  Hybrid renderer: takes the EXACT D3 export (public/d3-static/       */
@@ -128,25 +128,29 @@ function orderTile(o: DoleseOrderListItem): string {
   );
 }
 
-/* ---- fuel-surcharge promo tile (D3's exact first cell) ---- */
-function fuelTile(): string {
+/* ---- fuel-surcharge / announcement promo tile (D3's exact first cell) ----
+ * Driven by the live `announcements` row (getActiveAnnouncement). Renders nothing
+ * when no promo is published/active today, so the tile is never stale. */
+function fuelTile(ann?: DoleseAnnouncement | null): string {
+  if (!ann) return "";
+  const bg = (ann.color || "red").trim().toLowerCase();
   return (
-    `<div class="tile" style="position: relative; background-color: red; cursor: pointer; display: block;" ` +
+    `<div class="tile" style="position: relative; background-color: ${esc(bg)}; cursor: pointer; display: block;" ` +
     `onclick="window.top.location.href='/fuel-surcharges'">` +
     `<img src="${ASSET}/dogear.png" style="position: absolute; right: 0px; bottom: 0px; ">` +
     `<div class="tileContainer"><div class="tileIcon"><img src="${ASSET}/DOLESEPUBLISH.PNG"></div>` +
     `<div class="tileInfoSection"><div class="tileCell">` +
-    `<div class="tileSuperTitle">June 29th thru July 3rd, 2026</div>` +
-    `<div class="tileTitle">Current Fuel Surcharge</div>` +
-    `<div class="tileSubTitle">$25.00 per load *Click for Details</div>` +
+    `<div class="tileSuperTitle">${esc(ann.tagline || "")}</div>` +
+    `<div class="tileTitle">${esc(ann.title || "")}</div>` +
+    `<div class="tileSubTitle">${esc(ann.subtitle || "")}</div>` +
     `</div></div></div></div>`
   );
 }
 
 /** The order-tiles markup (fuel promo + one tile per order) — also served
  *  on its own from /api/orders-tiles so the client can re-render it live. */
-export function renderTiles(orders: DoleseOrderListItem[]): string {
-  return fuelTile() + orders.map(orderTile).join("");
+export function renderTiles(orders: DoleseOrderListItem[], announcement?: DoleseAnnouncement | null): string {
+  return fuelTile(announcement) + orders.map(orderTile).join("");
 }
 
 export async function buildOrdersHtml(): Promise<string> {

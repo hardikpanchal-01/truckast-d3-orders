@@ -28,10 +28,12 @@
     // Trucks
     var host = document.getElementById("d3-tm-trucks");
     if (host) {
+      // Columns match D3's TruckMap table. LAT DEC / LONG DEC = live truck GPS; the HEX
+      // columns are blank (D3's are blank too). Volume/Shipped/Driver live in the popup.
       host.innerHTML = (d.trucks || []).map(function (t) {
-        return "<tr>" + td(t.ticket_code) + td(t.truck_code) + td(t.driver_name) + td(t.status) +
-          td(t.last_update) + td(t.load_number) + td(cy(t.volume_cy) + " CY") +
-          td(cy(t.shipped_cy) + " OF " + cy(d.ordered_cy) + " CY") + td(t.plant_code ? "CG-" + t.plant_code : "") +
+        return "<tr>" + td(t.ticket_code) + td(t.truck_code) + td(t.status) +
+          td(t.lat != null ? t.lat : "") + td("") + td(t.lng != null ? t.lng : "") + td("") +
+          td(t.last_update) + td(t.load_number) + td(t.plant_code ? "CG-" + t.plant_code : "") +
           "</tr>";
       }).join("");
     }
@@ -95,14 +97,29 @@
       return;
     }
     if (!mapInited) {
-      var osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19, attribution: "&copy; OpenStreetMap contributors",
-      });
-      var sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-        maxZoom: 19, attribution: "Tiles &copy; Esri",
-      });
-      map = L.map("map", { layers: [osm] });
-      L.control.layers({ Map: osm, Satellite: sat }, null, { position: "topleft" }).addTo(map);
+      // Prefer Mapbox (our own token, injected server-side); fall back to keyless
+      // OSM + Esri satellite when no token is configured.
+      var MB = window.MAPBOX_TOKEN;
+      var street, sat;
+      if (MB) {
+        var mb = function (style) {
+          return L.tileLayer(
+            "https://api.mapbox.com/styles/v1/mapbox/" + style + "/tiles/512/{z}/{x}/{y}@2x?access_token=" + MB,
+            { tileSize: 512, zoomOffset: -1, maxZoom: 19, attribution: "&copy; Mapbox &copy; OpenStreetMap" }
+          );
+        };
+        street = mb("streets-v12");
+        sat = mb("satellite-streets-v12");
+      } else {
+        street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19, attribution: "&copy; OpenStreetMap contributors",
+        });
+        sat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+          maxZoom: 19, attribution: "Tiles &copy; Esri",
+        });
+      }
+      map = L.map("map", { layers: [street] });
+      L.control.layers({ Map: street, Satellite: sat }, null, { position: "topleft" }).addTo(map);
       // Fullscreen button (uses the browser Fullscreen API — no plugin needed).
       var fs = L.control({ position: "topright" });
       fs.onAdd = function () {
@@ -130,23 +147,32 @@
       L.marker([d.plant.lat, d.plant.lng]).addTo(map).bindPopup("<b>PLANT " + esc(d.plant.code ? "CG-" + d.plant.code : "") + "</b><br>" + esc(d.plant.name || ""));
       pts.push([d.plant.lat, d.plant.lng]);
     }
-    // Approximate truck markers (status-based; see truckPos). Only if we have both anchors.
+    // Truck markers at their LIVE GPS (from the trucks table). Fall back to a status-based
+    // approximation only for a truck that has no GPS fix.
     if (d.jobsite && d.plant) {
       (d.trucks || []).forEach(function (t, i) {
-        var p = truckPos(t.status, d.jobsite, d.plant, i);
+        var p = (t.lat != null && t.lng != null) ? [t.lat, t.lng] : truckPos(t.status, d.jobsite, d.plant, i);
+        pts.push(p);
+        // D3's InfoWindow content, field-for-field.
+        var pop = "<div style='font-size:12px;line-height:20px'>" +
+          "Truck No: " + esc(t.truck_code || "") + "<br>" +
+          "Driver No: " + esc(t.driver_code || "") + "<br>" +
+          "Order No: " + esc(t.order_code || "") + "<br>" +
+          "Ticket No: " + esc(t.ticket_code || "") + "<br>" +
+          "Product: " + esc(t.product || "") + "<br>" +
+          "Load Number: " + esc(t.load_number) + "<br>" +
+          "Volume: " + cy(t.volume_cy) + " CY<br>" +
+          "Shipped: " + cy(t.shipped_cy) + " OF " + cy(d.ordered_cy) + " CY<br>" +
+          "Status: " + esc(t.status) +
+          "</div>";
         L.marker(p, { icon: truckIcon(statusColor(t.status), t.truck_code || "") }).addTo(map)
-          .bindPopup("<b>TRUCK " + esc(t.truck_code || "") + "</b><br>" + esc(t.status) +
-            "<br>Load " + esc(t.load_number) + " &middot; " + esc((Math.round(t.shipped_cy * 100) / 100)) + " CY shipped");
+          .bindPopup(pop, { minWidth: 190 });
       });
     }
     if (pts.length) map.fitBounds(pts, { padding: [50, 50], maxZoom: 12 });
     else map.setView([35.68, -97.42], 10);
     setTimeout(function () { map.invalidateSize(); }, 100);
-    if (note) {
-      note.innerHTML = "Truck pins are placed by <b>status</b> (loading&nbsp;=&nbsp;plant, at&nbsp;job/pouring&nbsp;=&nbsp;jobsite, " +
-        "to&nbsp;job&nbsp;=&nbsp;midway) — our feed has no live truck GPS, so these are approximate, not each truck's real position. " +
-        "Traffic and Street View are Google-Maps-only and are not available on this keyless map.";
-    }
+    if (note) { note.innerHTML = ""; note.style.display = "none"; }
   }
 
   function render(d) {

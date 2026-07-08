@@ -73,9 +73,12 @@
   // Plant weather tile (D3 OrderDetails uses the 02n "few clouds" glyph; clear → 01N).
   function weatherTile(w) {
     if (!w) return "";
+    // Prefer the server's glyph code (correct day/night) resolved to D3's icon host, which
+    // has both day and night icons; fall back to the condition text if no code was sent.
     var desc = String(w.description || "").toLowerCase();
-    var icon = desc.indexOf("clear") >= 0 ? ASSET + "/01N.PNG"
-      : desc.indexOf("few") >= 0 || desc.indexOf("scattered") >= 0 || desc.indexOf("part") >= 0 ? ASSET + "/02n.png"
+    var icon = w.icon
+      ? (/^(https?:)?\/\//.test(w.icon) ? w.icon : "https://d3.truckast.com/Images/icons/" + w.icon + ".png")
+      : desc.indexOf("clear") >= 0 ? ASSET + "/01N.PNG"
       : ASSET + "/02n.png";
     return (
       '<div class="tile" style="position: relative; background-color: ' + BLUE + '; cursor: default; display: block;">' +
