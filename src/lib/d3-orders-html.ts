@@ -41,7 +41,10 @@ function tileColor(o: DoleseOrderListItem): string {
   // Pre-Pour: a FIRM (committed) order is green; a WILL-CALL order is yellow.
   // "Active" is a firm/confirmed state too, so it's green alongside "Firm".
   if (o.status === "PRE_POUR") return ds === "Firm" || ds === "Active" ? TILE_GREEN : TILE_YELLOW;
-  // In-Process / Complete: by poured speed vs planned (≥90 green, 60–89 yellow, <60 red).
+  // Completed orders are always green in D3 (a finished pour, regardless of the speed
+  // it ran at) — verified against the JobsForFixedNodeID export.
+  if (o.status === "COMPLETED") return TILE_GREEN;
+  // In-Process: by poured speed vs planned (≥90 green, 60–89 yellow, <60 red).
   const pct = o.pour_pct;
   if (pct == null) return TILE_GREEN;
   if (pct >= 90) return TILE_GREEN;

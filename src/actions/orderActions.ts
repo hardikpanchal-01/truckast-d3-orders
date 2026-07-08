@@ -351,6 +351,7 @@ interface TicketRow {
   loaded_time: string | null;
   to_job_time: string | null;
   on_job_time: string | null;
+  scheduled_on_job_time: string | null;
   unload_time: string | null;
   wash_time: string | null;
   to_plant_time: string | null;
@@ -360,7 +361,7 @@ interface TicketRow {
 }
 
 const TICKET_FIELDS =
-  "ticket_id, ticket_code, truck_code, printed_time, load_time, loaded_time, to_job_time, on_job_time, unload_time, wash_time, to_plant_time, at_plant_time, end_unload, remove_reason_code";
+  "ticket_id, ticket_code, truck_code, printed_time, load_time, loaded_time, to_job_time, on_job_time, scheduled_on_job_time, unload_time, wash_time, to_plant_time, at_plant_time, end_unload, remove_reason_code";
 
 const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
@@ -419,11 +420,11 @@ function isValidTicket(t: TicketRow): boolean {
 
 /** Ticket lifecycle stages, oldest → newest; the latest with a timestamp is the load's status. */
 const TICKET_STAGES: { field: keyof TicketRow; label: string }[] = [
-  { field: "printed_time", label: "PRINTED" },
+  { field: "printed_time", label: "TICKETED" },
   { field: "load_time", label: "LOADING" },
   { field: "loaded_time", label: "LOADED" },
   { field: "to_job_time", label: "TO JOB" },
-  { field: "on_job_time", label: "ON JOB" },
+  { field: "on_job_time", label: "AT JOB" },
   { field: "unload_time", label: "POURING" },
   { field: "end_unload", label: "POURED" },
   { field: "wash_time", label: "WASHING" },
@@ -1056,14 +1057,14 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
 
   const loads = tickets.length;
 
-  // TRUCKS tile = trucks currently "on the map": headed to the job or at the job and
-  // not yet BACK at the plant. A truck that is driving back (to_plant_time set but no
-  // at_plant_time yet) is still on the road / on the map, so it must keep counting —
-  // we retire it only once it has actually arrived at the plant (at_plant_time). Using
-  // the broader hasLeftJob() here (which also fires on to_plant) retired trucks a leg
-  // too early and under-counted vs D3.
+  // TRUCKS tile = trucks currently "on the map": assigned to this order and not yet
+  // BACK at the plant. A truck counts from the moment it has a ticket printed
+  // (TICKETED) — through Loaded, To Job, On Job, Pouring and even driving back
+  // (To Plant) — and only drops off once it has actually arrived at the plant
+  // (at_plant_time). We retire it at at_plant (not to_plant) because a truck driving
+  // back is still on the road / on the map.
   const mapTickets = tickets.filter(
-    (t) => (has(t.to_job_time) || has(t.on_job_time)) && !has(t.at_plant_time),
+    (t) => has(t.printed_time) && !has(t.at_plant_time),
   );
   const trucks = new Set(mapTickets.map((t) => t.truck_code).filter(Boolean)).size;
 
@@ -1227,14 +1228,37 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   if (scheduledTime && spacingMinutes && spacingMinutes > 0 && numberOfLoads && numberOfLoads > 0) {
     const startMin = tsMin(scheduledTime);
     const startMs = new Date(scheduledTime).getTime();
+    // D3 spaces the "Ordered" points by the EXACT per-load interval — loadCY ÷
+    // delivery_rate_per_hour × 60 minutes (e.g. 10.5 ÷ 79 × 60 = 7.9746 min) — NOT the
+    // rounded whole-minute truck_space. The fractional interval keeps the point times
+    // aligned with D3 to the second (the 9th point lands at 02:03:47, not 02:04:00).
+    // Per-load CY = the actual truck load (median ticket CY = 10.5), which is what D3
+    // uses; order_qty ÷ number_of_loads (304.51 ÷ 30 = 10.15) is a scheduling estimate
+    // that drifts because number_of_loads over-counts the real trips.
+    const ticketLoads = [...cyByTicket.values()].filter((x) => x > 0).sort((a, b) => a - b);
+    const perLoadCY = ticketLoads.length
+      ? ticketLoads[Math.floor(ticketLoads.length / 2)]
+      : numberOfLoads > 0
+        ? ordered / numberOfLoads
+        : 0;
+    const stepMin =
+      deliveryRatePerHour && deliveryRatePerHour > 0 && perLoadCY > 0
+        ? (perLoadCY / deliveryRatePerHour) * 60
+        : spacingMinutes;
+    // D3 draws one "Ordered" reference point per TICKETED load (every printed ticket),
+    // NOT per delivered/arrived load, and NOT the full remaining schedule. numberOfLoads
+    // counts the whole order (e.g. 29), so projecting all of them and capping at tMax
+    // leaves trailing points past the tickets that actually exist. Using the printed-
+    // ticket count tracks D3: as each new ticket prints, one more Ordered node appears.
+    const orderedCount = tickets.length > 0 ? Math.min(numberOfLoads, tickets.length) : numberOfLoads;
     if (startMin != null && !Number.isNaN(startMs)) {
-      for (let i = 0; i < numberOfLoads; i++) {
-        const t = startMin + i * spacingMinutes;
+      for (let i = 0; i < orderedCount; i++) {
+        const t = startMin + i * stepMin;
         if (tMax > 0 && t > tMax && scheduledOrderPoints.length > 0) break;
         scheduledOrderPoints.push({
           t,
           v: r2(scheduleRate),
-          ts: new Date(startMs + i * spacingMinutes * 60000).toISOString(),
+          ts: new Date(startMs + i * stepMin * 60000).toISOString(),
         });
       }
     }
@@ -1473,14 +1497,11 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   const loadRates: number[] = [];
   let sumPourVol = 0; // Σ poured CY over loads with a pour-finish stamp
   let sumPourTimeHr = 0; // Σ on-job pour time (on_job → finish-pour) for those loads
-  let sumPourOnlyVol = 0; // Σ poured CY (loads with begin+end pour stamps)
-  let sumPourOnlyHr = 0; // Σ PURE pour time (begin_pour → finish-pour), excludes waiting
   for (const t of tickets) {
     // Pour-finish stamp: end_unload if present, else wash_time, else to_plant_time.
     const finStamp = t.end_unload || t.wash_time || t.to_plant_time;
     if (!finStamp) continue;
     const arr = tsMin(t.on_job_time);
-    const begin = tsMin(t.unload_time);
     const fin = tsMin(finStamp);
     const cyv = cyByTicket.get(t.ticket_id) || 0;
     if (arr != null && fin != null && fin > arr && cyv > 0) {
@@ -1488,17 +1509,7 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
       sumPourVol += cyv;
       sumPourTimeHr += (fin - arr) / 60;
     }
-    // Pure pour rate: measured from Begin Pour (unload), not At Job — excludes the
-    // between-load waiting so the Pour-Finish projection isn't dragged out by delays.
-    if (begin != null && fin != null && fin > begin && cyv > 0) {
-      sumPourOnlyVol += cyv;
-      sumPourOnlyHr += (fin - begin) / 60;
-    }
   }
-  // Mean of per-load rates — drives the Pour-Finish projection (stable, doesn't drift).
-  const avgPourSpeed = loadRates.length
-    ? loadRates.reduce((a, b) => a + b, 0) / loadRates.length
-    : 0;
   // D3 "Pour Rate" tile = MEAN of per-load pour speeds (load ÷ At Job→Finish Pour),
   // EXCLUDING outlier loads. A plus/add-on load — or one whose Finish Pour is stamped
   // seconds after At Job — yields a wild rate that skews the mean, and D3 leaves it out.
@@ -1510,30 +1521,34 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   const pourRateTile = keptRates.length
     ? keptRates.reduce((a, b) => a + b, 0) / keptRates.length
     : (sumPourTimeHr > 0 ? sumPourVol / sumPourTimeHr : 0);
-  const arrivalMins = deliveredTickets
-    .map((t) => tsMin(t.on_job_time))
-    .filter((x): x is number => x != null);
-  const firstArrivalMin = arrivalMins.length
-    ? Math.min(...arrivalMins)
-    : (pourStarts.length ? Math.min(...pourStarts) : null);
-  // Pour-Finish projection (D3): project only the REMAINING volume forward from where
-  // the pour actually stands now, at the PURE pour rate (begin→end, no inter-load wait).
-  // Anchoring at the latest recorded pour-end (not first arrival) and using the pour-only
-  // rate keeps a delayed order from projecting artificially late — e.g. 26405 lands at
-  // ~11:21 (D3) instead of ~11:51 when the on-job rate + whole-order projection is used.
-  let progressFinishMs: number | null = null;
-  if (loadRates.length && ordered > 0) {
-    const effRate = sumPourOnlyHr > 0 ? sumPourOnlyVol / sumPourOnlyHr : avgPourSpeed;
-    const remainingCY = Math.max(0, ordered - pouredCY);
-    const endMins = tickets
-      .map((t) => tsMin(t.end_unload || t.wash_time || t.to_plant_time))
-      .filter((x): x is number => x != null);
-    const anchorMin = endMins.length ? Math.max(...endMins) : firstArrivalMin;
-    if (effRate > 0 && anchorMin != null) {
-      const od = new Date(order.order_date as string);
-      const base = Date.UTC(od.getUTCFullYear(), od.getUTCMonth(), od.getUTCDate());
-      progressFinishMs = base + anchorMin * 60000 + (remainingCY / effRate) * 3600000;
+  // "Now" reference (D3 anchors NEXT TRUCK and POUR FINISH at the live clock). Our
+  // mirror lags, so we approximate "now" with the most recent real activity timestamp
+  // on any ticket — the latest stage stamp across the order.
+  const nowMin = (() => {
+    let mx: number | null = null;
+    for (const t of tickets) {
+      for (const ts of [
+        t.printed_time, t.load_time, t.loaded_time, t.to_job_time, t.on_job_time,
+        t.unload_time, t.end_unload, t.wash_time, t.to_plant_time, t.at_plant_time,
+      ]) {
+        const m = tsMin(ts);
+        if (m != null && (mx == null || m > mx)) mx = m;
+      }
     }
+    return mx;
+  })();
+
+  // Pour-Finish projection (D3): the remaining volume is delivered at the SCHEDULED
+  // delivery rate (the sustained throughput of the operation — with several trucks
+  // pouring in parallel the bottleneck is the delivery cadence, not one truck's pour
+  // speed), projected forward from "now". e.g. 40904: 04:55 + 157.51 CY ÷ 79 CY/HR =
+  // 06:55, matching D3 exactly.
+  let progressFinishMs: number | null = null;
+  if (ordered > 0 && scheduleRate > 0 && nowMin != null) {
+    const remainingCY = Math.max(0, ordered - pouredCY);
+    const od = new Date(order.order_date as string);
+    const base = Date.UTC(od.getUTCFullYear(), od.getUTCMonth(), od.getUTCDate());
+    progressFinishMs = base + nowMin * 60000 + (remainingCY / scheduleRate) * 3600000;
   }
 
   let pourFinish: string | null = null;
@@ -1552,39 +1567,23 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     pourFinish = pourFinishRaw.length ? fmtTime(pourFinishRaw[pourFinishRaw.length - 1], true) : null;
   }
 
-  // Next Truck: find the next truck en route or calculate minutes until next arrival
+  // Next Truck (D3): minutes until the next truck arrives = the earliest not-yet-arrived
+  // truck's SCHEDULED on-job time minus "now". e.g. 40904: next scheduled arrival 05:02
+  // − now 04:55 = 6 MIN. When that truck is already due or overdue (scheduled ≤ now but
+  // not yet on the job), D3 shows "Now" — so we take the earliest pending arrival and
+  // don't filter out overdue ones. (D3's ETAs come from live GPS, absent in our mirror —
+  // scheduled_on_job_time is the closest proxy.)
   let nextTruck: string | null = null;
   if (status !== "COMPLETED") {
-    // Find trucks that are en route (have to_job_time but no on_job_time yet)
-    const enRouteTickets = tickets
-      .filter((t) => has(t.to_job_time) && !has(t.on_job_time))
-      .sort((a, b) => (a.to_job_time || "").localeCompare(b.to_job_time || ""));
+    const pendingArrivals = tickets
+      .filter((t) => !has(t.on_job_time))
+      .map((t) => tsMin(t.scheduled_on_job_time))
+      .filter((m): m is number => m != null)
+      .sort((a, b) => a - b);
 
-    if (enRouteTickets.length > 0) {
-      // Calculate minutes until arrival based on average travel time
-      const arrivedTickets = tickets.filter((t) => has(t.to_job_time) && has(t.on_job_time));
-      let avgTravelMin = 15; // default 15 minutes travel time
-      if (arrivedTickets.length > 0) {
-        const travelTimes = arrivedTickets
-          .map((t) => diffMin(t.on_job_time, t.to_job_time))
-          .filter((x): x is number => x != null && x > 0);
-        if (travelTimes.length > 0) {
-          avgTravelMin = Math.round(travelTimes.reduce((a, b) => a + b, 0) / travelTimes.length);
-        }
-      }
-
-      // Calculate when the en route truck will arrive
-      const nextTicket = enRouteTickets[0];
-      const departTime = new Date(nextTicket.to_job_time!).getTime();
-      const nowMs = nowCSTAsUTCEpoch();
-      const etaMs = departTime + avgTravelMin * 60 * 1000;
-      const minsUntilArrival = Math.max(0, Math.round((etaMs - nowMs) / 60000));
-
-      if (minsUntilArrival <= 0) {
-        nextTruck = "Now";
-      } else {
-        nextTruck = `${minsUntilArrival} MIN`;
-      }
+    if (pendingArrivals.length > 0 && nowMin != null) {
+      const mins = Math.round(pendingArrivals[0] - nowMin);
+      nextTruck = mins <= 0 ? "Now" : `${mins} MIN`;
     } else if (actualTicketedCY >= ordered - 0.02) {
       // Every ordered load has been dispatched and none is en route → there is no next
       // truck at all. D3 shows "None" (not "Waiting", which is only for the gap between
@@ -1698,7 +1697,11 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     scheduled_time: scheduledTime ? fmtDateTimeUpper(scheduledTime) : null,
     scheduled_time_raw: scheduledTime,
     delivery_rate: deliveryRatePerHour,
-    spacing_minutes: spacingMinutes,
+    // D3's "Spacing" = the rate-derived pour cadence floored to whole minutes
+    // (floor(loadCY ÷ delivery_rate × 60)), NOT the raw truck_space. Same value the
+    // delay table uses as "Spacing". e.g. 40904: floor(10.5÷79×60)=7 (truck_space is 8);
+    // 23302: floor(10.5÷32×60)=19 (truck_space is 20). Falls back to truck_space if no rate.
+    spacing_minutes: allotment > 0 ? allotment : spacingMinutes,
     purchase_order: (order as { purchase_order?: string | null }).purchase_order || null,
     instructions,
     ordered_by: (order as { ordered_by_name?: string | null; ordered_by_phone?: string | null }).ordered_by_name
@@ -1774,25 +1777,33 @@ export async function getDoleseTicketSummary(orderId: number): Promise<DoleseTic
     }
   }
 
-  // Order loads by their creation/print sequence (fallback: ticket_code).
-  const sorted = [...tickets].sort((a, b) =>
+  // Delivery (chronological) order drives the running cumulative CY + load number.
+  const chrono = [...tickets].sort((a, b) =>
     (a.printed_time || "").localeCompare(b.printed_time || "") ||
     (a.ticket_code || "").localeCompare(b.ticket_code || ""),
   );
-
   let cumulative = 0;
-  const loads: DoleseLoad[] = sorted.map((t, i) => {
+  const cumById = new Map<number, number>();
+  const noById = new Map<number, number>();
+  chrono.forEach((t, i) => {
+    cumulative = Math.round((cumulative + (cyByTicket.get(t.ticket_id) || 0)) * 100) / 100;
+    cumById.set(t.ticket_id, cumulative);
+    noById.set(t.ticket_id, i + 1);
+  });
+
+  // Display in load-number order (1, 2, 3 …) — i.e. delivery/chronological order, which is
+  // exactly how the load numbers were assigned above.
+  const loads: DoleseLoad[] = chrono.map((t) => {
     const cy = Math.round((cyByTicket.get(t.ticket_id) || 0) * 100) / 100;
-    cumulative = Math.round((cumulative + cy) * 100) / 100;
     const stage = ticketStage(t);
     return {
       ticket_id: t.ticket_id,
-      load_no: i + 1,
+      load_no: noById.get(t.ticket_id) || 0,
       ticket_code: t.ticket_code,
       truck_code: t.truck_code,
       plant_name: t.plant_name,
       load_cy: cy,
-      cumulative_cy: cumulative,
+      cumulative_cy: cumById.get(t.ticket_id) || 0,
       total_cy: totalCY,
       status: stage.label,
       status_time: stage.time ? (fmtTime(stage.time, true) || "").replace(/\s+/g, "") : null,
@@ -1849,8 +1860,12 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
 
   const { data: tp } = await supabase
     .from("ticket_products")
-    .select("item_code, description, short_description, is_mix, load_qty, delv_qty, order_qty_unit, delv_qty_unit, slump")
+    .select("id, item_code, description, short_description, is_mix, load_qty, delv_qty, order_qty_unit, delv_qty_unit, slump")
     .eq("ticket_id", ticketId)
+    // D3 lists admixtures/surcharges first and the concrete mix last; within each group
+    // keep the line sequence (row id). So order by is_mix (non-mix first) then id.
+    .order("is_mix", { ascending: true })
+    .order("id", { ascending: true })
     .limit(50);
 
   // ORDER product cards (mix shown green in the UI).
@@ -1898,6 +1913,17 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
   const metric = (label: string, value: string | null, unit: string, sub: string) =>
     events.push({ icon: "verifi", title: mix, value: `${label}: ${value != null ? `${value}${unit}` : "NA"}`, sub, dark: true });
 
+  // D3's "VERIFI WATER ADD" tiles show water added DURING that leg — the change in
+  // the cumulative Verifi reading since the previous stage, not the raw cumulative.
+  // Cumulative here: leavePlant 2.4, arrival 0.0 → AT JOB = arrival − leavePlant =
+  // 0.0 − 2.4 = −2.40 GAL/CY (a correction). TO JOB is the first reading (baseline
+  // 0) so its delta equals the raw value (2.4).
+  const wNum = (k: string) => { const s = volV(k); return s == null ? null : Number(s); };
+  const wLeave = wNum("verifiWaterAtLeavePlant");
+  const wArr = wNum("verifiWaterAtArrival");
+  const legWater = (cur: number | null, prev: number | null) =>
+    cur == null && prev == null ? null : ((cur ?? 0) - (prev ?? 0)).toFixed(2);
+
   // ---- D3's exact 34-card delivery timeline ----------------------
   stage("ticketed", "Ticketed", t.printed_time, false);
   stage("loading", "Loading", t.load_time, fmtClock(v?.loading as string));
@@ -1908,7 +1934,9 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
     metric("AGE", ageV("ageAtLeavePlantMinutes"), " min", "TO JOB");
     metric("SLUMP", slumpV("slumpAtLeavePlant"), " IN", "TO JOB");
     metric("TEMP", tempV("temperatureAtLeavePlant"), " F", "TO JOB");
-    metric("REVS", revsV("totalRevsSinceLoadedAtLeavePlant"), "", "TO JOB");
+    // D3's "REVS" tile at TO JOB shows the leave-plant SLUMP value (e.g. 3.50 / 4.50 =
+    // slumpAtLeavePlant), not the revolution count — verified against production.
+    metric("REVS", slumpV("slumpAtLeavePlant"), "", "TO JOB");
     metric("WATER", volV("verifiWaterAtLeavePlant") ?? "0.0", " GAL/CY", "TO JOB - VERIFI WATER ADD");
   }
   stage("at_job", "At Job", t.on_job_time, fmtClock(v?.arriveSite as string));
@@ -1917,7 +1945,7 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
     metric("REVS", revsV("totalRevsAtArrival"), "", "AT JOB");
     metric("ADMIX", volV("admixTotalVolumeAtArrival") ?? "0.0", " OZ/CY", "AT JOB");
     metric("TIME", vVal(v?.timeOnSiteMinutes, "time"), " min", "AT JOB");
-    metric("WATER", volV("verifiWaterAtArrival") ?? "0.0", " GAL/CY", "AT JOB - VERIFI WATER ADD");
+    metric("WATER", legWater(wArr, wLeave) ?? "0.0", " GAL/CY", "AT JOB - VERIFI WATER ADD");
     metric("SLUMP", slumpV("slumpAtArrival"), " IN", "AT JOB");
     metric("TEMP", tempV("temperatureAtArrival"), " F", "AT JOB");
   }
@@ -1930,9 +1958,14 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
     metric("SLUMP", slumpV("slumpAtDischarge"), " IN", "POURING");
     metric("TEMP", tempV("temperatureAtDischarge"), " F", "POURING");
   }
+  // Post-pour summary cards only appear once the truck reaches the matching stage — D3
+  // hides them while the load is still pouring. VOLUME POURED shows after the pour ends;
+  // MANUAL ADD / TOTAL WATER / ROUND TRIP only after the truck is back at the plant.
+  const pourFinished = has(t.end_unload) || has(t.wash_time);
+  const backAtPlant = has(t.at_plant_time);
   // End Pour lives in wash_time when end_unload isn't synced (D3 labels it "Finish Pour").
   stage("poured", "Finish Pour", t.end_unload || t.wash_time, fmtClock(v?.endPour as string));
-  if (v) {
+  if (v && pourFinished) {
     const poured = vVal(v.loadSize, "loadSize") || (products.find((p) => p.is_mix)?.qty != null ? String(products.find((p) => p.is_mix)?.qty) : null);
     if (poured != null) events.push({ icon: "verifi", title: mix, value: `${poured} CY`, sub: "VOLUME POURED", dark: true });
   }
@@ -1941,7 +1974,7 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
   stage("end_wash", "End Washing", t.to_plant_time, false);
   stage("to_plant", "To Plant", t.to_plant_time, fmtClock(v?.leaveSite as string));
   stage("at_plant", "At Plant", t.at_plant_time, fmtClock(v?.returnPlant as string));
-  if (v) {
+  if (v && backAtPlant) {
     const manual = volV("verifiWaterAtDischarge");
     if (manual != null) events.push({ icon: "verifi", title: mix, value: `MANUAL ADD: ${manual} GAL/CY`, sub: "MANUAL ADDITION OF WATER", dark: true });
     const total = volV("verifiWaterTotal");
@@ -1949,7 +1982,7 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
   }
   const roundTrip = typeof v?.startToEndTotalMinutes === "string" ? v.startToEndTotalMinutes : null;
   // D3 renders ROUND TRIP TIME as a Verifi (dark) tile, not a blue truck-status tile.
-  if (roundTrip) events.push({ icon: "verifi", title: `TRUCK ${truck}`, value: roundTrip, sub: "ROUND TRIP TIME", dark: true });
+  if (roundTrip && backAtPlant) events.push({ icon: "verifi", title: `TRUCK ${truck}`, value: roundTrip, sub: "ROUND TRIP TIME", dark: true });
 
   const statusLabel =
     t.current_status === 4 || t.order_current_status === 4
@@ -1968,6 +2001,293 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
     printed_stamp: fmtDateTimeUpper(t.printed_time),
     products,
     events,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  5b. Truck Arrival — active trucks heading to / on the job         */
+/* ------------------------------------------------------------------ */
+
+export interface DoleseTruckArrivalTile {
+  ticket_id: number;
+  ticket_code: string | null;
+  load_cy: number;
+  truck_code: string | null;
+  stage_label: string;
+  stage_time: string | null;
+  icon: string;
+}
+export interface DoleseTruckArrival {
+  order_id: number;
+  order_code: string | null;
+  order_date: string;
+  subtitle: string | null;
+  customer_name: string | null;
+  status: OrderStatus;
+  trucks: DoleseTruckArrivalTile[];
+}
+
+// Ticket-stage → vendored icon slug (the truck-status glyphs in Order_files).
+// Keyed by ticketStage() labels (PRINTED / ON JOB …). The icon PNG carries its own
+// baked-in caption ("TICKETED", "LOADED", "TO JOB", "AT JOB", "POURING" …). Both
+// spellings are listed (TICKETED/PRINTED, AT JOB/ON JOB) since the stage labels have
+// drifted in this codebase's history.
+const STAGE_ICON: Record<string, string> = {
+  PRINTED: "ticket_2", TICKETED: "ticket_2", LOADING: "loading_2", LOADED: "loaded_2",
+  "TO JOB": "to_job_2", "ON JOB": "at_job_2", "AT JOB": "at_job_2", POURING: "pouring_2",
+  POURED: "end_pour_2", WASHING: "washing_2", "TO PLANT": "to_plant_2",
+  "AT PLANT": "at_plant_2", ORDERED: "order_2",
+};
+
+/**
+ * Truck Arrival (D3 "TruckArrival") — the trucks currently in the delivery pipeline
+ * for an order: dispatched (To Job or later) and not yet returned to the plant. One
+ * tile per active truck with its latest status stamp; the NEXT TRUCK tile links here.
+ */
+export async function getDoleseTruckArrival(orderId: number): Promise<DoleseTruckArrival | null> {
+  const supabase = await getSupabaseClient();
+
+  const { data: order, error } = await supabase
+    .from("orders")
+    .select("order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products(order_qty, order_qty_unit, is_mix)")
+    .eq("order_id", orderId)
+    .limit(1)
+    .maybeSingle();
+  if (error || !order) {
+    if (error) console.error("[ERROR] getDoleseTruckArrival:", error.message);
+    return null;
+  }
+
+  const { data: tix } = await supabase.from("tickets").select(TICKET_FIELDS).eq("order_id", orderId).limit(500);
+  const tickets = ((tix || []) as TicketRow[]).filter(isValidTicket);
+
+  const cyByTicket = new Map<number, number>();
+  if (tickets.length > 0) {
+    const { data: tp } = await supabase
+      .from("ticket_products")
+      .select("ticket_id, is_mix, load_qty, order_qty_unit")
+      .in("ticket_id", tickets.map((t) => t.ticket_id))
+      .limit(2000);
+    for (const p of tp || []) {
+      if (p.is_mix === true && isCubicYardUnit(p.order_qty_unit)) {
+        cyByTicket.set(p.ticket_id, (cyByTicket.get(p.ticket_id) || 0) + Number(p.load_qty || 0));
+      }
+    }
+  }
+
+  // D3's Truck Arrival shows every truck in the delivery pipeline — from TICKETED
+  // through POURING — until it finishes and heads back. So: has a ticket printed and
+  // has NOT finished pouring / washed / left the site / returned to plant.
+  const stageRank: Record<string, number> = {
+    PRINTED: 0, LOADING: 1, LOADED: 2, "TO JOB": 3, "ON JOB": 4, POURING: 5,
+  };
+  const isFinished = (t: TicketRow) =>
+    has(t.end_unload) || has(t.wash_time) || has(t.to_plant_time) || has(t.at_plant_time);
+  const inPipeline = tickets.filter((t) => has(t.printed_time) && !isFinished(t));
+
+  // Dedup by truck: a reprint leaves a stale printed-only ticket alongside the live
+  // one (e.g. truck 205446 → 40978955 printed-only + 40978957 loaded). Keep the most-
+  // advanced ticket per truck (tie → the later-printed one).
+  const byTruck = new Map<string, TicketRow>();
+  for (const t of inPipeline) {
+    const key = t.truck_code || `t${t.ticket_id}`;
+    const prev = byTruck.get(key);
+    if (!prev) { byTruck.set(key, t); continue; }
+    const r = stageRank[ticketStage(t).label] ?? 0;
+    const rp = stageRank[ticketStage(prev).label] ?? 0;
+    if (r > rp || (r === rp && (t.printed_time || "") > (prev.printed_time || ""))) byTruck.set(key, t);
+  }
+  // Dispatch order (printed ascending) — the pouring/earliest truck leads, newest trails.
+  const active = [...byTruck.values()].sort((a, b) => (a.printed_time || "").localeCompare(b.printed_time || ""));
+
+  const trucks: DoleseTruckArrivalTile[] = active.map((t) => {
+    const stage = ticketStage(t);
+    // D3's subtitle is ALWAYS "TRUCK n ON JOB: {time}", regardless of the truck's
+    // current stage. The time is its arrival on the job: the actual on_job_time once
+    // it has arrived, otherwise the predicted arrival. D3's prediction comes from live
+    // GPS (eta_data, null in our mirror), so we fall back to scheduled_on_job_time —
+    // which matches D3 to within ~1–2 min. The icon still reflects the current stage.
+    const arrivalTs = t.on_job_time || t.scheduled_on_job_time;
+    return {
+      ticket_id: t.ticket_id,
+      ticket_code: t.ticket_code,
+      load_cy: Math.round((cyByTicket.get(t.ticket_id) || 0) * 100) / 100,
+      truck_code: t.truck_code,
+      stage_label: "ON JOB",
+      stage_time: arrivalTs ? (fmtTime(arrivalTs, true) || "").replace(/\s+/g, "") : null,
+      icon: STAGE_ICON[stage.label] || "order_2",
+    };
+  });
+
+  const products = (order.order_products || []) as OrderProductRow[];
+  const { ordered } = sumCY(products);
+  const pouredOutCY = tickets.reduce((s, t) => s + (isPouredOut(t) ? cyByTicket.get(t.ticket_id) || 0 : 0), 0);
+  const status = deriveStatus(order, ordered, pouredOutCY, tickets.length > 0);
+
+  return {
+    order_id: order.order_id,
+    order_code: order.order_code,
+    order_date: order.order_date,
+    subtitle: order.delivery_addr1 || order.project_name || null,
+    customer_name: order.customer_name,
+    status,
+    trucks,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  5c. Truck Map (D3 "TruckMap") — active trucks + plant + jobsite    */
+/* ------------------------------------------------------------------ */
+
+export interface DoleseTruckMapRow {
+  ticket_code: string | null;
+  truck_code: string | null;
+  driver_name: string | null;
+  status: string; // "At Job" / "Pouring" / "To Job" / "Loaded" …
+  last_update: string | null; // clock of the latest stage stamp
+  load_number: number; // this truck's load sequence in the order (1-based)
+  volume_cy: number; // this load's CY
+  shipped_cy: number; // cumulative CY delivered through this load
+  plant_code: string | null;
+}
+export interface DoleseTruckMap {
+  order_id: number;
+  order_code: string | null;
+  order_date: string;
+  subtitle: string | null;
+  project_name: string | null;
+  ordered_cy: number;
+  jobsite: { lat: number; lng: number; address: string | null } | null;
+  plant: { code: string | null; name: string | null; address: string | null; city: string | null; zip: string | null; lat: number; lng: number } | null;
+  trucks: DoleseTruckMapRow[];
+}
+
+// Ticket stage → the status text D3's TruckMap table uses.
+const MAP_STATUS: Record<string, string> = {
+  PRINTED: "Ticketed", LOADING: "Loading", LOADED: "Loaded", "TO JOB": "To Job",
+  "ON JOB": "At Job", "AT JOB": "At Job", POURING: "Pouring", POURED: "Poured",
+  WASHING: "Washing", "TO PLANT": "Returning", "AT PLANT": "At Plant",
+};
+
+/**
+ * Truck Map (D3 "TruckMap") — the trucks currently out for an order, with their
+ * current status, load sequence and cumulative CY shipped, plus the plant and jobsite.
+ * D3 also plots each truck's live GPS on a Google map; our mirror has NO truck GPS feed
+ * (there are no lat/lng columns on tickets), so the map can plot the jobsite and plant
+ * (whose coords we do have) but not the trucks — the truck data lives in the table.
+ * The TRUCKS "MAP" tile on the order page links here.
+ */
+export async function getDoleseTruckMap(orderId: number): Promise<DoleseTruckMap | null> {
+  const supabase = await getSupabaseClient();
+
+  const { data: order, error } = await supabase
+    .from("orders")
+    .select("order_id, order_code, order_date, delivery_addr1, delivery_addr2, delivery_addr3, project_name, latitude, longitude, pricing_plant_code, order_products(order_qty, order_qty_unit, is_mix)")
+    .eq("order_id", orderId)
+    .limit(1)
+    .maybeSingle();
+  if (error || !order) {
+    if (error) console.error("[ERROR] getDoleseTruckMap:", error.message);
+    return null;
+  }
+
+  // Plant coords by the order's pricing plant code.
+  let plant: DoleseTruckMap["plant"] = null;
+  if (order.pricing_plant_code) {
+    const { data: p } = await supabase
+      .from("plants")
+      .select("code, description, address1, address2, address3, latitude, longitude")
+      .eq("code", order.pricing_plant_code)
+      .limit(1)
+      .maybeSingle();
+    if (p && p.latitude != null && p.longitude != null) {
+      plant = {
+        code: p.code, name: p.description, address: p.address1 || null,
+        city: p.address2 || null, zip: p.address3 || null,
+        lat: Number(p.latitude), lng: Number(p.longitude),
+      };
+    }
+  }
+
+  type MapTicket = TicketRow & { driver_name: string | null; plant_code: string | null };
+  const { data: tix } = await supabase
+    .from("tickets")
+    .select(`${TICKET_FIELDS}, driver_name, plant_code`)
+    .eq("order_id", orderId)
+    .limit(500);
+  const tickets = ((tix || []) as MapTicket[]).filter(isValidTicket);
+
+  const cyByTicket = new Map<number, number>();
+  if (tickets.length > 0) {
+    const { data: tp } = await supabase
+      .from("ticket_products")
+      .select("ticket_id, is_mix, load_qty, order_qty_unit")
+      .in("ticket_id", tickets.map((t) => t.ticket_id))
+      .limit(2000);
+    for (const p of tp || []) {
+      if (p.is_mix === true && isCubicYardUnit(p.order_qty_unit)) {
+        cyByTicket.set(p.ticket_id, (cyByTicket.get(p.ticket_id) || 0) + Number(p.load_qty || 0));
+      }
+    }
+  }
+
+  // Load number + cumulative shipped: number the tickets in dispatch (printed) order.
+  const seq = [...tickets].sort((a, b) => (a.printed_time || "").localeCompare(b.printed_time || ""));
+  const loadNo = new Map<number, number>();
+  const cumCY = new Map<number, number>();
+  let running = 0;
+  seq.forEach((t, i) => {
+    loadNo.set(t.ticket_id, i + 1);
+    running += cyByTicket.get(t.ticket_id) || 0;
+    cumCY.set(t.ticket_id, Math.round(running * 100) / 100);
+  });
+
+  // Active = dispatched (printed) and not yet returned to plant; dedup by truck (most-
+  // advanced ticket), same rule as Truck Arrival.
+  const stageRank: Record<string, number> = { PRINTED: 0, LOADING: 1, LOADED: 2, "TO JOB": 3, "ON JOB": 4, POURING: 5 };
+  const isFinished = (t: TicketRow) => has(t.end_unload) || has(t.wash_time) || has(t.to_plant_time) || has(t.at_plant_time);
+  const inPipeline = tickets.filter((t) => has(t.printed_time) && !isFinished(t));
+  const byTruck = new Map<string, MapTicket>();
+  for (const t of inPipeline) {
+    const key = t.truck_code || `t${t.ticket_id}`;
+    const prev = byTruck.get(key);
+    if (!prev) { byTruck.set(key, t); continue; }
+    const r = stageRank[ticketStage(t).label] ?? 0;
+    const rp = stageRank[ticketStage(prev).label] ?? 0;
+    if (r > rp || (r === rp && (t.printed_time || "") > (prev.printed_time || ""))) byTruck.set(key, t);
+  }
+  const active = [...byTruck.values()].sort((a, b) => (loadNo.get(a.ticket_id) || 0) - (loadNo.get(b.ticket_id) || 0));
+
+  const trucks: DoleseTruckMapRow[] = active.map((t) => {
+    const stage = ticketStage(t);
+    return {
+      ticket_code: t.ticket_code,
+      truck_code: (t.truck_code || "").trim() || null,
+      driver_name: t.driver_name,
+      status: MAP_STATUS[stage.label] || stage.label,
+      last_update: stage.time ? (fmtTime(stage.time, true) || "").trim() : null,
+      load_number: loadNo.get(t.ticket_id) || 0,
+      volume_cy: Math.round((cyByTicket.get(t.ticket_id) || 0) * 100) / 100,
+      shipped_cy: cumCY.get(t.ticket_id) || 0,
+      plant_code: t.plant_code || plant?.code || null,
+    };
+  });
+
+  const products = (order.order_products || []) as OrderProductRow[];
+  const { ordered } = sumCY(products);
+
+  return {
+    order_id: order.order_id,
+    order_code: order.order_code,
+    order_date: order.order_date,
+    subtitle: order.delivery_addr1 || order.project_name || null,
+    project_name: order.project_name,
+    ordered_cy: Math.round(ordered * 100) / 100,
+    jobsite: order.latitude != null && order.longitude != null
+      ? { lat: Number(order.latitude), lng: Number(order.longitude), address: order.delivery_addr1 || null }
+      : null,
+    plant,
+    trucks,
   };
 }
 
