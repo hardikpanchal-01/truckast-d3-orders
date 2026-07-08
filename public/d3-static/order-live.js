@@ -169,9 +169,10 @@
         colors: ["#434348", "#90ed7d", "#7cb5ec"],
         title: { text: "Pour Speed (CY/HR)" },
         subtitle: { text: ZOOM_SUB },
-        // Pin the x-axis to 15-minute gaps (D3's Pour Speed spacing for this order),
-        // instead of Highcharts' width-dependent auto ticks.
-        xAxis: { type: "datetime", minRange: 6000, tickInterval: 15 * 60 * 1000, title: { text: null } },
+        // No tickInterval — D3's Pour Speed x-axis lets Highcharts auto-pick the tick
+        // spacing from the chart's pixel width (hourly when wide/long-range, finer when
+        // short). Pinning it to 15 min forced dense labels that didn't adapt responsively.
+        xAxis: { type: "datetime", minRange: 6000, title: { text: null } },
         yAxis: { min: 0, title: { text: "" } },
         tooltip: TOOLTIP,
         legend: { enabled: true },
@@ -193,19 +194,28 @@
       // D3 encodes the truck-count CSV. This gives crisp vertical steps + thin spikes
       // without relying on Highcharts' `step` (which can smear when stacked).
       var stepify = function (arr, key) {
+        // Match D3's actual CSV staircase (confirmed from D3's own D3TKPourInventoryTrucksCSV
+        // render): hold the previous count flat, then a SHORT ~1-min near-vertical riser
+        // into the new count at each event. D3's chart is a STEEP staircase (~77° risers),
+        // NOT gradual slopes.
+        //
+        // Clamp the riser to 40% of the SMALLER neighbouring gap. A brief "hill" — a truck
+        // arrives and another departs seconds later — has a tiny gap on ONE side; clamping
+        // to the min keeps BOTH risers of the spike short, so it renders as a sharp,
+        // symmetric peak like D3 instead of a wide rounded bump. Normal steps (large gaps
+        // both sides) keep the full ~1-min D3 staircase riser.
         var out = [], prev = null, prevX = null;
-        // Give each riser a small diagonal ramp (~1 min, clamped to 40% of the gap to
-        // the previous event) so steps LEAN like D3 instead of being a vertical wall.
-        // Tightly-spaced events clamp down so brief spikes stay thin.
         var RAMP = 60000;
         for (var i = 0; i < arr.length; i++) {
           var x = chartBase + arr[i].t * 60000;
           var y = arr[i][key];
           if (prev !== null) {
-            var ramp = Math.min(RAMP, (x - prevX) * 0.4);
+            var gapBefore = x - prevX;
+            var gapAfter = (i + 1 < arr.length) ? (chartBase + arr[i + 1].t * 60000) - x : Infinity;
+            var ramp = Math.min(RAMP, gapBefore * 0.4, gapAfter * 0.4);
             out.push([x - ramp, prev]); // hold previous count until just before the event
           }
-          out.push([x, y]); // diagonal (not vertical) to the new count at the event
+          out.push([x, y]); // short riser to the new count at the event
           prev = y;
           prevX = x;
         }
@@ -216,40 +226,55 @@
       // the scheduled start until the first truck arrives, and the x-axis begins at 02:00
       // instead of at the first event (~02:06).
       var truckData = (c.trucks || []).slice();
-      var startT = (typeof c.tMin === "number") ? c.tMin
-        : (truckData.length ? truckData[0].t : 0);
-      if (truckData.length && truckData[0].t > startT) {
-        truckData.unshift({ t: startT, waiting: 0, pouring: 0 });
-      }
-      var waiting = stepify(truckData, "waiting");
-      var pouring = stepify(truckData, "pouring");
-      new window.Highcharts.Chart({
-        chart: { renderTo: trucks, type: "area", zoomType: "x", spacingRight: 10, spacingLeft: 10, spacingTop: 10, spacingBottom: 10 },
-        colors: ["#434348", "#90ed7d"],
-        title: { text: "Trucks on the Job" },
-        subtitle: { text: ZOOM_SUB },
-        xAxis: { type: "datetime", minRange: 60000, title: { text: null } },
-        yAxis: { min: 0, title: { text: "" }, allowDecimals: false },
-        tooltip: TOOLTIP,
-        legend: { enabled: true },
-        credits: { enabled: false },
-        plotOptions: {
-          area: {
-            stacking: "normal",
-            lineWidth: 1,
-            // No point marker, and no bold hover marker / halo ring on the hovered node.
-            marker: { enabled: false, states: { hover: { enabled: false } } },
-            states: { hover: { halo: null } },
-            connectNulls: true,
+      if (!truckData.length) {
+        // Pre-pour / will-call order — no truck movement yet. D3 collapses the "Trucks
+        // on the Job" chart entirely (the chat follows the Pour Speed chart directly),
+        // so hide the container instead of leaving an empty 300px chart with a title.
+        trucks.style.display = "none";
+      } else {
+        trucks.style.display = "";
+        var startT = (typeof c.tMin === "number") ? c.tMin : truckData[0].t;
+        if (truckData[0].t > startT) {
+          truckData.unshift({ t: startT, waiting: 0, pouring: 0 });
+        }
+        var waiting = stepify(truckData, "waiting");
+        var pouring = stepify(truckData, "pouring");
+        new window.Highcharts.Chart({
+          chart: { renderTo: trucks, type: "area", zoomType: "x", spacingRight: 10, spacingLeft: 10, spacingTop: 10, spacingBottom: 10 },
+          colors: ["#434348", "#90ed7d"],
+          title: { text: "Trucks on the Job" },
+          subtitle: { text: ZOOM_SUB },
+          xAxis: { type: "datetime", minRange: 60000, title: { text: null } },
+          // No allowDecimals:false — D3 lets Highcharts auto-pick the 2.5 interval
+          // (y-axis 0, 2.5, 5, 7.5). Forcing integers gave 0, 2, 4, 6, 8 instead.
+          yAxis: { min: 0, title: { text: "" } },
+          tooltip: TOOLTIP,
+          legend: { enabled: true },
+          credits: { enabled: false },
+          plotOptions: {
+            area: {
+              stacking: "normal",
+              lineWidth: 1,
+              shadow: false,
+              threshold: null,
+              // D3 keeps the line at width 1 on hover (no thickening). We additionally
+              // suppress the hover marker + halo so hovering shows only the tooltip — no
+              // bold node/border on the point.
+              marker: { enabled: false, states: { hover: { enabled: false } } },
+              states: { hover: { lineWidth: 1, halo: null } },
+              connectNulls: true,
+            },
           },
-        },
-        series: [
-          { name: '"Waiting"', data: waiting },
-          { name: '"Pouring"', data: pouring },
-        ],
-      });
+          series: [
+            { name: '"Waiting"', data: waiting },
+            { name: '"Pouring"', data: pouring },
+          ],
+        });
+      }
     }
-    chartsDone = true;
+    // Only mark charts "done" once the trucks chart has real data — so a pre-pour order
+    // re-renders (and shows the chart) on a later refresh once trucks start moving.
+    if ((c.trucks || []).length) chartsDone = true;
   }
 
   // One D3-style chat bubble. bodyHtml is already-escaped/HTML; timeLabel optional.
@@ -294,8 +319,12 @@
         L.push("Product Name: " + esc(p.item_code || ""));
         L.push("Product Description: " + esc(p.description || ""));
         L.push("Quantity: " + esc(half(p.qty)) + " " + esc(unitFull(p.unit)));
-        L.push("Slump: " + esc(p.slump != null ? p.slump : ""));
-        L.push("Usage: " + esc(p.usage || ""));
+        // Slump & Usage belong to the concrete mix, not admixtures (EA additives like
+        // MR6) — D3 only lists them for the mix, so skip them for non-mix products.
+        if (p.is_mix) {
+          L.push("Slump: " + esc(p.slump != null ? p.slump : ""));
+          L.push("Usage: " + esc(p.usage || ""));
+        }
       });
     }
     return chatBubble(L.join("<br>"), "");
@@ -404,18 +433,25 @@
       var nt = splitTime(d.next_truck);
       var pf = splitTime(d.pour_finish);
       if (hdr) {
+        // NEXT TRUCK links to the Truck Arrival page (active trucks heading to / on the
+        // job). TRUCKS "MAP" opens the Truck Map (D3's TruckMap) — map + truck table.
+        var taHref = "window.top.location.href='/orders/" + ID + "/truck-arrival'";
+        var mapHref = "window.top.location.href='/orders/" + ID + "/truckmap'";
         hdr.innerHTML =
-          tile1x1("NEXT TRUCK", nt.v, nt.sub) +
+          tile1x1("NEXT TRUCK", nt.v, nt.sub, taHref) +
           tile1x1("POUR FINISH", pf.v, pf.sub) +
-          tile1x1("TRUCKS", String(d.trucks || 0), "MAP");
+          tile1x1("TRUCKS", String(d.trucks || 0), "MAP", mapHref);
       }
       if (det) {
         det.innerHTML =
-          tile1x1("ORDERED", half(d.ordered_cy), "CY") +
+          tile1x1("ORDERED", half(d.ordered_cy), "CY", "window.top.location.href='/orders/" + ID + "/details'") +
           tile1x1("TICKETED", half(d.ticketed_cy), "CY", "window.top.location.href='/orders/" + ID + "/tickets'") +
           tile1x1("ON JOB", half(d.on_job_cy), "CY") +
           '<div style="width: 100%; height: 1px; clear: both"></div>' +
-          weatherTile(d.weather);
+          weatherTile(d.weather) +
+          // D3 also shows the Evaporation Rate tile on in-process orders (below weather).
+          '<div style="width: 100%; height: 1px; clear: both"></div>' +
+          evaporationTile(d.evaporation);
       }
     }
     chartBase = dayBase(d.order_date);

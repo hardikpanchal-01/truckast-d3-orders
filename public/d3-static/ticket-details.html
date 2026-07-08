@@ -108,15 +108,19 @@
 
                 <div style="float:right;padding:5px;visibility:visible"><a style="cursor:pointer" onclick="window.print()"><img alt="Download" src="./TicketDetails_files/pdf-icon.48x48pixel.png"></a></div>
 
-                <div id="td-truck" style="display: inline-block; width: 100%;"></div>
-                <div id="td-products" style="display: inline-block; width: 100%;"></div>
-                <div id="td-events" style="display: inline-block; width: 100%;"></div>
+                <!-- Match D3's tile-section structure: a full-width block section with a
+                     clear:both spacer, then an inline-block tiles container (which contains
+                     the floated .tile children). This keeps the vertical spacing between the
+                     truck / products / delivery-step rows identical to D3. -->
+                <div style="width: 100%; display: block"><div style="width: 100%; height: 1px; clear: both"></div><div id="td-truck" style="display: inline-block;"></div></div>
+                <div style="width: 100%; display: block"><div style="width: 100%; height: 1px; clear: both"></div><div id="td-products" style="display: inline-block;"></div></div>
+                <div style="width: 100%; display: block"><div style="width: 100%; height: 1px; clear: both"></div><div id="td-events" style="display: inline-block;"></div></div>
 
             </form>
         </div>
     </div>
 
-    <script src="/d3-static/ticket-details-live.js?v=2"></script>
+    <script src="/d3-static/ticket-details-live.js?v=6"></script>
 </body>
 
 </html>
