@@ -1,4 +1,4 @@
-import { getDoleseOrders } from "@/actions/orderActions";
+import { getDoleseOrders, getActiveAnnouncement } from "@/actions/orderActions";
 import { renderTiles } from "@/lib/d3-orders-html";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +13,8 @@ export async function GET(request: Request): Promise<Response> {
   const today = new Date().toISOString().slice(0, 10);
   const dateStr = searchParams.get("date") || today;
 
-  const orders = await getDoleseOrders(dateStr);
-  const html = renderTiles(orders);
+  const [orders, announcement] = await Promise.all([getDoleseOrders(dateStr), getActiveAnnouncement()]);
+  const html = renderTiles(orders, announcement);
 
   return new Response(html, {
     headers: {

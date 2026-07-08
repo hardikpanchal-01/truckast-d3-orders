@@ -577,6 +577,51 @@ function crackingRisk(rate: number): string {
   return "Normal";
 }
 
+// Map an OpenWeatherMap icon code (e.g. "01n", "04d") to a glyph we ship in Order_files.
+// The full OWM day+night set (01d…50n) is now vendored from D3, so the code maps 1:1.
+function owmGlyph(code: string | undefined): string | undefined {
+  if (!code) return undefined;
+  const m = String(code).match(/^(0[1-9]|1[013]|50)([dn])$/i);
+  return m ? m[1] + m[2].toLowerCase() : undefined;
+}
+
+// Map a WeatherAPI icon URL (…/day/113.png) to the matching OWM-coded D3 glyph (day/night
+// + condition), so the stored WeatherAPI weather renders D3's own weather icon.
+function weatherApiGlyph(iconUrl: string): string | undefined {
+  const m = iconUrl.match(/\/(day|night)\/(\d+)\.png/i);
+  if (!m) return undefined;
+  const dn = m[1].toLowerCase() === "day" ? "d" : "n";
+  const CODE: Record<string, string> = {
+    "113": "01", "116": "02", "119": "03", "122": "04", "143": "50", "248": "50", "260": "50",
+    "176": "10", "293": "10", "296": "10", "299": "10", "302": "10", "305": "10", "308": "10", "356": "10", "359": "10",
+    "263": "09", "266": "09", "281": "09", "284": "09", "311": "09", "314": "09", "353": "09",
+    "200": "11", "386": "11", "389": "11", "392": "11", "395": "11",
+    "179": "13", "182": "13", "185": "13", "227": "13", "230": "13", "317": "13", "320": "13", "323": "13",
+    "326": "13", "329": "13", "332": "13", "335": "13", "338": "13", "350": "13", "362": "13", "365": "13",
+    "368": "13", "371": "13", "374": "13", "377": "13",
+  };
+  return (CODE[m[2]] || "04") + dn;
+}
+
+// Live current weather from OpenWeatherMap at a lat/lng. Returns an OWM-shaped object
+// (main.temp, wind.speed/deg, weather[].description/icon, dt) that the order-detail
+// weather parser already understands. Null on failure so the caller falls back to the
+// stored weather_data JSONB. Short timeout so a slow API never stalls the page.
+async function fetchOWMWeather(lat: number, lng: number, key: string): Promise<Record<string, unknown> | null> {
+  try {
+    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&units=imperial&appid=${key}`;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const j = (await res.json()) as Record<string, unknown>;
+    return j && (j.main || j.weather) ? j : null;
+  } catch {
+    return null;
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /*  1. Market summary (business-unit aggregate)                        */
 /* ------------------------------------------------------------------ */
@@ -923,6 +968,40 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
   return items;
 }
 
+export interface DoleseAnnouncement {
+  tagline: string | null;
+  title: string | null;
+  subtitle: string | null;
+  color: string | null;
+}
+
+/**
+ * The current published promo/announcement (e.g. the weekly Fuel Surcharge) — the red
+ * tile at the top of the orders + market pages. Returns the one live TODAY (published,
+ * with today between start_date/end_date), newest start first, or null if none is active.
+ * Driven by the `announcements` table so the tagline/amount update without a code change.
+ */
+export async function getActiveAnnouncement(): Promise<DoleseAnnouncement | null> {
+  const supabase = await getSupabaseClient();
+  const today = new Date().toISOString().slice(0, 10);
+  // Same filter/order as /api/announcements/active (the market page's source) so the
+  // orders + market pages surface the SAME promo tile.
+  const { data, error } = await supabase
+    .from("announcements")
+    .select("tagline, title, subtitle, color, start_date, end_date, is_published, created_at")
+    .eq("is_published", true)
+    .lte("start_date", today)
+    .gte("end_date", today)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error || !data || !data.length) {
+    if (error) console.error("[ERROR] getActiveAnnouncement:", error.message);
+    return null;
+  }
+  const a = data[0] as { tagline: string | null; title: string | null; subtitle: string | null; color: string | null };
+  return { tagline: a.tagline, title: a.title, subtitle: a.subtitle, color: a.color };
+}
+
 /* ------------------------------------------------------------------ */
 /*  3. Single order detail                                            */
 /* ------------------------------------------------------------------ */
@@ -1003,13 +1082,19 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   // Prefer the plants-table full description ("Moore Batch Plant") over the ticket's
   // short plant_name ("Moore") — D3 shows the full plant name on the weather tile.
   const plantCode = firstTicket?.plant_code || firstSchedule?.plant_code || order.pricing_plant_code;
+  let plantLat: number | null = null;
+  let plantLng: number | null = null;
   if (plantCode) {
     const { data: plant } = await supabase
       .from("plants")
-      .select("description, short_description")
+      .select("description, short_description, latitude, longitude")
       .eq("code", plantCode)
       .maybeSingle();
     plantName = plant?.description || plant?.short_description || null;
+    if (plant?.latitude != null && plant?.longitude != null) {
+      plantLat = Number(plant.latitude);
+      plantLng = Number(plant.longitude);
+    }
   }
   if (!plantName) plantName = firstTicket?.plant_name || null;
 
@@ -1439,6 +1524,22 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   const lastTicket = tickets.length
     ? tickets.reduce((a, b) => ((b.ticket_code || "") > (a.ticket_code || "") ? b : a))
     : null;
+  // Measured concrete temperature for the evaporation estimate — D3 uses the CURRENT
+  // ticket's Verifi reading (temp at discharge/pour), not a fixed value, so the tile and
+  // the Evaporation Details page vary (75F, 92F…). Fall back arrival → leave-plant → 85.
+  let measuredConcreteF: number | null = null;
+  if (lastTicket) {
+    const { data: lt } = await supabase
+      .from("tickets").select("verifi_json").eq("ticket_id", lastTicket.ticket_id).maybeSingle();
+    const vj = (lt?.verifi_json as Record<string, unknown>) || null;
+    if (vj) {
+      const tv = (k: string) => {
+        const s = vVal(vj[k], "temperatureUnitsValue");
+        return s != null && s !== "" ? Number(s) : null;
+      };
+      measuredConcreteF = tv("temperatureAtDischarge") ?? tv("temperatureAtArrival") ?? tv("temperatureAtLeavePlant");
+    }
+  }
   // Completion follows the D3 spec: Complete once the POURED-OUT volume reaches the
   // ordered amount (not the dispatch flag, not merely "all loads ticketed"). Keeps the
   // detail page in step with the tile list and with D3.
@@ -1603,7 +1704,19 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   // older rows use the OpenWeatherMap shape. Handle both.
   let weather: DoleseOrderDetail["weather"] = null;
   let evaporation: DoleseOrderDetail["evaporation"] = null;
-  const w = order.weather_data as Record<string, unknown> | null;
+  // Dynamic: fetch live current weather from OpenWeatherMap at the PLANT location (the
+  // ORDER HELP shows plant-local weather). Falls back to the stored weather_data JSONB
+  // when the key/coords are missing or the API call fails.
+  const owmKey = process.env.OPENWEATHERMAP_API_KEY;
+  let w = order.weather_data as Record<string, unknown> | null;
+  // Prefer LIVE OpenWeatherMap at the plant — that's exactly what the D3 ORDER HELP tile
+  // shows (e.g. "82.96F Clear Sky", H 71% P 1016 W 3 S), not the stored WeatherAPI sync
+  // ("Sunny", 67%, 10.3 SSW). Fall back to the stored weather_data only if the live call
+  // fails or the key/coords are missing.
+  if (owmKey && plantLat != null && plantLng != null) {
+    const live = await fetchOWMWeather(plantLat, plantLng, owmKey);
+    if (live) w = live;
+  }
   if (w && typeof w === "object") {
     const num = (v: unknown): number | undefined => {
       const n = typeof v === "number" ? v : v != null && v !== "" ? Number(v) : NaN;
@@ -1652,23 +1765,30 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     }
 
     if (tempF != null || desc) {
+      // Match D3's ORDER HELP formatting: temp to 2 decimals with an "F" suffix (no degree
+      // sign), Title-Cased condition ("clear sky" → "Clear Sky"), whole-number wind speed.
+      const titleCase = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase());
       weather = {
-        temp: tempF != null ? `${Math.round(tempF * 10) / 10}°F` : undefined,
-        description: desc,
+        temp: tempF != null ? `${tempF.toFixed(2)}F` : undefined,
+        description: desc ? titleCase(desc) : undefined,
         place: plantName || order.pricing_plant_code || undefined,
         humidity: humidity != null ? `${Math.round(humidity)}%` : undefined,
         pressure: pressure != null ? String(Math.round(pressure)) : undefined,
-        wind: windMph != null ? String(Math.round(windMph * 100) / 100) : undefined,
+        wind: windMph != null ? String(Math.round(windMph)) : undefined,
         direction,
         updated,
-        // The weatherapi icon is an external CDN URL we don't load; the client
-        // falls back to a local cloud glyph.
-        icon: undefined,
+        // Icon: map the stored WeatherAPI icon (day/night + condition) to D3's own weather
+        // glyph vendored in Order_files; else map the OpenWeatherMap code the same way.
+        icon:
+          (typeof w.weather_icon === "string" && w.weather_icon ? weatherApiGlyph(w.weather_icon as string) : undefined) ??
+          owmGlyph(Array.isArray(w.weather) ? ((w.weather[0] as Record<string, unknown>)?.icon as string) : undefined),
       };
 
-      // Surface-evaporation estimate (assumes concrete placed at 85°F, as the live app does).
+      // Surface-evaporation estimate. Concrete temp = the current ticket's measured Verifi
+      // reading (D3 shows the real placement temp — 75F, 92F…); fall back to 85°F only when
+      // no Verifi temperature is available yet.
       if (tempF != null && humidity != null && windMph != null) {
-        const CONCRETE_F = 85;
+        const CONCRETE_F = measuredConcreteF ?? 85;
         const rate = evaporationRate(tempF, humidity, windMph, CONCRETE_F);
         evaporation = {
           rate,
@@ -2142,13 +2262,18 @@ export async function getDoleseTruckArrival(orderId: number): Promise<DoleseTruc
 export interface DoleseTruckMapRow {
   ticket_code: string | null;
   truck_code: string | null;
+  driver_code: string | null;
   driver_name: string | null;
-  status: string; // "At Job" / "Pouring" / "To Job" / "Loaded" …
-  last_update: string | null; // clock of the latest stage stamp
+  order_code: string | null;
+  product: string | null; // mix item code (e.g. A405A3)
+  status: string; // "At Job" / "Pouring" / "To Job" / "Loaded" / "To Plant" …
+  last_update: string | null; // clock of the latest GPS/stage update
   load_number: number; // this truck's load sequence in the order (1-based)
   volume_cy: number; // this load's CY
   shipped_cy: number; // cumulative CY delivered through this load
   plant_code: string | null;
+  lat: number | null; // live GPS from the trucks table
+  lng: number | null;
 }
 export interface DoleseTruckMap {
   order_id: number;
@@ -2162,11 +2287,12 @@ export interface DoleseTruckMap {
   trucks: DoleseTruckMapRow[];
 }
 
-// Ticket stage → the status text D3's TruckMap table uses.
+// Ticket stage → the status text D3's TruckMap uses (title-case stage; the marker
+// colour maps "To Plant" to the pink "Returning" legend swatch client-side).
 const MAP_STATUS: Record<string, string> = {
   PRINTED: "Ticketed", LOADING: "Loading", LOADED: "Loaded", "TO JOB": "To Job",
   "ON JOB": "At Job", "AT JOB": "At Job", POURING: "Pouring", POURED: "Poured",
-  WASHING: "Washing", "TO PLANT": "Returning", "AT PLANT": "At Plant",
+  WASHING: "Washing", "TO PLANT": "To Plant", "AT PLANT": "At Plant",
 };
 
 /**
@@ -2209,24 +2335,26 @@ export async function getDoleseTruckMap(orderId: number): Promise<DoleseTruckMap
     }
   }
 
-  type MapTicket = TicketRow & { driver_name: string | null; plant_code: string | null };
+  type MapTicket = TicketRow & { driver_name: string | null; driver_code: string | null; plant_code: string | null };
   const { data: tix } = await supabase
     .from("tickets")
-    .select(`${TICKET_FIELDS}, driver_name, plant_code`)
+    .select(`${TICKET_FIELDS}, driver_name, driver_code, plant_code`)
     .eq("order_id", orderId)
     .limit(500);
   const tickets = ((tix || []) as MapTicket[]).filter(isValidTicket);
 
   const cyByTicket = new Map<number, number>();
+  const mixByTicket = new Map<number, string>();
   if (tickets.length > 0) {
     const { data: tp } = await supabase
       .from("ticket_products")
-      .select("ticket_id, is_mix, load_qty, order_qty_unit")
+      .select("ticket_id, is_mix, load_qty, order_qty_unit, item_code")
       .in("ticket_id", tickets.map((t) => t.ticket_id))
       .limit(2000);
     for (const p of tp || []) {
       if (p.is_mix === true && isCubicYardUnit(p.order_qty_unit)) {
         cyByTicket.set(p.ticket_id, (cyByTicket.get(p.ticket_id) || 0) + Number(p.load_qty || 0));
+        if (p.item_code && !mixByTicket.has(p.ticket_id)) mixByTicket.set(p.ticket_id, p.item_code);
       }
     }
   }
@@ -2242,11 +2370,13 @@ export async function getDoleseTruckMap(orderId: number): Promise<DoleseTruckMap
     cumCY.set(t.ticket_id, Math.round(running * 100) / 100);
   });
 
-  // Active = dispatched (printed) and not yet returned to plant; dedup by truck (most-
-  // advanced ticket), same rule as Truck Arrival.
-  const stageRank: Record<string, number> = { PRINTED: 0, LOADING: 1, LOADED: 2, "TO JOB": 3, "ON JOB": 4, POURING: 5 };
-  const isFinished = (t: TicketRow) => has(t.end_unload) || has(t.wash_time) || has(t.to_plant_time) || has(t.at_plant_time);
-  const inPipeline = tickets.filter((t) => has(t.printed_time) && !isFinished(t));
+  // "On the map" = dispatched (printed) and not yet back AT the plant — this KEEPS
+  // washing/returning ("To Plant") trucks, which D3's TruckMap shows (unlike Truck
+  // Arrival, which drops them). Dedup by truck, keeping the most-advanced ticket.
+  const stageRank: Record<string, number> = {
+    PRINTED: 0, LOADING: 1, LOADED: 2, "TO JOB": 3, "ON JOB": 4, POURING: 5, POURED: 6, WASHING: 7, "TO PLANT": 8,
+  };
+  const inPipeline = tickets.filter((t) => has(t.printed_time) && !has(t.at_plant_time));
   const byTruck = new Map<string, MapTicket>();
   for (const t of inPipeline) {
     const key = t.truck_code || `t${t.ticket_id}`;
@@ -2258,18 +2388,45 @@ export async function getDoleseTruckMap(orderId: number): Promise<DoleseTruckMap
   }
   const active = [...byTruck.values()].sort((a, b) => (loadNo.get(a.ticket_id) || 0) - (loadNo.get(b.ticket_id) || 0));
 
+  // Live truck GPS + last-update time from the `trucks` table (joined by truck code).
+  const truckCodes = active.map((t) => (t.truck_code || "").trim()).filter(Boolean);
+  const gpsByTruck = new Map<string, { lat: number; lng: number; updated: string | null }>();
+  if (truckCodes.length) {
+    const { data: gps } = await supabase
+      .from("trucks")
+      .select("code, latitude, longitude, location_update_time")
+      .in("code", truckCodes);
+    for (const g of gps || []) {
+      if (g.latitude != null && g.longitude != null) {
+        gpsByTruck.set(String(g.code).trim(), {
+          lat: Number(g.latitude), lng: Number(g.longitude), updated: g.location_update_time as string | null,
+        });
+      }
+    }
+  }
+
   const trucks: DoleseTruckMapRow[] = active.map((t) => {
     const stage = ticketStage(t);
+    const code = (t.truck_code || "").trim();
+    const g = gpsByTruck.get(code);
+    // Prefer the GPS ping time for "Last Update" (that's what D3 shows); fall back to the
+    // latest stage stamp.
+    const lastUpdate = g?.updated ? fmtTime(g.updated, true) : stage.time ? fmtTime(stage.time, true) : null;
     return {
       ticket_code: t.ticket_code,
-      truck_code: (t.truck_code || "").trim() || null,
+      truck_code: code || null,
+      driver_code: (t.driver_code || "").trim() || null,
       driver_name: t.driver_name,
+      order_code: order.order_code,
+      product: mixByTicket.get(t.ticket_id) || null,
       status: MAP_STATUS[stage.label] || stage.label,
-      last_update: stage.time ? (fmtTime(stage.time, true) || "").trim() : null,
+      last_update: lastUpdate ? lastUpdate.trim() : null,
       load_number: loadNo.get(t.ticket_id) || 0,
       volume_cy: Math.round((cyByTicket.get(t.ticket_id) || 0) * 100) / 100,
       shipped_cy: cumCY.get(t.ticket_id) || 0,
       plant_code: t.plant_code || plant?.code || null,
+      lat: g ? g.lat : null,
+      lng: g ? g.lng : null,
     };
   });
 
