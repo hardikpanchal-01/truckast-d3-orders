@@ -19,6 +19,11 @@
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
+  // Strip trailing corporate suffixes so the customer reads like D3's short name
+  // ("UNLIMITED CONSTRUCTION SERVICES LLC" → "UNLIMITED CONSTRUCTION").
+  function shortCustomer(name) {
+    return String(name || "").replace(/\s+(SERVICES\s+)?(L\.?L\.?C\.?|INC\.?|INCORPORATED|CORP\.?|CORPORATION|COMPANY|CO\.?|L\.?P\.?|LLP|PLLC|LTD\.?)\.?\s*$/i, "").trim() || String(name || "");
+  }
   // Concrete is half-yard increments → show CY to nearest 0.50 (kills float artifacts).
   function half(n) { return (Math.round(Number(n || 0) * 2) / 2).toFixed(2); }
   function mdShort(s) {
@@ -53,16 +58,19 @@
 
   function weatherTile(w, finalLabel) {
     if (!w) return "";
-    // Pick the D3 weather glyph from the condition text: clear → 01N, else clouds (04n).
+    // icon may be a full URL or a bare glyph code (e.g. "01d"). A bare code resolves to
+    // D3's OWN weather glyph, vendored locally in Order_files (downloaded from D3's
+    // images/weather/ — the white line-art sun/moon set, NOT the red Images/icons set).
     var desc = String((w && w.description) || "").toLowerCase();
-    var icon = w.icon ? ASSET + "/" + w.icon + ".png"
+    var icon = w.icon
+      ? (/^(https?:)?\/\//.test(w.icon) ? w.icon : ASSET + "/" + w.icon + ".png")
       : desc.indexOf("clear") >= 0 ? ASSET + "/01N.PNG"
       : ASSET + "/04n.png";
     return (
       '<div class="tile" style="position: relative; background-color: ' + BLUE + '; cursor: default; display: block;">' +
       '<div class="tileContainer"><div class="tileIcon"><img src="' + icon + '" onerror="this.src=\'' + ASSET + '/04n.png\'"></div>' +
       '<div class="tileInfoSection"><div class="tileCell">' +
-      '<div class="tileSuperTitle"><span style="font-size:11px;font-weight:bold">' + esc(w.place || "") + "</span></div>" +
+      '<div class="tileSuperTitle"><span style="font-size:11px;font-weight:bold">' + esc(String(w.place || "").toUpperCase().replace(/^CEMCO\s+/, "")) + "</span></div>" +
       '<div class="tileTitle"><span style="font-size:14px;font-weight:bold">' + esc(((w.temp || "") + " " + (w.description || "")).trim()) + "</span></div>" +
       '<div class="tileSubTitle">H: ' + esc(w.humidity || "") + "   P: " + esc(w.pressure || "") + "   W: " + esc(w.wind || "") + " " + esc(w.direction || "") +
       (w.updated ? "<br>" + (finalLabel ? "Final Update: " : "Last Update: ") + esc(w.updated) : "") + "</div>" +
@@ -71,20 +79,22 @@
   }
 
   // Evaporation-rate tile (shown on Completed orders in D3). Coloured by shrinkage-
-  // cracking risk: Normal = green, Caution = yellow, High/Severe = red.
+  // cracking risk: Normal = green, Caution = yellow, High/Severe = red. Clicking it opens
+  // the Evaporation Details page (D3's evaporationdetails).
   function evaporationTile(e) {
     if (!e) return "";
     var risk = String(e.risk || "").toLowerCase();
     var bg = risk.indexOf("high") >= 0 || risk.indexOf("severe") >= 0 ? RED
            : risk.indexOf("caution") >= 0 ? YELLOW : GREEN;
+    var href = "window.top.location.href='/orders/" + ID + "/evaporation'";
     return (
-      '<div class="tile" style="position: relative; background-color: ' + bg + '; cursor: default; display: block;">' +
+      '<div class="tile" style="position: relative; background-color: ' + bg + '; cursor: pointer; display: block;" onclick="' + href + '">' +
+      '<img src="' + ASSET + '/dogear.png" style="position:absolute;right:0;bottom:0">' +
       '<div class="tileContainer"><div class="tileIcon"><img src="' + ASSET + '/EVAPORATIONRATEVERIFI.PNG"></div>' +
       '<div class="tileInfoSection"><div class="tileCell">' +
-      '<div class="tileSuperTitle"><span style="font-size:14px;font-weight:bold">Evaporation Rate </span></div>' +
+      '<div class="tileSuperTitle"><span style="font-size:14px;font-weight:bold">Evaporation Rate ' + (e.ticketNo ? " TN:" + esc(e.ticketNo) : "") + "</span></div>" +
       '<div class="tileTitle"><span style="font-size:12px;font-weight:bold">Concrete: ' + esc(e.concreteTempF != null ? e.concreteTempF + "F" : "") + ", " + esc(e.rate != null ? e.rate + " lb/ft^2/hr" : "") + "<br>Shrinkage Cracking: " + esc(e.risk || "") + "</span></div>" +
-      '<div class="tileSubTitle"><span style="font-size:11px;font-weight:normal">' +
-      (e.ticketNo ? "Please use as a guide  TN:" + esc(e.ticketNo) : "Please use as a guide") + "</span></div>" +
+      '<div class="tileSubTitle"><span style="font-size:11px;font-weight:normal">Please use as a guide More information...</span></div>' +
       "</div></div></div></div>"
     );
   }
@@ -383,7 +393,7 @@
   function render(d) {
     setText("d3-title", "ORDER " + d.order_code + "-" + mdShort(d.order_date));
     setText("d3-subtitle", (d.delivery_addr1 || d.project_name || "").toUpperCase());
-    setText("d3-status", (STATUS[d.status] || d.status) + " - " + (d.customer_name || ""));
+    setText("d3-status", (STATUS[d.status] || d.status) + " - " + shortCustomer(d.customer_name));
 
     var hdr = document.getElementById("d3-header-tiles");
     var det = document.getElementById("d3-detail-tiles");
