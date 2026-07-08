@@ -13,7 +13,7 @@
   var ASSET = "/d3-static/TicketDetails_files";
   var BLUE = "rgb(47, 126, 216)";
   var GREEN = "rgb(69, 139, 0)";
-  var DARK = "rgb(67, 67, 72)"; // Verifi sensor cards
+  var DARK = "rgb(63, 63, 63)"; // Verifi sensor cards (D3's exact shade)
   var STATUS = { IN_PROCESS: "IN PROCESS", PRE_POUR: "PRE-POUR", COMPLETED: "COMPLETE", CANCELED: "CANCELLED" };
   // Event icon slug → vendored glyph. Truck-status stages + the Verifi logo.
   var ICON = {
@@ -28,6 +28,9 @@
   }
   function setText(id, s) { var el = document.getElementById(id); if (el) el.textContent = s; }
   function iconFor(slug) { return ASSET + "/" + (ICON[slug] || "order_2") + ".png"; }
+  // Uppercase the plant name and restore D3's "PORTABLE #N" convention (our synced
+  // data stores portable plants as "Portable N" without the #).
+  function plantName(s) { return String(s || "").toUpperCase().replace(/\bPORTABLE\s+(\d)/, "PORTABLE #$1"); }
 
   // One D3 tile (274x90): icon + super/title/sub text. bg = background colour.
   function tile(bg, iconSlug, superT, title, sub) {
@@ -53,7 +56,7 @@
     if (truck) {
       truck.innerHTML = tile(
         BLUE, "truck",
-        d.plant_name ? "PLANT: " + d.plant_name : "",
+        d.plant_name ? "PLANT: " + plantName(d.plant_name) : "",
         "TRUCK: " + (d.truck_code || "—"),
         d.printed_stamp || ""
       );
@@ -63,7 +66,7 @@
     var prods = document.getElementById("td-products");
     if (prods) {
       prods.innerHTML = (d.products || []).map(function (p) {
-        var name = (p.item_code || "") + (p.description ? " (" + p.description + ")" : "");
+        var name = ((p.item_code || "") + (p.description ? " (" + p.description + ")" : "")).toUpperCase();
         return tile(p.is_mix ? GREEN : BLUE, "order", name,
           (Number(p.qty || 0)).toFixed(2) + " " + (p.unit || ""),
           p.slump != null ? "SLUMP: " + p.slump + " IN" : "");

@@ -13,15 +13,21 @@
   // Ticket-stage label → D3 status glyph (…_2.png). Missing early stages fall back to loading.
   var ICON = {
     "AT PLANT": "at_plant_2", "TO PLANT": "to_plant_2", "WASHING": "washing_2",
-    "POURED": "end_pour_2", "POURING": "pouring_2", "ON JOB": "at_job_2",
+    "POURED": "end_pour_2", "POURING": "pouring_2", "AT JOB": "at_job_2",
     "TO JOB": "to_job_2", "LOADED": "loaded_2", "LOADING": "loading_2",
-    "PRINTED": "loading_2", "ORDERED": "loading_2",
+    "TICKETED": "ticket_2", "ORDERED": "loading_2",
   };
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
-  function num(n) { return (Math.round(Number(n || 0) * 100) / 100).toFixed(2); }
+  // Concrete is half-yard increments — show CY to the nearest 0.50 (turns e.g. 315.01 → 315.00).
+  function num(n) { return (Math.round(Number(n || 0) * 2) / 2).toFixed(2); }
+  // Strip trailing corporate suffixes so the customer reads like D3's short name
+  // ("UNLIMITED CONSTRUCTION SERVICES LLC" → "UNLIMITED CONSTRUCTION").
+  function shortCustomer(name) {
+    return String(name || "—").replace(/\s+(SERVICES\s+)?(L\.?L\.?C\.?|INC\.?|INCORPORATED|CORP\.?|CORPORATION|COMPANY|CO\.?|L\.?P\.?|LLP|PLLC|LTD\.?)\.?\s*$/i, "").trim() || String(name || "—");
+  }
   function mdShort(s) {
     if (!s) return "";
     var p = String(s).slice(0, 10).split("-");
@@ -40,9 +46,9 @@
       '" onerror="this.onerror=null;this.src=\'' + ASSET + '/at_plant_2.png\'"></div>' +
       '<div class="tileInfoSection"><div class="tileCell">' +
       '<div class="tileSuperTitle">LOAD # ' + esc(l.load_no) + "</div>" +
-      // Truck + plant on its own line, always suffixed with "..." (D3 shows the ellipsis
-      // to hint there's more detail behind the tile).
-      '<div class="tileSuperTitle" style="white-space:normal;word-wrap:break-word;overflow-wrap:break-word">TRUCK ' + esc(l.truck_code || "—") +
+      // Truck + plant on ONE line — no wrap; overflow is clipped with an ellipsis (D3 shows
+      // the "..." to hint there's more detail behind the tile).
+      '<div class="tileSuperTitle" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">TRUCK ' + esc(l.truck_code || "—") +
       (l.plant_name ? " - " + esc(String(l.plant_name).toUpperCase()) : "") + " ...</div>" +
       '<div class="tileTitle">' + esc(l.ticket_code || "—") + ": " + num(l.load_cy) + " CY</div>" +
       '<div class="tileSubTitle">' + (l.status_time ? esc(l.status_time) + " " : "") +
@@ -69,7 +75,7 @@
   function render(d) {
     setText("d3-title", "ORDER " + d.order_code + "-" + mdShort(d.order_date));
     setText("d3-subtitle", String(d.subtitle || "").toUpperCase());
-    setText("d3-status", (STATUS[d.status] || d.status) + " - " + (d.customer_name || "—"));
+    setText("d3-status", (STATUS[d.status] || d.status) + " - " + shortCustomer(d.customer_name));
     var t = document.getElementById("ts-tiles");
     if (t) {
       t.innerHTML = (d.loads || []).map(loadTile).join("");
