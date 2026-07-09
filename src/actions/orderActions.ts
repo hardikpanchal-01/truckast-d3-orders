@@ -2885,12 +2885,14 @@ export async function searchCompanies(q: string): Promise<CompanySearchResult[]>
 
   const supabase = await getSupabaseClient();
 
+  // Production returns ALL active companies when SEARCH is clicked.
+  // The client-side "Search" filter handles filtering by text.
   const { data: custs, error } = await supabase
     .from("customers")
-    .select("id, code, name")
-    .or(`name.ilike.%${term}%,code.ilike.%${term}%`)
-    .order("name", { ascending: true })
-    .limit(50);
+    .select("id, code, name, sort_name")
+    .is("inactive", null)
+    .order("sort_name", { ascending: true })
+    .limit(2000);
 
   if (error) {
     console.error("[ERROR] searchCompanies:", error.message);
@@ -2899,17 +2901,34 @@ export async function searchCompanies(q: string): Promise<CompanySearchResult[]>
 
   if (!custs || custs.length === 0) return [];
 
-  // Get project counts for each customer
   const custIds = custs.map((c) => c.id);
-  const { data: projCounts } = await supabase
-    .from("projects")
-    .select("customer_id")
-    .in("customer_id", custIds);
 
+  // Get project counts
   const projectCountMap = new Map<number, number>();
-  for (const p of projCounts || []) {
-    if (p.customer_id != null) {
-      projectCountMap.set(p.customer_id, (projectCountMap.get(p.customer_id) || 0) + 1);
+  if (custIds.length) {
+    const { data: projLinks } = await supabase
+      .from("projects")
+      .select("customer_id")
+      .in("customer_id", custIds);
+    for (const p of projLinks || []) {
+      if (p.customer_id != null) {
+        projectCountMap.set(p.customer_id, (projectCountMap.get(p.customer_id) || 0) + 1);
+      }
+    }
+  }
+
+  // Get user counts from user_customers table
+  const userCountMap = new Map<number, number>();
+  if (custIds.length) {
+    const { data: userLinks } = await supabase
+      .from("user_customers")
+      .select("customer_id")
+      .in("customer_id", custIds)
+      .limit(5000);
+    for (const l of userLinks || []) {
+      if (l.customer_id != null) {
+        userCountMap.set(l.customer_id, (userCountMap.get(l.customer_id) || 0) + 1);
+      }
     }
   }
 
@@ -2918,7 +2937,7 @@ export async function searchCompanies(q: string): Promise<CompanySearchResult[]>
     name: c.name,
     code: c.code,
     project_count: projectCountMap.get(c.id) || 0,
-    user_count: 15, // Placeholder - would need user_customers table query
+    user_count: userCountMap.get(c.id) || 0,
   }));
 }
 
@@ -2940,24 +2959,42 @@ export async function searchProjectsByName(q: string): Promise<ProjectSearchResu
 
   const supabase = await getSupabaseClient();
 
+  // Production returns ALL projects when SEARCH is clicked.
   const { data: projs, error } = await supabase
     .from("projects")
     .select("id, code, name, customer_name")
-    .or(`name.ilike.%${term}%,customer_name.ilike.%${term}%`)
     .order("name", { ascending: true })
-    .limit(50);
+    .limit(2000);
 
   if (error) {
     console.error("[ERROR] searchProjectsByName:", error.message);
     return [];
   }
 
-  return (projs || []).map((p) => ({
+  if (!projs || projs.length === 0) return [];
+
+  // Get user counts from user_projects table
+  const projIds = projs.map((p) => p.id);
+  const userCountMap = new Map<number, number>();
+  if (projIds.length) {
+    const { data: userLinks } = await supabase
+      .from("user_projects")
+      .select("project_id")
+      .in("project_id", projIds)
+      .limit(5000);
+    for (const l of userLinks || []) {
+      if (l.project_id != null) {
+        userCountMap.set(l.project_id, (userCountMap.get(l.project_id) || 0) + 1);
+      }
+    }
+  }
+
+  return projs.map((p) => ({
     id: p.id,
     name: p.name,
     code: p.code,
     customer_name: p.customer_name,
-    user_count: 15, // Placeholder
+    user_count: userCountMap.get(p.id) || 0,
   }));
 }
 
