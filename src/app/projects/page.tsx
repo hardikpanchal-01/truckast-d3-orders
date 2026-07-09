@@ -1,28 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { SubHeader } from "@/components/d3-ui";
 
-const btnStyle = {
-  width: 250,
-  // content-box (like Bootstrap) so width:250 is the CONTENT width and the padding +
-  // border sit outside it — box model: content 250×20, padding 11/19, border 1.
-  boxSizing: "content-box" as const,
-  display: "inline-block",
-  padding: "11px 19px",
-  fontSize: "17.5px",
-  lineHeight: "20px",
-  textAlign: "center" as const,
-  textShadow: "0 -1px 0 rgba(0, 0, 0, 0.25)",
-  backgroundColor: "#006dcc",
-  backgroundImage: "linear-gradient(to bottom, #0088cc, #0044cc)",
-  backgroundRepeat: "repeat-x",
-  border: "1px solid #0044cc",
-  borderColor: "rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.1) rgba(0, 0, 0, 0.25)",
-  borderRadius: "6px",
-  boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05)",
-  color: "#fff",
-  fontWeight: "normal",
-  cursor: "pointer",
-};
+import styles from "./projects.module.css";
 
 export default function ProjectsPage() {
   return (
@@ -30,11 +11,11 @@ export default function ProjectsPage() {
       <SubHeader title="INVITE TO" backHref="/" />
 
       <div className="flex flex-col gap-3">
-        <Link href="/projects/company" style={btnStyle}>
+        <Link href="/projects/company" className={styles.btn}>
           COMPANY
         </Link>
 
-        <Link href="/projects/project" style={btnStyle}>
+        <Link href="/projects/project" className={styles.btn}>
           PROJECT
         </Link>
       </div>
