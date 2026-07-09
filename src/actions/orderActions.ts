@@ -1521,23 +1521,35 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   // appended last by the client, matching D3's newest→oldest feed.
   const activityFeed = [...activity, ...noteActivity];
 
-  const lastTicket = tickets.length
-    ? tickets.reduce((a, b) => ((b.ticket_code || "") > (a.ticket_code || "") ? b : a))
-    : null;
   // Measured concrete temperature for the evaporation estimate — D3 uses the CURRENT
-  // ticket's Verifi reading (temp at discharge/pour), not a fixed value, so the tile and
-  // the Evaporation Details page vary (75F, 92F…). Fall back arrival → leave-plant → 85.
+  // load's Verifi reading (temp at discharge/pour), not a fixed value, so the tile and
+  // the Evaporation Details page vary (75F, 92F…). "Current" = the most recent load that
+  // has actually POURED OUT: a truck still en route can carry a stale pre-discharge temp
+  // (e.g. a leave-plant value) and a poured load may have no Verifi reading at all, so we
+  // walk newest→oldest through the poured-out loads and take the first with a real temp.
+  // Keying on the single highest ticket number instead (its verifi_json is often null) is
+  // why the tile silently vanished on some in-process orders.
+  const evapCandidates = tickets
+    .filter(isPouredOut)
+    .sort((a, b) => (b.ticket_code || "").localeCompare(a.ticket_code || ""));
   let measuredConcreteF: number | null = null;
-  if (lastTicket) {
-    const { data: lt } = await supabase
-      .from("tickets").select("verifi_json").eq("ticket_id", lastTicket.ticket_id).maybeSingle();
-    const vj = (lt?.verifi_json as Record<string, unknown>) || null;
-    if (vj) {
+  let evapTicket: TicketRow | null = null;
+  if (evapCandidates.length) {
+    const { data: vrows } = await supabase
+      .from("tickets").select("ticket_id, verifi_json")
+      .in("ticket_id", evapCandidates.map((t) => t.ticket_id));
+    const vById = new Map(
+      (vrows || []).map((r) => [r.ticket_id, (r.verifi_json as Record<string, unknown>) || null]),
+    );
+    for (const t of evapCandidates) { // newest → oldest
+      const vj = vById.get(t.ticket_id);
+      if (!vj) continue;
       const tv = (k: string) => {
         const s = vVal(vj[k], "temperatureUnitsValue");
         return s != null && s !== "" ? Number(s) : null;
       };
-      measuredConcreteF = tv("temperatureAtDischarge") ?? tv("temperatureAtArrival") ?? tv("temperatureAtLeavePlant");
+      const temp = tv("temperatureAtDischarge") ?? tv("temperatureAtArrival") ?? tv("temperatureAtLeavePlant");
+      if (temp != null) { measuredConcreteF = temp; evapTicket = t; break; }
     }
   }
   // Completion follows the D3 spec: Complete once the POURED-OUT volume reaches the
@@ -1784,17 +1796,18 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
           owmGlyph(Array.isArray(w.weather) ? ((w.weather[0] as Record<string, unknown>)?.icon as string) : undefined),
       };
 
-      // Surface-evaporation estimate. Concrete temp = the current ticket's measured Verifi
-      // reading (D3 shows the real placement temp — 75F, 92F…); fall back to 85°F only when
-      // no Verifi temperature is available yet.
-      if (tempF != null && humidity != null && windMph != null) {
-        const CONCRETE_F = measuredConcreteF ?? 85;
+      // Surface-evaporation estimate — the "EvaporationRateVerifi" tile. D3 only shows it
+      // when the current ticket has a REAL Verifi concrete-temperature reading; with no
+      // Verifi temp there's no tile (D3 does not fall back to a default). So gate the whole
+      // estimate on measuredConcreteF being present — no reading → no evaporation → no tile.
+      if (measuredConcreteF != null && tempF != null && humidity != null && windMph != null) {
+        const CONCRETE_F = measuredConcreteF;
         const rate = evaporationRate(tempF, humidity, windMph, CONCRETE_F);
         evaporation = {
           rate,
           concreteTempF: CONCRETE_F,
           risk: crackingRisk(rate),
-          ticketNo: lastTicket?.ticket_code ?? null,
+          ticketNo: evapTicket?.ticket_code ?? null,
         };
       }
     }
@@ -2327,9 +2340,12 @@ export async function getDoleseTruckMap(orderId: number): Promise<DoleseTruckMap
       .limit(1)
       .maybeSingle();
     if (p && p.latitude != null && p.longitude != null) {
+      // address3 holds "State ZIP" (e.g. "Oklahoma 73448"); D3's Zip Code column shows just
+      // the numeric ZIP, so pull the 5-digit (or ZIP+4) out and fall back to the raw string.
+      const zipMatch = (p.address3 || "").match(/\d{5}(?:-\d{4})?/);
       plant = {
         code: p.code, name: p.description, address: p.address1 || null,
-        city: p.address2 || null, zip: p.address3 || null,
+        city: p.address2 || null, zip: zipMatch ? zipMatch[0] : p.address3 || null,
         lat: Number(p.latitude), lng: Number(p.longitude),
       };
     }
@@ -2370,13 +2386,14 @@ export async function getDoleseTruckMap(orderId: number): Promise<DoleseTruckMap
     cumCY.set(t.ticket_id, Math.round(running * 100) / 100);
   });
 
-  // "On the map" = dispatched (printed) and not yet back AT the plant — this KEEPS
-  // washing/returning ("To Plant") trucks, which D3's TruckMap shows (unlike Truck
-  // Arrival, which drops them). Dedup by truck, keeping the most-advanced ticket.
+  // "On the map" = actually dispatched (LOADING or later) and not yet back AT the plant —
+  // this KEEPS washing/returning ("To Plant") trucks, which D3's TruckMap shows (unlike
+  // Truck Arrival). TICKETED-only trucks (printed, not yet loading) are EXCLUDED — they
+  // haven't started moving. Dedup by truck, keeping the most-advanced ticket.
   const stageRank: Record<string, number> = {
-    PRINTED: 0, LOADING: 1, LOADED: 2, "TO JOB": 3, "ON JOB": 4, POURING: 5, POURED: 6, WASHING: 7, "TO PLANT": 8,
+    TICKETED: 0, LOADING: 1, LOADED: 2, "TO JOB": 3, "AT JOB": 4, POURING: 5, POURED: 6, WASHING: 7, "TO PLANT": 8,
   };
-  const inPipeline = tickets.filter((t) => has(t.printed_time) && !has(t.at_plant_time));
+  const inPipeline = tickets.filter((t) => has(t.load_time) && !has(t.at_plant_time));
   const byTruck = new Map<string, MapTicket>();
   for (const t of inPipeline) {
     const key = t.truck_code || `t${t.ticket_id}`;
@@ -3010,21 +3027,27 @@ export interface OrderRequestItem {
   ordered_cy: number;
   address: string | null;
   customer_name: string | null;
-  status: "active" | "scheduled";
+  // D3 request states → tile colour: active (Restarted, blue), scheduled
+  // (Scheduled, green), cancelled (Cancelled, red).
+  status: "active" | "scheduled" | "cancelled";
 }
 
 export async function getOrderRequests(): Promise<OrderRequestItem[]> {
   const supabase = await getSupabaseClient();
 
-  // Get today's orders only
+  // Get today's orders only. order_date is a full timestamp (e.g.
+  // 2026-07-09T01:00:00+00:00), so an equality match on a date-only string never hits —
+  // filter on the [day, next-day) range like the rest of the order-list queries.
   const today = new Date().toISOString().slice(0, 10);
+  const { from, to } = dayRange(today);
 
   const { data: orders, error } = await supabase
     .from("orders")
     .select(
       "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products(order_qty, order_qty_unit, is_mix, order_product_schedules(start_time))"
     )
-    .eq("order_date", today)
+    .gte("order_date", from)
+    .lt("order_date", to)
     .order("order_code", { ascending: true })
     .limit(100);
 
@@ -3075,6 +3098,14 @@ export async function getOrderRequests(): Promise<OrderRequestItem[]> {
       formattedTime = `${month}/${day} ${hours}:${minutes}`;
     }
 
+    // Removed/cancelled → red "Cancelled"; in-process → blue "Restarted"; else
+    // green "Scheduled" (matches D3's DoleseOrderRequestDashboardV2 tile colours).
+    const status: OrderRequestItem["status"] = isRemoved
+      ? "cancelled"
+      : hasStarted
+        ? "active"
+        : "scheduled";
+
     return {
       order_id: o.order_id,
       order_code: o.order_code || "",
@@ -3083,7 +3114,7 @@ export async function getOrderRequests(): Promise<OrderRequestItem[]> {
       ordered_cy: Math.round(orderedCY * 100) / 100,
       address: o.delivery_addr1 || o.project_name || null,
       customer_name: o.customer_name || null,
-      status: (hasStarted && !isRemoved ? "active" : "scheduled") as "active" | "scheduled",
+      status,
     };
   });
 }
