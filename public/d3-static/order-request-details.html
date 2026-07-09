@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<!-- D3 "DoleseOrderRequestDetailsV2" export, made self-dynamic. Structure mirrors the D3
+     export verbatim (tiles, dataTables wrappers, hidden "No Dispatch" group); the METHOD/
+     USAGE/P.O.# labels live inside the pour_use_po.png icon, so the CHUTE tile's three text
+     rows are values only. order-request-details-live.js reads the OrderRequestID (GUID) from
+     /order-request/{id}, fetches /api/order-request-detail and fills the dynamic ids. Fields
+     D3 sources from its D3BUY subsystem that our snapshot lacks render blank, as D3 does. -->
+<html xmlns="http://www.w3.org/1999/xhtml" class="k-webkit k-webkit149"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="format-detection" content="telephone=no">
+        <title></title>
+
+        <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
+        <link href="./JobsForFixedNodeID_files/d3_complete.css" rel="stylesheet" type="text/css">
+        <script src="./JobsForFixedNodeID_files/highcharts.js"></script>
+        <script src="./JobsForFixedNodeID_files/highcharts-more.js"></script>
+        <script src="./JobsForFixedNodeID_files/data.js"></script>
+        <script src="./JobsForFixedNodeID_files/jquery.rateit.min.js"></script>
+        <link href="./JobsForFixedNodeID_files/rateit.css" rel="stylesheet" type="text/css">
+        <script src="./JobsForFixedNodeID_files/hopscotch.min.js"></script>
+        <link href="./JobsForFixedNodeID_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+        <script src="./JobsForFixedNodeID_files/chardinjs.min.js"></script>
+        <link href="./JobsForFixedNodeID_files/chardinjs.css" rel="stylesheet" type="text/css">
+        <link href="./JobsForFixedNodeID_files/bootstrap2-toggle.min.css" rel="stylesheet">
+        <script src="./JobsForFixedNodeID_files/bootstrap2-toggle.min.js"></script>
+
+        <style media="print" type="text/css">
+            a:after { content:''; } a[href]:after { content: none !important; }
+        </style>
+        <style>
+            .dataTables_filter label { float: right }
+            .dataTables_paginate ul { float: right }
+            .pagination { margin: 0px 0; }
+            .table { margin-bottom: 8px; }
+        </style>
+    </head>
+    <body>
+        <script>
+            $(document).ready(function () { hideLoadingIndicator(); loadLogin(); });
+            $(window).unload(function () { hideLoadingIndicator(); saveLogin(); });
+        </script>
+<div class="d3-page">
+
+<div class="navbar navbar-fixed-top navbar-inverse">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
+            </a>
+            <a id="header-bar-title" class="brand">ORDER REQUEST</a>
+            <div class="nav-collapse collapse">
+                <ul class="nav">
+                    <li><a href="/order-request">DASHBOARD</a></li>
+                    <li><a href="https://d3.truckast.com/dv/v1/dolese/OrderRequest/OrderByProject">ORDER FORM</a></li>
+                    <li><a href="https://d3.truckast.com/dv/v1/dolese/truckast/Settings">SETTINGS</a></li>
+                    <li><a href="https://d3.truckast.com/dv/v1/dolese/Announcements/AnnouncementForm">PUBLISH</a></li>
+                    <li><a href="https://d3.truckast.com/dv/v1/dolese/TKAdmin/UserSearch">ADMIN</a></li>
+                    <li><a href="https://d3.truckast.com/dv/v1/dolese/Truckast/MarketSummary">TRUCKAST</a></li>
+                    <li><a href="https://d3.truckast.com/dv/v1/d3/Accounts/Logout">LOGOUT</a></li>
+                    <li><a href="https://d3.truckast.com/dv/v1/dolese/Rollout/Search">ROLLOUT</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div id="error-box" class="alert alert-error" style="display: none"><h4 id="error-title" style="margin-bottom: 5px">Error!</h4><p id="error-text"></p></div>
+    <div id="warning-box" class="alert alert-block" style="display: none"><h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4><p id="warning-text"></p></div>
+    <div id="success-box" class="alert alert-success" style="display: none"><h4 id="success-title" style="margin-bottom: 5px">Success!</h4><p id="success-text"></p></div>
+    <div id="information-box" class="alert alert-info" style="display: none"><h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4><p id="information-text"></p></div>
+
+<form id="DoleseOrderRequestDetailsV2" method="POST" onsubmit="return false">
+
+<div class="navbar">
+    <div class="navbar-inner">
+        <div class="container">
+            <table style="width:100%">
+                <tbody><tr>
+                    <td style="width:38px">
+                        <a style="cursor:pointer" onclick="history.back();hideLoadingIndicator();">
+                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png">
+                        </a>
+                    </td>
+                    <td>
+                    <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                        <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                            <span style="font-size: 16px"><strong id="or-cust">ORDER REQUEST</strong></span><br>
+                            <span style="font-size: 11px; padding: 0"><strong id="or-project"></strong></span>
+                        </div>
+                    </div>
+                    </td>
+                    <td style="width:38px">
+                        <a style="cursor:pointer" onclick="location.reload()">
+                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-small-27@2x.png">
+                        </a>
+                    </td>
+                </tr>
+            </tbody></table>
+        </div>
+    </div>
+</div>
+                <div id="title-label" class="d3-label" style="width: 100%;"><h4 id="or-title">REQUEST</h4></div>
+            <div id="dispatch-label" class="d3-label" style="width: 100%;display: none;">Your Order Request has been submitted. Dispatch will respond to this request during the hours listed below:</div>
+        <br>
+
+<!-- Dispatch tiles (hidden unless the request has a dispatch tile — matches D3) -->
+<div style="width: 100%; display: none">
+    <div style="display: inline-block;">
+        <div class="tile" style="position: relative; background-color: rgb(158, 11, 15); cursor: default; display: block;">
+            <div class="tileContainer">
+                <div class="tileIcon"><img src="./JobsForFixedNodeID_files/Cancelled.png"></div>
+                <div class="tileInfoSection"><div class="tileCell">
+                    <div class="tileSuperTitle"></div><div class="tileTitle">No Disatch Tile</div><div class="tileSubTitle"></div>
+                </div></div>
+            </div>
+        </div>
+    </div>
+</div>
+        <br>
+
+        <a id="accept-button" class="btn btn-success" style="width: 60px; display: inline-block; margin-bottom:10px; pointer-events:none; opacity:.65">ACCEPT</a>
+        <a id="reject-button" class="btn btn-danger" style="width: 60px; display: inline-block; margin-bottom:10px; pointer-events:none; opacity:.65">REJECT</a>
+        <a id="update-button" class="btn btn-primary" style="width: 60px; display: inline-block; margin-bottom:10px; pointer-events:none; opacity:.65">UPDATE</a>
+        <br><br>
+        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <div class="form-group">
+                <label class="form-label" style="font-weight: bold; margin-bottom: 4px; display: block; font-size: 14px; color: #333;">ORDER NUMBER(*)</label>
+                <input type="text" id="or-ordereid" placeholder="ORDER NUMBER" class="form-input" style="width: 150px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+            </div>
+            <div class="form-group">
+                <label class="form-label" style="font-weight: bold; margin-bottom: 4px; display: block; font-size: 14px; color: #333;">VERIFY ORDER STATUS</label>
+                <select id="or-orderstatus" class="form-select" style="width: 163px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;">
+                    <option value="Firm">Firm</option><option value="Hold">Hold</option><option value="WILL CALL">WILL CALL</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" style="font-weight: bold; margin-bottom: 4px; display: block; font-size: 14px; color: #333;">VERIFY ORDER DATE</label>
+                <select id="or-scheduledate" class="form-select" style="width: 150px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;"></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" style="font-weight: bold; margin-bottom: 4px; display: block; font-size: 14px; color: #333;">VERIFY ARRIVAL TIME</label>
+                <input type="time" id="or-scheduletime" class="form-input" style="width: 150px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px;" step="300">
+            </div>
+        </div>
+        <br><br>
+
+<!-- Summary tile group -->
+<div style="width: 100%; display: block">
+    <div style="display: inline-block;">
+        <div class="tile" style="position: relative; width: 88px; height: 90px; margin-right: 5px; margin-bottom: 5px; background-color: rgb(47, 126, 216); float: left; color: white; cursor: default; display: block;">
+            <div style="padding:5px">
+                <div style="text-align: center; font-size: 12px; font-weight: bold">STATUS</div>
+                <div id="or-tile-status" style="width:100%; height:40px; line-height: 40px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 24px"></div>
+                <div style="text-align: center; font-size: 12px"></div>
+            </div>
+        </div>
+        <div class="tile" style="position: relative; width: 88px; height: 90px; margin-right: 5px; margin-bottom: 5px; background-color: rgb(47, 126, 216); float: left; color: white; cursor: default; display: block;">
+            <div style="padding:5px">
+                <div style="text-align: center; font-size: 12px; font-weight: bold">ON JOB</div>
+                <div id="or-tile-onjob" style="width:100%; height:40px; line-height: 40px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 24px"></div>
+                <div id="or-tile-onjob-time" style="text-align: center; font-size: 12px"></div>
+            </div>
+        </div>
+        <div class="tile" style="position: relative; width: 88px; height: 90px; margin-right: 5px; margin-bottom: 5px; background-color: rgb(47, 126, 216); float: left; color: white; cursor: default; display: block;">
+            <div style="padding:5px">
+                <div style="text-align: center; font-size: 12px; font-weight: bold">Spacing</div>
+                <div id="or-tile-spacing" style="width:100%; height:40px; line-height: 40px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 24px"></div>
+                <div style="text-align: center; font-size: 12px">Minutes</div>
+            </div>
+        </div>
+        <div class="tile" style="position: relative; background-color: rgb(47, 126, 216); cursor: default; display: block;">
+            <div class="tileContainer">
+                <div class="tileIcon"><img src="./JobsForFixedNodeID_files/pour_use_po.png"></div>
+                <div class="tileInfoSection"><div class="tileCell">
+                    <div class="tileSuperTitle" id="or-method"></div>
+                    <div class="tileTitle" id="or-usage"></div>
+                    <div class="tileSubTitle" id="or-po"></div>
+                </div></div>
+            </div>
+        </div>
+        <div class="tile" style="position: relative; background-color: rgb(69, 139, 0); cursor: default; display: block;">
+            <div class="tileContainer">
+                <div class="tileIcon"><img src="./JobsForFixedNodeID_files/map-pin-white@2x.png"></div>
+                <div class="tileInfoSection"><div class="tileCell">
+                    <div class="tileSuperTitle" id="or-loc-name"></div>
+                    <div class="tileTitle" id="or-loc-addr"></div>
+                    <div class="tileSubTitle" id="or-loc-region"></div>
+                </div></div>
+            </div>
+        </div>
+        <div class="tile" style="position: relative; background-color: rgb(196, 57, 38); cursor: default; display: block;">
+            <div class="tileContainer">
+                <div class="tileIcon"><img src="./JobsForFixedNodeID_files/phone-white@2x.png"></div>
+                <div class="tileInfoSection"><div class="tileCell">
+                    <div class="tileSuperTitle">JOBSITE CONTACT</div>
+                    <div class="tileTitle" id="or-contact"></div>
+                    <div class="tileSubTitle"></div>
+                </div></div>
+            </div>
+        </div>
+    </div>
+</div>
+        <br>
+
+<!-- Product tiles -->
+<div style="width: 100%; display: block">
+    <div id="or-product-tiles" style="display: inline-block;"></div>
+</div>
+        <br>
+
+<!-- Product Category / Description -->
+<div style="display: block; width: 100%">
+    <div class="dataTables_wrapper form-inline" role="grid"><div class="row"><div class="span6"></div><div class="span6"></div></div>
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered dataTable" style="width: 100%;">
+            <thead><tr role="row"><th class="sorting_disabled" style="width: 274px;">Product Category</th><th class="sorting_disabled" style="width: 415px;">Product Description</th></tr></thead>
+            <tbody id="or-prodcat-body" role="alert" aria-live="polite" aria-relevant="all"></tbody>
+        </table>
+    <div class="row"><div class="span6"></div><div class="span6"></div></div></div>
+</div>
+        <br>
+
+<!-- Region -->
+<div style="display: block; width: 100%">
+    <div class="dataTables_wrapper form-inline" role="grid"><div class="row"><div class="span6"></div><div class="span6"></div></div>
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered dataTable" style="width: 100%;">
+            <thead><tr role="row"><th class="sorting_disabled" style="width: 706px;">Region</th></tr></thead>
+            <tbody id="or-region-body" role="alert" aria-live="polite" aria-relevant="all"></tbody>
+        </table>
+    <div class="row"><div class="span6"></div><div class="span6"></div></div></div>
+</div>
+        <br>
+
+<!-- Notes & Comments -->
+<div style="display: block; width: 100%">
+    <div class="dataTables_wrapper form-inline" role="grid"><div class="row"><div class="span6"></div><div class="span6"></div></div>
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered dataTable" style="width: 100%;">
+            <thead><tr role="row"><th class="sorting_disabled" style="width: 706px;">Notes &amp; Comments</th></tr></thead>
+            <tbody id="or-notes-body" role="alert" aria-live="polite" aria-relevant="all"></tbody>
+        </table>
+    <div class="row"><div class="span6"></div><div class="span6"></div></div></div>
+</div>
+
+<!-- Message box -->
+<div id="social-table" style="display: block; width:100%">
+<table class="table table-hover"><tbody><tr>
+    <td style="vertical-align: middle; width: 90%">
+        <input id="message" name="message" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="Enter your message here">
+    </td>
+    <td style="vertical-align: middle; width: 10%">
+        <button id="submit-button" class="btn btn-primary" type="button" style="width: 75px; pointer-events:none; opacity:.65">SEND</button>
+    </td>
+</tr></tbody></table>
+</div>
+
+<!-- Chat / request summary -->
+<div id="chat1" class="chat-list" style="width:100%; display: block"></div>
+        <br><br>
+</form>
+</div>
+</div>
+
+<script src="/d3-static/order-request-details-live.js"></script>
+</body></html>
