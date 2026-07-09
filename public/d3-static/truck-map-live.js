@@ -23,6 +23,9 @@
   }
   function cy(n) { return (Math.round(Number(n || 0) * 100) / 100).toFixed(2); }
   function td(v) { return "<td>" + esc(v == null ? "" : v) + "</td>"; }
+  // Plant name like D3: uppercase, drop the "CEMCO " prefix ("Cemco Portable #5 - Exit 1"
+  // → "PORTABLE #5 - EXIT 1").
+  function plantName(s) { return String(s || "").toUpperCase().replace(/^CEMCO\s+/, ""); }
 
   function renderTables(d) {
     // Trucks
@@ -41,7 +44,7 @@
     var ph = document.getElementById("d3-tm-plant");
     if (ph) {
       ph.innerHTML = d.plant
-        ? "<tr>" + td(d.plant.name) + td(d.plant.code ? "CG-" + d.plant.code : "") + td(d.plant.address) +
+        ? "<tr>" + td(plantName(d.plant.name)) + td(d.plant.code ? "CG-" + d.plant.code : "") + td(d.plant.address) +
           td(d.plant.city) + td(d.plant.zip) + td(d.plant.lng) + td(d.plant.lat) + "</tr>"
         : "";
     }
@@ -49,7 +52,8 @@
     var jh = document.getElementById("d3-tm-jobsite");
     if (jh) {
       jh.innerHTML = d.jobsite
-        ? "<tr>" + td("JOBSITE") + td(d.jobsite.address) + td(d.jobsite.lat) + td(d.jobsite.lng) + "</tr>"
+        ? "<tr>" + td("JOBSITE") + td(d.jobsite.address) +
+          td(d.jobsite.lat) + td("") + td(d.jobsite.lng) + td("") + "</tr>"
         : "";
     }
   }
@@ -77,14 +81,45 @@
     return [at.lat + j, at.lng + k];
   }
   function truckIcon(color, num) {
+    // D3's truck marker (62x59): a WHITE rounded card holding the cement-mixer glyph tinted
+    // with the truck's status colour, the truck number in dark text below it, and a small
+    // downward tail. The glyph is coloured by masking D3's truck.png with the status colour.
+    var glyph =
+      '<div style="width:30px;height:26px;margin:0 auto;background-color:' + color + ';' +
+      '-webkit-mask:url(/d3-static/Order_files/truck.png) center/contain no-repeat;' +
+      'mask:url(/d3-static/Order_files/truck.png) center/contain no-repeat"></div>';
     return L.divIcon({
       className: "",
-      html: '<div style="background:' + color + ';border:2px solid #2b2b2b;border-radius:5px;' +
-        'padding:1px 5px;color:#fff;font-size:10px;font-weight:bold;white-space:nowrap;' +
-        'box-shadow:1px 1px 2px rgba(0,0,0,.45);text-align:center;line-height:14px">&#128667; ' + esc(num) + "</div>",
-      iconSize: [46, 20], iconAnchor: [23, 20],
+      html:
+        '<div style="position:relative;width:62px;text-align:center;white-space:nowrap">' +
+          '<div style="display:inline-block;background:#fff;border:2px solid ' + color + ';' +
+          'border-radius:8px;padding:4px 7px 3px;box-shadow:0 1px 2px rgba(0,0,0,.45)">' + glyph +
+            '<div style="color:#222;font-size:11px;font-weight:bold;line-height:13px;margin-top:1px">' + esc(num) + "</div>" +
+          "</div>" +
+          '<span style="position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);width:0;height:0;' +
+          'border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid ' + color + '"></span>' +
+        "</div>",
+      iconSize: [62, 59], iconAnchor: [31, 59],
     });
   }
+  // D3-style badge for the plant / jobsite (58x45): a white rounded card (with a downward
+  // tail) holding a navy glyph. Replaces Leaflet's default teardrop pins.
+  function badgeIcon(inner) {
+    return L.divIcon({
+      className: "",
+      html:
+        '<div style="position:relative;width:58px;text-align:center">' +
+          '<div style="display:inline-block;background:#fff;border:1px solid rgba(0,0,0,.35);' +
+          'border-radius:8px;padding:7px 9px;box-shadow:0 1px 3px rgba(0,0,0,.45);line-height:0">' + inner + "</div>" +
+          '<span style="position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);width:0;height:0;' +
+          'border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid #fff"></span>' +
+        "</div>",
+      iconSize: [58, 45], iconAnchor: [29, 45],
+    });
+  }
+  // Jobsite = navy location pin; Plant = navy factory/building — both in a D3 white badge.
+  var JOBSITE_SVG = '<svg width="26" height="28" viewBox="0 0 24 24" fill="#1b4e8a"><path d="M12 2C8.1 2 5 5.1 5 9c0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3.1-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>';
+  var PLANT_SVG = '<svg width="28" height="26" viewBox="0 0 24 24" fill="#1b4e8a"><path d="M2 21V9l6 3V9l6 3V4h2l1 4h3l1 13H2zm5-3h3v-3H7v3zm7 0h3v-3h-3v3z"/></svg>';
 
   function renderMap(d) {
     var el = document.getElementById("map");
@@ -140,11 +175,16 @@
     map.eachLayer(function (l) { if (l instanceof L.Marker) map.removeLayer(l); });
     var pts = [];
     if (d.jobsite) {
-      L.marker([d.jobsite.lat, d.jobsite.lng]).addTo(map).bindPopup("<b>JOB SITE</b><br>" + esc(d.jobsite.address || ""));
+      // D3's JOB SITE InfoWindow: title, Project name, then the delivery address.
+      var jobPop = "<div style='font-size:12px;line-height:18px'><b>JOB SITE</b>" +
+        (d.project_name ? "<br>Project: " + esc(d.project_name) : "") +
+        (d.jobsite.address ? "<br>Delivery Address: " + esc(d.jobsite.address) : "") +
+        "</div>";
+      L.marker([d.jobsite.lat, d.jobsite.lng], { icon: badgeIcon(JOBSITE_SVG) }).addTo(map).bindPopup(jobPop);
       pts.push([d.jobsite.lat, d.jobsite.lng]);
     }
     if (d.plant) {
-      L.marker([d.plant.lat, d.plant.lng]).addTo(map).bindPopup("<b>PLANT " + esc(d.plant.code ? "CG-" + d.plant.code : "") + "</b><br>" + esc(d.plant.name || ""));
+      L.marker([d.plant.lat, d.plant.lng], { icon: badgeIcon(PLANT_SVG) }).addTo(map).bindPopup("<b>PLANT " + esc(d.plant.code ? "CG-" + d.plant.code : "") + "</b><br>" + esc(d.plant.name || ""));
       pts.push([d.plant.lat, d.plant.lng]);
     }
     // Truck markers at their LIVE GPS (from the trucks table). Fall back to a status-based
