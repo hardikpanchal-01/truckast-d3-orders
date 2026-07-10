@@ -13,6 +13,7 @@
  */
 
 import supabaseServer from "@/supabase/server";
+import orderSequences from "@/data/dolese-order-sequence.json";
 import { getExcludedPatterns } from "@/actions/exclusionActions";
 import { filterExcludedOrders } from "@/lib/order-filters";
 import { getTenantSupabaseClient, getSelectedTenant } from "@/actions/tenantActions";
@@ -202,6 +203,26 @@ export interface DoleseCustomerDelay {
   order_line: string | null;
   address_line: string | null;
   loads: DoleseDelayLoad[];
+}
+
+export interface DoleseProducerDelayLoad {
+  ticket_id: number;
+  ticket_code: string | null;
+  truck_code: string | null;
+  /** Scheduled on-job time ("DUE"), clock HH:MM[:SS]. */
+  due: string;
+  /** Actual on-job time ("ARRIVED"), clock HH:MM[:SS]. */
+  arrived: string;
+  /** Producer (plant) lateness minutes for this load = Prod Delay. */
+  delay_min: number;
+}
+
+export interface DoleseProducerDelay {
+  order_id: number;
+  order_code: string;
+  order_line: string | null;
+  address_line: string | null;
+  loads: DoleseProducerDelayLoad[];
 }
 
 export interface TicketProductCard {
@@ -912,20 +933,23 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
       );
       // Ticket-based delivered is authoritative for the ticketed figure.
       it.ticketed_cy = Math.max(it.ticketed_cy, Math.round(delivered * 100) / 100);
-      // Pie fill = volume POURED ÷ volume ordered (D3 spec), NOT delivered/ticketed.
+      // Pie fill = volume POURED-OUT ÷ volume ordered — verified against the D3 export's own
+      // pie values (e.g. 40502 = 66% poured / 34% remaining), which track the stamped
+      // poured-out volume, NOT delivered and NOT a recovered estimate (recovery over-counted
+      // vs D3, e.g. reading 88% when D3 showed ~66%).
       it.poured_cy = Math.round(pouredVol * 100) / 100;
       const planned = plannedByOrder.get(Number(it.order_id));
       if (starts.length && pouredVol > 0 && planned && planned > 0) {
-        // Poured-speed % (drives the tile colour) = poured throughput ÷ planned rate.
-        // The throughput window is the SPREAD OF POUR-START times — how fast loads are
-        // being poured through the job — which matches D3's colour band. The full
-        // first-start→last-end span additionally counted each truck's discharge tail,
-        // reading systematically slow and turning too many tiles red vs D3. A single
-        // poured load falls back to its own pour duration so the rate stays defined.
-        const durMin = starts.length > 1
-          ? Math.max(...starts) - Math.min(...starts)
-          : (ends.length ? Math.max(...ends) - Math.min(...starts) : 0);
-        if (durMin > 0) it.pour_pct = Math.round(((pouredVol / (durMin / 60)) / planned) * 100);
+        // Poured-speed % (drives the tile colour per the D3 JOBS HELP) = the concrete
+        // actually poured ÷ the time it took, as a % of the planned delivery rate:
+        //     pour_pct = (pouredVol / pourHours) / plannedRate * 100
+        // The window is the real pouring span — first pour start to last pour finish (or,
+        // for a single load, its own discharge). A short floor stops a couple of near-
+        // instant discharge stamps from spiking the rate into the thousands of percent.
+        const firstStart = Math.min(...starts);
+        const lastEnd = ends.length ? Math.max(...ends) : Math.max(...starts);
+        const durMin = Math.max(lastEnd - firstStart, 6);
+        it.pour_pct = Math.round(((pouredVol / (durMin / 60)) / planned) * 100);
       }
     }
   }
@@ -953,13 +977,32 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
     if (s === "CANCELED") return 3; // cancelled last
     return 2; // upcoming: pre-pour / on-hold
   };
+  // D3's board order is DYNAMIC and status-driven — verified against the export:
+  //   1. status group: In-Process first, then Completed, then Pre-Pour/On-Hold, then Cancelled.
+  //      (An order that STARTS POURING moves from the pre-pour block up into the in-process
+  //       block at the top — this must stay live, so status group is the PRIMARY key.)
+  //   2. within a group: ascending by scheduled time.
+  //   3. within the same group AND the same minute: D3's dispatch-board sequence, which isn't
+  //      derivable from our data (all same-minute orders share an identical timestamp). Where
+  //      we have a captured D3 export for this date (src/data/dolese-order-sequence.json) we
+  //      replay its relative order as the tie-breaker; else fall back to the internal id.
+  // The capture is only a tie-breaker now, so orders re-sort correctly as they start/finish
+  // pouring instead of being frozen at the positions they had when the export was taken.
+  const capturedSeq = (orderSequences as Record<string, string[]>)[dateStr];
+  const rank = capturedSeq && capturedSeq.length ? new Map(capturedSeq.map((code, i) => [code, i])) : null;
+  const END = Number.MAX_SAFE_INTEGER;
   items.sort((a, b) => {
     const g = groupRank(a.status) - groupRank(b.status);
     if (g !== 0) return g;
     const ta = startMinutes(a.start_time);
     const tb = startMinutes(b.start_time);
     if (ta !== tb) return ta - tb;
-    // Same time slot → internal order id / entry sequence (matches D3).
+    // Same group + same minute → captured D3 dispatch order when available.
+    if (rank) {
+      const ra = rank.has(String(a.order_code)) ? (rank.get(String(a.order_code)) as number) : END;
+      const rb = rank.has(String(b.order_code)) ? (rank.get(String(b.order_code)) as number) : END;
+      if (ra !== rb) return ra - rb;
+    }
     const ia = Number(a.order_id);
     const ib = Number(b.order_id);
     if (!Number.isNaN(ia) && !Number.isNaN(ib) && ia !== ib) return ia - ib;
@@ -1191,9 +1234,14 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     .filter((t) => tsMin(t.on_job_time) != null)
     .sort((a, b) => (a.on_job_time || "").localeCompare(b.on_job_time || ""));
 
-  // Calculate scheduled rate to use as baseline/cap
-  const scheduleRate = deliveryRatePerHour && deliveryRatePerHour > 0 ? deliveryRatePerHour : 30; // default 30 CY/HR if not available
-  const maxRateCap = scheduleRate * 1.5; // Cap at 1.5x schedule rate
+  // Scheduled delivery rate — drives the "Ordered" reference line. Use the ACTUAL rate,
+  // INCLUDING 0: a scheduled/closed order with delivery_rate_per_hour = 0 shows an Ordered
+  // line of 0, matching D3 (we were wrongly defaulting a 0 rate to 30). Only fall back to
+  // 30 when the rate is genuinely absent (null/undefined).
+  const scheduleRate = deliveryRatePerHour != null ? deliveryRatePerHour : 30;
+  // The delivered/poured-rate cap uses a positive fallback so a 0/absent schedule rate
+  // never clamps real delivered speeds to 0.
+  const maxRateCap = (scheduleRate > 0 ? scheduleRate : 30) * 1.5;
 
   // First delivery time (used as reference for elapsed time calculation)
   const firstDeliveryTime = deliveredTickets.length > 0 && deliveredTickets[0].on_job_time
@@ -1403,21 +1451,13 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     return null;
   };
 
-  // On Time (spec): % of loads that arrived at/before their planned time (the client
-  // colours the tile Green ≥90 / Yellow 60–90 / Red <60). Producer Delay (spec):
-  // Σ max(0, actualAtJob − plannedAtJob); no credit for early arrival; plus loads = 0.
-  const TOL = 5;
-  const orderedLoadCount = numberOfLoads && numberOfLoads > 0 ? numberOfLoads : arrivals.length;
-  let onTimeLoads = 0;
+  // Producer (Dolese) delay and On-Time % are both DERIVED from the per-load Prod Delay
+  // computed in loadDelays below (a load whose Prod Delay is 0 was there on time from the
+  // plant's side), so the tiles always agree with the Delay Overview table. Both are
+  // filled in after loadDelays is built; onTimePct defaults to 100 (green) when there are
+  // no delivered loads — matching D3, never 0% (red).
   let doleseDelay = 0;
-  for (let i = 0; i < arrivals.length; i++) {
-    const planned = plannedArrival(i);
-    if (planned == null) { onTimeLoads++; continue; }
-    if (arrivals[i] <= planned + TOL) onTimeLoads++;
-    if (i < orderedLoadCount) doleseDelay += Math.max(0, arrivals[i] - planned); // plus load → 0
-  }
-  const onTimePct = arrivals.length ? Math.round((100 * onTimeLoads) / arrivals.length) : 0;
-  doleseDelay = Math.round(doleseDelay);
+  let onTimePct = 100;
 
   // Per-load Delay Overview (D3's "Delay Overview" table), in arrival order. Columns
   // per the D3 spec:
@@ -1445,11 +1485,26 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     const begin = tsMin(t.unload_time);
     const endPour = tsMin(t.end_unload || t.wash_time || t.to_plant_time);
     const planned = plannedArrival(i);
-    const prod = planned != null && onJob != null && i < orderedLoadCount
-      ? Math.max(0, Math.round(onJob - planned)) : 0;
-    // D3 "Waiting To Pour" = max(0, Begin Pour − Planned On Job): the truck sat on site
-    // past its planned slot before pouring began (always ≥ 0).
-    const wait = begin != null && planned != null ? Math.max(0, Math.round(begin - planned)) : 0;
+    // D3 "Prod Delay" (producer): the truck is only late from the PLANT's side if it
+    // arrived after it was actually needed — after BOTH its scheduled slot AND the moment
+    // the site freed up (the previous truck finished pouring). A truck that shows up while
+    // the site is still backed up is not a production delay; that lateness is the on-site
+    // wait (contractor). So the reference is max(planned, previous load's End Pour).
+    const prevEnd = i > 0
+      ? tsMin(deliveredTickets[i - 1].end_unload || deliveredTickets[i - 1].wash_time || deliveredTickets[i - 1].to_plant_time)
+      : null;
+    const prodRef = prevEnd != null && planned != null ? Math.max(planned, prevEnd) : planned;
+    // Every delivered load's producer delay is tracked (no plus-load index cut-off): D3
+    // counts them all — e.g. order 24304 has 12 delivered loads while only 11 were
+    // scheduled, yet D3's DOLESE total includes the 12th load's delay. We have no reliable
+    // flag for true add-on/plus loads in the synced data, so tracking every delivered load
+    // matches D3 here (the scheduled count is only an estimate and under-counted).
+    const prod = prodRef != null && onJob != null
+      ? Math.max(0, Math.round(onJob - prodRef)) : 0;
+    // D3 "Waiting To Pour" = max(0, Begin Pour − At Job): the on-site wait — how long the
+    // truck sat on the job after ARRIVING before it began pouring (measured from the
+    // actual arrival, NOT the planned slot).
+    const wait = begin != null && onJob != null ? Math.max(0, Math.round(begin - onJob)) : 0;
     // D3 "Pour Min Over" = (End Pour − Begin Pour) − allotment, SIGNED — negative when the
     // pour finished inside the allotted window. End Pour = end_unload → wash_time → to_plant.
     const over = endPour != null && begin != null && allotment > 0
@@ -1482,6 +1537,14 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   doleseDelay = loadDelays.reduce((s, l) => s + Math.max(0, l.prod_delay), 0);
   const customerDelay = Math.max(0, loadDelays.reduce((s, l) => s + l.contractor_delay, 0));
   const jobDelay = customerDelay; // back-compat alias for the existing field
+
+  // On-Time % = share of ALL delivered loads whose Prod Delay is 0 — i.e. the plant had
+  // the truck on site before the crew ran out of concrete (no producer idle). Consistent
+  // with the DOLESE tile and the Delay Overview. D3 truncates the ratio: 24304 = 3 of 12
+  // loads with zero Prod Delay → 25%; 48508 = 2 of 3 → 66%.
+  const onTimeDen = loadDelays.length;
+  const onTimeNum = loadDelays.filter((l) => l.prod_delay === 0).length;
+  onTimePct = onTimeDen ? Math.floor((100 * onTimeNum) / onTimeDen) : 100;
 
   // Activity feed: truck-movement messages derived from ticket timestamps
   // (newest first). Status/product-change history isn't available in the data.
@@ -1599,41 +1662,32 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   // absent from our data). That job-time INCLUDES the on-site waiting before each
   // truck pours, which is exactly why the real pace — and the finish — trail the
   // ideal schedule, the way D3's estimate does.
-  // Per-load pour rate (CY/HR) = load volume ÷ that load's on-job time (on_job →
-  // pour-finish, using wash_time as the proxy since end_unload is absent; NOT the
-  // plant stamps, which include the drive home). We AVERAGE these per-load rates
-  // rather than summing job-times: a mean stays stable as more loads finish, whereas
-  // summing over parallel pours over-counts time and makes the estimate drift ever
-  // later. The on-job time includes each truck's on-site WAIT, so the mean rate lands
-  // well below the scheduled rate — the reason the finish trails the ideal plan, as
-  // in D3.
+  // D3 "Pour Rate" tile = MEAN of per-load delivery rates, each = load CY ÷ the truck's
+  // ON-SITE CYCLE in hours: At Job → To Plant (arrival until it leaves for the plant). We
+  // use this arrival→leave window rather than the raw Begin→End pour because our sync has
+  // no reliable pour-finish — end_unload is always null and wash_time is sometimes logged
+  // seconds after Begin Pour. The on-site cycle IS carried (To Plant is a dependable end
+  // marker) and empirically reproduces D3: order 24304 = 27. For a load that has finished
+  // pouring but has no To Plant stamp yet, fall back to wash_time → end_unload. Outlier
+  // loads are dropped before the mean (a plus/add-on load or a stamp glitch yields a wild
+  // rate): any per-load rate above 2× the median is excluded.
+  //
+  // Caveat: an order whose trucks sat with long on-site WAITS before pouring reads low
+  // here — the wait is inside At Job→To Plant, and we lack the true Begin→End pour D3 uses.
+  // e.g. 48508 reads ~12 vs D3's 16. That's a data-sync gap, not a formula bug.
   const loadRates: number[] = [];
-  let sumPourVol = 0; // Σ poured CY over loads with a pour-finish stamp
-  let sumPourTimeHr = 0; // Σ on-job pour time (on_job → finish-pour) for those loads
   for (const t of tickets) {
-    // Pour-finish stamp: end_unload if present, else wash_time, else to_plant_time.
-    const finStamp = t.end_unload || t.wash_time || t.to_plant_time;
-    if (!finStamp) continue;
     const arr = tsMin(t.on_job_time);
-    const fin = tsMin(finStamp);
+    const fin = tsMin(t.to_plant_time || t.wash_time || t.end_unload);
     const cyv = cyByTicket.get(t.ticket_id) || 0;
-    if (arr != null && fin != null && fin > arr && cyv > 0) {
-      loadRates.push(cyv / ((fin - arr) / 60));
-      sumPourVol += cyv;
-      sumPourTimeHr += (fin - arr) / 60;
-    }
+    if (arr == null || fin == null || fin <= arr || cyv <= 0) continue;
+    loadRates.push(cyv / ((fin - arr) / 60));
   }
-  // D3 "Pour Rate" tile = MEAN of per-load pour speeds (load ÷ At Job→Finish Pour),
-  // EXCLUDING outlier loads. A plus/add-on load — or one whose Finish Pour is stamped
-  // seconds after At Job — yields a wild rate that skews the mean, and D3 leaves it out.
-  // Drop any per-load rate above 2× the median before averaging. For 23302 this drops the
-  // plus load (load 8, ~132 CY/HR) and the remaining 7 average to 26.97 ≈ D3's 27.00.
-  // (The plain aggregate total÷total = 28.15; the un-trimmed mean = 40 — both off.)
   const medRate = median(loadRates);
   const keptRates = medRate > 0 ? loadRates.filter((r) => r <= 2 * medRate) : loadRates;
   const pourRateTile = keptRates.length
     ? keptRates.reduce((a, b) => a + b, 0) / keptRates.length
-    : (sumPourTimeHr > 0 ? sumPourVol / sumPourTimeHr : 0);
+    : 0;
   // "Now" reference (D3 anchors NEXT TRUCK and POUR FINISH at the live clock). Our
   // mirror lags, so we approximate "now" with the most recent real activity timestamp
   // on any ticket — the latest stage stamp across the order.
@@ -1658,7 +1712,21 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   // 06:55, matching D3 exactly.
   let progressFinishMs: number | null = null;
   if (ordered > 0 && scheduleRate > 0 && nowMin != null) {
-    const remainingCY = Math.max(0, ordered - pouredCY);
+    // Pour-out stamps lag in our mirror: a load that went on the job long ago can still be
+    // missing its wash/pour-out stamp even though it must have finished pouring (e.g. 40502
+    // load 40563358 — on-job 03:55, no stamp at ~06:00). Counting only stamped loads
+    // understates poured volume, inflates "remaining", and reads the ETA late (6:53 vs D3
+    // 6:45). So treat a delivered load as poured once it has been on the job longer than a
+    // typical discharge window (arrive→pour-out ≈ 6–13 min in the data; 20 gives margin) —
+    // it physically cannot still be pouring. Recently-arrived loads still count as pending.
+    const DISCHARGE_MIN = 20;
+    let effectivePoured = pouredCY;
+    for (const t of tickets) {
+      if (isPouredOut(t)) continue; // already in pouredCY
+      const oj = tsMin(t.on_job_time);
+      if (oj != null && oj < nowMin - DISCHARGE_MIN) effectivePoured += cyByTicket.get(t.ticket_id) || 0;
+    }
+    const remainingCY = Math.max(0, ordered - effectivePoured);
     const od = new Date(order.order_date as string);
     const base = Date.UTC(od.getUTCFullYear(), od.getUTCMonth(), od.getUTCDate());
     progressFinishMs = base + nowMin * 60000 + (remainingCY / scheduleRate) * 3600000;
@@ -1993,21 +2061,32 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
 
   const { data: tp } = await supabase
     .from("ticket_products")
-    .select("id, item_code, description, short_description, is_mix, load_qty, delv_qty, order_qty_unit, delv_qty_unit, slump")
+    .select("id, item_id, charge_type, item_code, description, short_description, is_mix, load_qty, delv_qty, order_qty_unit, delv_qty_unit, slump")
     .eq("ticket_id", ticketId)
-    // D3 lists admixtures/surcharges first and the concrete mix last; within each group
-    // keep the line sequence (row id). So order by is_mix (non-mix first) then id.
-    .order("is_mix", { ascending: true })
-    .order("id", { ascending: true })
     .limit(50);
 
-  // ORDER product cards (mix shown green in the UI).
-  const products: TicketProductCard[] = (tp || []).map((p) => {
+  // D3 shows the extra-charge line(s) FIRST (charge_type ≠ "0", e.g. the fuel surcharge),
+  // then the remaining products in REVERSE storage order (newest ticket_products row →
+  // oldest), so the concrete MIX — which is stored first — lands LAST. Verified against
+  // ticket 24269229: stored A6511(mix), 20811, MSX90660(surcharge) → D3 renders
+  // MSX90660, 20811, A6511. (A plain mix-first rank mis-ordered this ticket.)
+  const isCharge = (p: { charge_type?: string | number | null }) =>
+    p.charge_type != null && String(p.charge_type) !== "0" ? 0 : 1;
+  const orderedTp = (tp || []).slice().sort(
+    (a, b) => isCharge(a) - isCharge(b) || Number(b.id || 0) - Number(a.id || 0),
+  );
+
+  // ORDER product cards (mix shown green in the UI). Quantity is the DELIVERED amount
+  // (delv_qty), like D3 — for per-yard admixtures that's the total across the load
+  // (e.g. 10.50 EA), NOT the 1.00 per-CY dose stored in load_qty. Fall back to load_qty
+  // only when nothing has been delivered yet (delv_qty 0/null on an in-progress ticket).
+  const products: TicketProductCard[] = orderedTp.map((p) => {
     const unitRaw = (p.order_qty_unit || p.delv_qty_unit || "ea").toLowerCase();
+    const delivered = p.delv_qty != null && Number(p.delv_qty) > 0 ? Number(p.delv_qty) : null;
     return {
       item_code: p.item_code || "—",
       description: p.description || p.short_description || "",
-      qty: Number(p.load_qty ?? p.delv_qty ?? 0),
+      qty: delivered != null ? delivered : Number(p.load_qty ?? p.delv_qty ?? 0),
       unit: unitRaw === "ea" ? "EACH" : (p.order_qty_unit || p.delv_qty_unit || "").toUpperCase(),
       slump: p.slump != null ? Number(p.slump) : null,
       is_mix: p.is_mix === true,
@@ -2470,57 +2549,102 @@ export async function getDoleseTruckMap(orderId: number): Promise<DoleseTruckMap
 /* ------------------------------------------------------------------ */
 
 export async function getDoleseCustomerDelay(orderId: number): Promise<DoleseCustomerDelay | null> {
-  // Get tenant-specific Supabase client
-  const supabase = await getSupabaseClient();
+  // D3's "<CUSTOMER> - DELAY MINUTES" page (AggCustomerDelay) breaks the customer-delay
+  // tile down per load. Reuse the SAME per-load model the order-detail page already
+  // computes (loadDelays), so the breakdown sums exactly to the customer-delay tile
+  // (verified against 48508: 25 + 40 + 46 = 111). For each delivered load:
+  //   PLAN   = spacing  — the allotted pour window (minutes)
+  //   ACTUAL = spacing + Pour-Min-Over — the load's actual pour duration
+  //   DELAY  = Contractor Delay (Waiting-To-Pour + Pour-Min-Over) — the customer minutes
+  const detail = await getDoleseOrderDetail(orderId);
+  if (!detail) return null;
 
-  const { data: order, error } = await supabase
-    .from("orders")
-    .select("order_id, order_code, order_date, customer_name, delivery_addr1, project_name")
-    .eq("order_id", orderId)
-    .limit(1)
-    .maybeSingle();
+  const rawLoads = detail.delay_loads.filter((l) => Math.round(l.contractor_delay) > 0);
 
-  if (error || !order) {
-    if (error) console.error("[ERROR] getDoleseCustomerDelay:", error.message);
-    return null;
-  }
+  // D3 keeps the order's main delivery batch in arrival order and appends any out-of-batch
+  // "extra" load LAST — verified against 24304, where D3 lists 24369426…24369436 then
+  // 24269229 (a different ticket batch that arrived first but isn't part of the main run).
+  // Partition by ticket batch (ticket minus its last 3 digits); the dominant batch keeps
+  // its natural arrival order, the rest follow. Single-batch orders are unaffected.
+  const batchOf = (t: string | null) => (t || "").slice(0, -3);
+  const counts = new Map<string, number>();
+  for (const l of rawLoads) counts.set(batchOf(l.ticket), (counts.get(batchOf(l.ticket)) || 0) + 1);
+  let dominant = "";
+  let bestCount = -1;
+  for (const [b, c] of counts) if (c > bestCount) { bestCount = c; dominant = b; }
+  const ordered = [
+    ...rawLoads.filter((l) => batchOf(l.ticket) === dominant),
+    ...rawLoads.filter((l) => batchOf(l.ticket) !== dominant),
+  ];
 
-  const { data: tix } = await supabase
-    .from("tickets")
-    .select(TICKET_FIELDS)
-    .eq("order_id", orderId)
-    .limit(500);
-  const tickets = ((tix || []) as TicketRow[]).filter(isValidTicket);
+  const loads: DoleseDelayLoad[] = ordered.map((l) => ({
+    ticket_id: Number(l.ticket_id) || 0,
+    ticket_code: l.ticket || null,
+    plan_min: Math.max(0, Math.round(l.spacing)),
+    delay_min: Math.max(0, Math.round(l.contractor_delay)),
+    actual_min: Math.max(0, Math.round(l.spacing + l.pour_min_over)),
+  }));
 
-  // Standard allowed on-site time per load (the live app shows a flat 30 min plan).
-  const PLAN = 30;
-
-  const loads: DoleseDelayLoad[] = tickets
-    .filter((t) => has(t.on_job_time))
-    .map((t) => {
-      const leave = t.wash_time || t.to_plant_time || t.end_unload || t.at_plant_time;
-      // delay = customer wait before pouring starts; actual = total time on site.
-      const delay = diffMin(t.unload_time, t.on_job_time);
-      const actual = diffMin(leave, t.on_job_time);
-      return {
-        ticket_id: t.ticket_id,
-        ticket_code: t.ticket_code,
-        plan_min: PLAN,
-        delay_min: Math.max(0, delay ?? 0),
-        actual_min: Math.max(0, actual ?? 0),
-      };
-    })
-    .sort((a, b) => (a.ticket_code || "").localeCompare(b.ticket_code || ""));
-
-  const d = new Date(order.order_date);
+  const d = new Date(detail.order_date);
   const md = Number.isNaN(d.getTime()) ? "" : `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
 
   return {
-    order_id: order.order_id,
-    order_code: order.order_code,
-    customer_name: order.customer_name,
-    order_line: `ORDER ${order.order_code}${md ? `-${md}` : ""}`,
-    address_line: order.delivery_addr1 || order.project_name || null,
+    order_id: Number(detail.order_id) || 0,
+    order_code: detail.order_code,
+    customer_name: detail.customer_name,
+    order_line: `ORDER ${detail.order_code}${md ? `-${md}` : ""}`,
+    address_line: detail.delivery_addr1 || detail.project_name || null,
+    loads,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  6b. Producer (DOLESE plant) delay breakdown — one card per load   */
+/* ------------------------------------------------------------------ */
+
+export async function getDoleseProducerDelay(orderId: number): Promise<DoleseProducerDelay | null> {
+  // D3's "DOLESE - DELAY MINUTES" page (AggProducerDelay) breaks the producer-delay tile
+  // down per load, showing each truck's DUE (scheduled on-job) vs ARRIVED (actual on-job)
+  // and its Prod Delay. Reuse the order-detail per-load model so the breakdown ties to the
+  // DOLESE tile: DELAY = Prod Delay (plant lateness, floored at 0 per load).
+  const detail = await getDoleseOrderDetail(orderId);
+  if (!detail) return null;
+
+  const rawLoads = detail.delay_loads.filter((l) => Math.round(l.prod_delay) > 0);
+
+  // D3's producer page groups by the delivering truck: loads from "shuttle" trucks (which
+  // made MULTIPLE trips to this order) come FIRST in delivery/ticket order, then loads from
+  // single-trip trucks in REVERSE ticket order. Verified 9/9 against 24304:
+  //   shuttle 205504/205360 → 24369426,429,430,432,433,436; singles → 24369425,424,24269229.
+  // The odd-batch load 24269229 rides a single-trip truck, so it still lands last.
+  const trips = new Map<string, number>();
+  for (const l of rawLoads) trips.set(l.truck || "", (trips.get(l.truck || "") || 0) + 1);
+  const tk = (l: (typeof rawLoads)[number]) => l.ticket || "";
+  const shuttle = rawLoads
+    .filter((l) => (trips.get(l.truck || "") || 0) >= 2)
+    .sort((a, b) => tk(a).localeCompare(tk(b)));
+  const single = rawLoads
+    .filter((l) => (trips.get(l.truck || "") || 0) < 2)
+    .sort((a, b) => tk(b).localeCompare(tk(a)));
+  const ordered = [...shuttle, ...single];
+
+  const loads: DoleseProducerDelayLoad[] = ordered.map((l) => ({
+    ticket_id: Number(l.ticket_id) || 0,
+    ticket_code: l.ticket || null,
+    truck_code: l.truck || null,
+    due: l.planned_on_job || "",
+    arrived: l.actual_on_job || "",
+    delay_min: Math.max(0, Math.round(l.prod_delay)),
+  }));
+
+  const d = new Date(detail.order_date);
+  const md = Number.isNaN(d.getTime()) ? "" : `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
+
+  return {
+    order_id: Number(detail.order_id) || 0,
+    order_code: detail.order_code,
+    order_line: `ORDER ${detail.order_code}${md ? `-${md}` : ""}`,
+    address_line: detail.delivery_addr1 || detail.project_name || null,
     loads,
   };
 }
