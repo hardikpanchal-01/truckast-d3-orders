@@ -60,7 +60,7 @@
   "address": "H & H CONSTRUCTION LLC",
   "customer_name": "",
   "status": "active",
-  "region": null
+  "region": "okc"
  },
  {
   "order_id": "80941FD9-0474-F111-82CC-9F6F49760254",
@@ -82,7 +82,7 @@
   "address": "TEST",
   "customer_name": "C L SMITH CUSTOM HOMES",
   "status": "active",
-  "region": null
+  "region": "okc"
  },
  {
   "order_id": "5E0C893A-6575-F111-82CC-9F6F49760254",
@@ -93,7 +93,7 @@
   "address": "TEST",
   "customer_name": "BOGI LLC",
   "status": "active",
-  "region": null
+  "region": "okc"
  },
  {
   "order_id": "75DE4E84-7C75-F111-82CC-9F6F49760254",
@@ -104,7 +104,7 @@
   "address": "MTZ CONCRETE WORKS",
   "customer_name": "",
   "status": "active",
-  "region": null
+  "region": "okc"
  },
  {
   "order_id": "D6F740A2-7C75-F111-82CC-9F6F49760254",
@@ -115,7 +115,7 @@
   "address": "MTZ CONCRETE WORKS",
   "customer_name": "",
   "status": "active",
-  "region": null
+  "region": "okc"
  },
  {
   "order_id": "B268618E-3376-F111-82CC-9F6F49760254",

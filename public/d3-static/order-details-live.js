@@ -108,7 +108,9 @@
     var hdr = document.getElementById("d3-od-header");
     if (hdr) {
       hdr.innerHTML =
-        tile1x1("STATUS", String(d.dispatch_status || "").toUpperCase(), "") +
+        // D3 clips the STATUS value to what fits the 88px tile at 24px — "COMPLETE" → "COMP"
+        // (short codes like "W/C", "FIRM", "HOLD" already fit and are unaffected).
+        tile1x1("STATUS", String(d.dispatch_status || "").toUpperCase().slice(0, 4), "") +
         tile1x1("ON JOB", oj.time, oj.date) +
         tile1x1("RATE", d.delivery_rate != null ? num2(d.delivery_rate) : "", "CY/HR");
     }
