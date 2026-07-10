@@ -36,33 +36,36 @@ const TILE_RED = "rgb(196, 57, 38)";
 
 function tileColor(o: DoleseOrderListItem): string {
   const ds = o.dispatch_status;
-  // Cancelled / On-Hold → red (per the D3 JOBS HELP).
+  // D3 JOBS HELP colour spec:
+  //   Red    — a Cancelled order, or one On Hold.
+  //   Green  — a Firm order while Pre-Pour; OR ≥90% of planned poured-speed In Process/Complete.
+  //   Yellow — a Will-Call order while Pre-Pour; OR 60–89% of planned poured-speed In Process/Complete.
+  //   Red    — <60% of planned poured-speed In Process/Complete.
   if (o.status === "CANCELED" || ds === "Cancelled" || ds === "Hold") return TILE_RED;
   // Pre-Pour: a FIRM (committed) order is green; a WILL-CALL order is yellow.
   // "Active" is a firm/confirmed state too, so it's green alongside "Firm".
   if (o.status === "PRE_POUR") return ds === "Firm" || ds === "Active" ? TILE_GREEN : TILE_YELLOW;
-  // Completed orders are always green in D3 (a finished pour, regardless of the speed
-  // it ran at) — verified against the JobsForFixedNodeID export.
-  if (o.status === "COMPLETED") return TILE_GREEN;
-  // In-Process: colour by how well the pour is KEEPING UP WITH DELIVERIES — poured ÷
-  // delivered (ticketed) — NOT pour speed. Verified against the live D3 board (7/9):
-  // 40502 poured 96% of delivered → green; 41206/20705/26508 poured 75/50/33% → yellow
-  // even though 41206 pours FASTER than planned (so speed is not the signal). Orders that
-  // haven't begun pouring (poured 0) read green — they're just delivering, not behind.
-  // In-Process is never red on the D3 board; red comes only from Hold/Cancelled (above).
-  if (o.poured_cy <= 0) return TILE_GREEN;
-  const keptUp = o.ticketed_cy > 0 ? o.poured_cy / o.ticketed_cy : 1;
-  return keptUp >= 0.85 ? TILE_GREEN : TILE_YELLOW;
+  // In-Process AND Complete: colour by poured speed as a % of the planned delivery rate
+  // (o.pour_pct). Before any load has poured out there's no speed yet → on-track (green).
+  const pct = o.pour_pct;
+  if (pct == null) return TILE_GREEN;
+  if (pct >= 90) return TILE_GREEN;
+  if (pct >= 60) return TILE_YELLOW;
+  return TILE_RED;
 }
 
 // Concrete is ordered in half-yard increments, so D3 shows CY to the nearest 0.50
 // (e.g. 294.00, 73.50). Round to kill float artifacts like 294.01 / 73.51.
 const cyLabel = (cy: number) => (Math.round(cy * 2) / 2).toFixed(2);
 
+// order_date is a CST clock value stored in a UTC field → read UTC parts (same convention
+// as startLabel). Using LOCAL getMonth/getDate rolled late-in-the-day orders (e.g. a
+// 19:00 UTC order) to the next calendar day on machines ahead of UTC — showing "7/11" for
+// a 7/10 order. UTC parts keep the date stable regardless of the server's timezone.
 function md(dateStr: string): string {
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return "";
-  return `${d.getMonth() + 1}/${d.getDate()}`;
+  return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
 }
 
 // start_time is a CST clock value stored in a UTC field → read UTC parts as HH:MM.
@@ -109,11 +112,17 @@ function orderTile(o: DoleseOrderListItem): string {
   const addr = o.delivery_addr1 || o.project_name || "";
   const title = `${start} ${addr}`.trim().toUpperCase();
   const subTitle = (o.customer_name || "").toUpperCase();
-  // Pie fill = volume DELIVERED (ticketed) ÷ volume ordered (per the D3 JOBS HELP), NOT the
-  // poured-out volume and NOT the speed % (that only drives the colour). D3 fills the pie by
-  // what's been shipped to the job, so an order with 4 loads delivered but only 1 poured out
-  // (e.g. 26508: 42 of 73.5 delivered, 10.5 poured) reads ~57% full, not a near-empty 14%.
-  const pourFrac = o.ordered_cy > 0 ? (o.ticketed_cy / o.ordered_cy) * 100 : 0;
+  // D3 shows the project / jobsite name as a 4th tile line under the customer (e.g.
+  // "DOLLAR TREE DISTRIBUTION CENTER"). Omit it when empty, or when the title already fell
+  // back to the project because delivery_addr1 was blank (avoids showing it twice).
+  const projectRaw = (o.project_name || "").trim();
+  const project = projectRaw && projectRaw.toUpperCase() !== addr.toUpperCase() ? projectRaw.toUpperCase() : "";
+  // Pie fill = volume POURED ÷ volume ordered — D3's definition ("the total volume poured
+  // divided by the volume ordered"), NOT delivered/ticketed and NOT the speed %. o.poured_cy
+  // already includes the stale-stamp recovery (loads on the job long enough to have poured
+  // but missing their pour-out stamp in our mirror), so a fully-delivered-but-still-pouring
+  // order like 40502 reads its real poured fraction instead of a misleading 100%.
+  const pourFrac = o.ordered_cy > 0 ? (o.poured_cy / o.ordered_cy) * 100 : 0;
   const icon = isCancelled
     ? `<div class="tileIcon"><img src="${ASSET}/Cancelled.png"></div>`
     : isComplete
@@ -129,6 +138,7 @@ function orderTile(o: DoleseOrderListItem): string {
     `<div class="tileSuperTitle">${esc(superTitle)}</div>` +
     `<div class="tileTitle">${esc(title)}</div>` +
     `<div class="tileSubTitle">${esc(subTitle)}</div>` +
+    (project ? `<div class="tileSubTitle">${esc(project)}</div>` : "") +
     `</div></div></div></div>`
   );
 }
