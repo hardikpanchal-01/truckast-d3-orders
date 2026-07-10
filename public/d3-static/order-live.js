@@ -10,11 +10,19 @@
   var ID = oi >= 0 && parts[oi + 1] ? parts[oi + 1] : "";
   var ASSET = "/d3-static/Order_files";
   var BLUE = "rgb(47, 126, 216)";
-  var STATUS = { IN_PROCESS: "IN PROCESS", PRE_POUR: "PRE-POUR", COMPLETED: "COMPLETED", CANCELED: "CANCELLED" };
+  var GREEN = "rgb(69, 139, 0)";
+  var RED = "rgb(196, 57, 38)";
+  var YELLOW = "rgb(247, 187, 0)";
+  var STATUS = { IN_PROCESS: "IN PROCESS", PRE_POUR: "PRE-POUR", COMPLETED: "COMPLETE", CANCELED: "CANCELLED" };
 
   function esc(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  // Strip trailing corporate suffixes so the customer reads like D3's short name
+  // ("UNLIMITED CONSTRUCTION SERVICES LLC" → "UNLIMITED CONSTRUCTION").
+  function shortCustomer(name) {
+    return String(name || "").replace(/\s+(SERVICES\s+)?(L\.?L\.?C\.?|INC\.?|INCORPORATED|CORP\.?|CORPORATION|COMPANY|CO\.?|L\.?P\.?|LLP|PLLC|LTD\.?)\.?\s*$/i, "").trim() || String(name || "");
   }
   // Concrete is half-yard increments → show CY to nearest 0.50 (kills float artifacts).
   function half(n) { return (Math.round(Number(n || 0) * 2) / 2).toFixed(2); }
@@ -33,13 +41,13 @@
     return { v: String(s), sub: "" };
   }
 
-  function tile1x1(tagline, title, subtitle, onclick) {
+  function tile1x1(tagline, title, subtitle, onclick, bg) {
     var click = onclick ? ' onclick="' + onclick + '"' : "";
     var cur = onclick ? "pointer" : "default";
     var dog = onclick ? '<img src="' + ASSET + '/dogear.png" style="position:absolute;right:0;bottom:0">' : "";
     return (
       '<div class="tile" style="position: relative; width: 88px; height: 90px; margin-right:5px; margin-bottom: 5px; background-color: ' +
-      BLUE + "; float: left; color:white; cursor:" + cur + '; display:block"' + click + ">" + dog +
+      (bg || BLUE) + "; float: left; color:white; cursor:" + cur + '; display:block"' + click + ">" + dog +
       '<div style="padding:5px">' +
       '<div style="text-align:center;font-size:12px;font-weight:bold">' + esc(tagline) + "</div>" +
       '<div style="width:100%;height:40px;line-height:40px;text-align:center;font-weight:bold;font-size:24px">' + esc(title) + "</div>" +
@@ -48,19 +56,94 @@
     );
   }
 
-  function weatherTile(w) {
+  function weatherTile(w, finalLabel) {
     if (!w) return "";
-    var icon = w.icon ? ASSET + "/" + w.icon + ".png" : ASSET + "/04n.png";
+    // icon may be a full URL or a bare glyph code (e.g. "01d"). A bare code resolves to
+    // D3's OWN weather glyph, vendored locally in Order_files (downloaded from D3's
+    // images/weather/ — the white line-art sun/moon set, NOT the red Images/icons set).
+    var desc = String((w && w.description) || "").toLowerCase();
+    var icon = w.icon
+      ? (/^(https?:)?\/\//.test(w.icon) ? w.icon : ASSET + "/" + w.icon + ".png")
+      : desc.indexOf("clear") >= 0 ? ASSET + "/01N.PNG"
+      : ASSET + "/04n.png";
     return (
       '<div class="tile" style="position: relative; background-color: ' + BLUE + '; cursor: default; display: block;">' +
       '<div class="tileContainer"><div class="tileIcon"><img src="' + icon + '" onerror="this.src=\'' + ASSET + '/04n.png\'"></div>' +
       '<div class="tileInfoSection"><div class="tileCell">' +
-      '<div class="tileSuperTitle"><span style="font-size:11px;font-weight:bold">' + esc(w.place || "") + "</span></div>" +
+      '<div class="tileSuperTitle"><span style="font-size:11px;font-weight:bold">' + esc(String(w.place || "").toUpperCase().replace(/^CEMCO\s+/, "")) + "</span></div>" +
       '<div class="tileTitle"><span style="font-size:14px;font-weight:bold">' + esc(((w.temp || "") + " " + (w.description || "")).trim()) + "</span></div>" +
       '<div class="tileSubTitle">H: ' + esc(w.humidity || "") + "   P: " + esc(w.pressure || "") + "   W: " + esc(w.wind || "") + " " + esc(w.direction || "") +
-      (w.updated ? "<br>Last Update: " + esc(w.updated) : "") + "</div>" +
+      (w.updated ? "<br>" + (finalLabel ? "Final Update: " : "Last Update: ") + esc(w.updated) : "") + "</div>" +
       "</div></div></div></div>"
     );
+  }
+
+  // Evaporation-rate tile (shown on Completed orders in D3). Coloured by shrinkage-
+  // cracking risk: Normal = green, Caution = yellow, High/Severe = red. Clicking it opens
+  // the Evaporation Details page (D3's evaporationdetails).
+  function evaporationTile(e) {
+    if (!e) return "";
+    var risk = String(e.risk || "").toLowerCase();
+    var bg = risk.indexOf("high") >= 0 || risk.indexOf("severe") >= 0 ? RED
+           : risk.indexOf("caution") >= 0 ? YELLOW : GREEN;
+    var href = "window.top.location.href='/orders/" + ID + "/evaporation'";
+    return (
+      '<div class="tile" style="position: relative; background-color: ' + bg + '; cursor: pointer; display: block;" onclick="' + href + '">' +
+      '<img src="' + ASSET + '/dogear.png" style="position:absolute;right:0;bottom:0">' +
+      '<div class="tileContainer"><div class="tileIcon"><img src="' + ASSET + '/EVAPORATIONRATEVERIFI.PNG"></div>' +
+      '<div class="tileInfoSection"><div class="tileCell">' +
+      '<div class="tileSuperTitle"><span style="font-size:14px;font-weight:bold">Evaporation Rate ' + (e.ticketNo ? " TN:" + esc(e.ticketNo) : "") + "</span></div>" +
+      '<div class="tileTitle"><span style="font-size:12px;font-weight:bold">Concrete: ' + esc(e.concreteTempF != null ? e.concreteTempF + "F" : "") + ", " + esc(e.rate != null ? e.rate + " lb/ft^2/hr" : "") + "<br>Shrinkage Cracking: " + esc(e.risk || "") + "</span></div>" +
+      '<div class="tileSubTitle"><span style="font-size:11px;font-weight:normal">Please use as a guide More information...</span></div>' +
+      "</div></div></div></div>"
+    );
+  }
+
+  // Delay Overview table (D3), shown on Completed orders below the Trucks chart.
+  // Uses D3's EXACT export markup — the ".d3-label" header, the Bootstrap
+  // "table table-striped" table, <font color> value cells and the "btn btn-success"
+  // button — so the layout, striping and spacing are styled verbatim by
+  // d3_complete.css (already loaded on the page). Contractor Delay is signed: red
+  // when positive (over the allotted pour), green when zero/negative.
+  function delayOverviewHtml(loads) {
+    if (!loads || !loads.length) return "";
+    // Column widths as PERCENTAGES of D3's rendered dataTable (210/139/205/233/303 px)
+    // so the columns spread across the full width exactly like D3's, at any container size.
+    var W = ["19.3%", "12.7%", "18.8%", "21.4%", "27.8%"];
+    var rows = loads.map(function (l, idx) {
+      var cd = l.contractor_delay;
+      var color = cd > 0 ? "red" : "green";
+      var rowClass = idx % 2 === 0 ? "gradeA odd" : "gradeA even";
+      return '<tr class="' + rowClass + '">' +
+        '<td style="border-top:0" class="  sorting_1">' + esc(l.order) + "</td>" +
+        '<td style="border-top:0" class=" ">' + esc(l.truck) + "</td>" +
+        '<td style="border-top:0" class=" ">' + esc(l.prod_delay) + "</td>" +
+        '<td style="border-top:0" class=" ">' + esc(l.wait_to_pour) + "</td>" +
+        '<td style="border-top:0" class=" "><font color="' + color + '">' + esc(cd) + "</font></td>" +
+        "</tr>";
+    }).join("");
+    return '<div class="d3-label" style="width: 100%;"><h4>Delay Overview</h4></div>' +
+      '<div style="display: block; width: 100%">' +
+      '<div class="dataTables_wrapper form-inline" role="grid">' +
+      '<div class="row"><div class="span6"></div><div class="span6"></div></div>' +
+      '<table cellpadding="0" cellspacing="0" border="0" class="table table-striped dataTable" style="width: 100%;">' +
+      '<thead><tr role="row">' +
+      '<th class="sorting_asc" role="columnheader" style="width:' + W[0] + '">Load Order</th>' +
+      '<th class="sorting" role="columnheader" style="width:' + W[1] + '">Truck</th>' +
+      '<th class="sorting" role="columnheader" style="width:' + W[2] + '">Prod Delay</th>' +
+      '<th class="sorting" role="columnheader" style="width:' + W[3] + '">Wait To Pour</th>' +
+      '<th class="sorting" role="columnheader" style="width:' + W[4] + '">Contractor Delay</th>' +
+      "</tr></thead>" +
+      '<tbody role="alert" aria-live="polite" aria-relevant="all">' + rows + "</tbody></table>" +
+      '<div class="row"><div class="span6"></div><div class="span6"></div></div>' +
+      "</div></div>" +
+      '<a class="btn btn-success" style="width:100px; display:inline-block" ' +
+      "onclick=\"window.top.location.href='/orders/" + ID + "/delays'\">Delay Details</a><br><br><br><br>"
+      ;
+  }
+  function renderDelayOverview(loads) {
+    var host = document.getElementById("d3-delay-overview");
+    if (host) host.innerHTML = delayOverviewHtml(loads);
   }
 
   // ---- Highcharts (v4, vendored like D3): new Highcharts.Chart({chart:{renderTo}}) ----
@@ -96,6 +179,9 @@
         colors: ["#434348", "#90ed7d", "#7cb5ec"],
         title: { text: "Pour Speed (CY/HR)" },
         subtitle: { text: ZOOM_SUB },
+        // No tickInterval — D3's Pour Speed x-axis lets Highcharts auto-pick the tick
+        // spacing from the chart's pixel width (hourly when wide/long-range, finer when
+        // short). Pinning it to 15 min forced dense labels that didn't adapt responsively.
         xAxis: { type: "datetime", minRange: 6000, title: { text: null } },
         yAxis: { min: 0, title: { text: "" } },
         tooltip: TOOLTIP,
@@ -118,53 +204,87 @@
       // D3 encodes the truck-count CSV. This gives crisp vertical steps + thin spikes
       // without relying on Highcharts' `step` (which can smear when stacked).
       var stepify = function (arr, key) {
+        // Match D3's actual CSV staircase (confirmed from D3's own D3TKPourInventoryTrucksCSV
+        // render): hold the previous count flat, then a SHORT ~1-min near-vertical riser
+        // into the new count at each event. D3's chart is a STEEP staircase (~77° risers),
+        // NOT gradual slopes.
+        //
+        // Clamp the riser to 40% of the SMALLER neighbouring gap. A brief "hill" — a truck
+        // arrives and another departs seconds later — has a tiny gap on ONE side; clamping
+        // to the min keeps BOTH risers of the spike short, so it renders as a sharp,
+        // symmetric peak like D3 instead of a wide rounded bump. Normal steps (large gaps
+        // both sides) keep the full ~1-min D3 staircase riser.
         var out = [], prev = null, prevX = null;
-        // Give each riser a small diagonal ramp (~1 min, clamped to 40% of the gap to
-        // the previous event) so steps LEAN like D3 instead of being a vertical wall.
-        // Tightly-spaced events clamp down so brief spikes stay thin.
         var RAMP = 60000;
         for (var i = 0; i < arr.length; i++) {
           var x = chartBase + arr[i].t * 60000;
           var y = arr[i][key];
           if (prev !== null) {
-            var ramp = Math.min(RAMP, (x - prevX) * 0.4);
+            var gapBefore = x - prevX;
+            var gapAfter = (i + 1 < arr.length) ? (chartBase + arr[i + 1].t * 60000) - x : Infinity;
+            var ramp = Math.min(RAMP, gapBefore * 0.4, gapAfter * 0.4);
             out.push([x - ramp, prev]); // hold previous count until just before the event
           }
-          out.push([x, y]); // diagonal (not vertical) to the new count at the event
+          out.push([x, y]); // short riser to the new count at the event
           prev = y;
           prevX = x;
         }
         return out;
       };
-      var waiting = stepify(c.trucks || [], "waiting");
-      var pouring = stepify(c.trucks || [], "pouring");
-      new window.Highcharts.Chart({
-        chart: { renderTo: trucks, type: "area", zoomType: "x", spacingRight: 10, spacingLeft: 10, spacingTop: 10, spacingBottom: 10 },
-        colors: ["#434348", "#90ed7d"],
-        title: { text: "Trucks on the Job" },
-        subtitle: { text: ZOOM_SUB },
-        xAxis: { type: "datetime", minRange: 60000, title: { text: null } },
-        yAxis: { min: 0, title: { text: "" }, allowDecimals: false },
-        tooltip: TOOLTIP,
-        legend: { enabled: true },
-        credits: { enabled: false },
-        plotOptions: {
-          area: {
-            stacking: "normal",
-            lineWidth: 1,
-            // No point marker, and no bold hover marker / halo ring on the hovered node.
-            marker: { enabled: false, states: { hover: { enabled: false } } },
-            states: { hover: { halo: null } },
-            connectNulls: true,
+      // Anchor the staircase to the order's SCHEDULED start (c.tMin = 02:00), like D3:
+      // prepend a zero-count baseline point at that time so the area sits flat at 0 from
+      // the scheduled start until the first truck arrives, and the x-axis begins at 02:00
+      // instead of at the first event (~02:06).
+      var truckData = (c.trucks || []).slice();
+      if (!truckData.length) {
+        // Pre-pour / will-call order — no truck movement yet. D3 collapses the "Trucks
+        // on the Job" chart entirely (the chat follows the Pour Speed chart directly),
+        // so hide the container instead of leaving an empty 300px chart with a title.
+        trucks.style.display = "none";
+      } else {
+        trucks.style.display = "";
+        var startT = (typeof c.tMin === "number") ? c.tMin : truckData[0].t;
+        if (truckData[0].t > startT) {
+          truckData.unshift({ t: startT, waiting: 0, pouring: 0 });
+        }
+        var waiting = stepify(truckData, "waiting");
+        var pouring = stepify(truckData, "pouring");
+        new window.Highcharts.Chart({
+          chart: { renderTo: trucks, type: "area", zoomType: "x", spacingRight: 10, spacingLeft: 10, spacingTop: 10, spacingBottom: 10 },
+          colors: ["#434348", "#90ed7d"],
+          title: { text: "Trucks on the Job" },
+          subtitle: { text: ZOOM_SUB },
+          xAxis: { type: "datetime", minRange: 60000, title: { text: null } },
+          // No allowDecimals:false — D3 lets Highcharts auto-pick the 2.5 interval
+          // (y-axis 0, 2.5, 5, 7.5). Forcing integers gave 0, 2, 4, 6, 8 instead.
+          yAxis: { min: 0, title: { text: "" } },
+          tooltip: TOOLTIP,
+          legend: { enabled: true },
+          credits: { enabled: false },
+          plotOptions: {
+            area: {
+              stacking: "normal",
+              lineWidth: 1,
+              shadow: false,
+              threshold: null,
+              // D3 keeps the line at width 1 on hover (no thickening). We additionally
+              // suppress the hover marker + halo so hovering shows only the tooltip — no
+              // bold node/border on the point.
+              marker: { enabled: false, states: { hover: { enabled: false } } },
+              states: { hover: { lineWidth: 1, halo: null } },
+              connectNulls: true,
+            },
           },
-        },
-        series: [
-          { name: '"Waiting"', data: waiting },
-          { name: '"Pouring"', data: pouring },
-        ],
-      });
+          series: [
+            { name: '"Waiting"', data: waiting },
+            { name: '"Pouring"', data: pouring },
+          ],
+        });
+      }
     }
-    chartsDone = true;
+    // Only mark charts "done" once the trucks chart has real data — so a pre-pour order
+    // re-renders (and shows the chart) on a later refresh once trucks start moving.
+    if ((c.trucks || []).length) chartsDone = true;
   }
 
   // One D3-style chat bubble. bodyHtml is already-escaped/HTML; timeLabel optional.
@@ -209,8 +329,12 @@
         L.push("Product Name: " + esc(p.item_code || ""));
         L.push("Product Description: " + esc(p.description || ""));
         L.push("Quantity: " + esc(half(p.qty)) + " " + esc(unitFull(p.unit)));
-        L.push("Slump: " + esc(p.slump != null ? p.slump : ""));
-        L.push("Usage: " + esc(p.usage || ""));
+        // Slump & Usage belong to the concrete mix, not admixtures (EA additives like
+        // MR6) — D3 only lists them for the mix, so skip them for non-mix products.
+        if (p.is_mix) {
+          L.push("Slump: " + esc(p.slump != null ? p.slump : ""));
+          L.push("Usage: " + esc(p.usage || ""));
+        }
       });
     }
     return chatBubble(L.join("<br>"), "");
@@ -226,31 +350,123 @@
 
   function setText(id, s) { var el = document.getElementById(id); if (el) el.textContent = s; }
 
+  // ---- Pre-Pour tile helpers. For an order with no ticket activity D3 shows a
+  //      different layout: STATUS / ON JOB / RATE, then one product tile per product
+  //      (not NEXT TRUCK / ORDERED / TICKETED / ON JOB). ----
+  function onJobTime(raw) {
+    if (!raw) return "—";
+    var d = new Date(raw);
+    if (isNaN(d.getTime())) return "—"; // scheduled clock (CST value in a UTC field)
+    return String(d.getUTCHours()).padStart(2, "0") + ":" + String(d.getUTCMinutes()).padStart(2, "0");
+  }
+  function onJobDate(raw) {
+    if (!raw) return "";
+    var d = new Date(raw);
+    if (isNaN(d.getTime())) return "";
+    return String(d.getUTCMonth() + 1).padStart(2, "0") + "/" + String(d.getUTCDate()).padStart(2, "0") + "/" + String(d.getUTCFullYear()).slice(-2);
+  }
+  // Barcode + "ORDER" glyph (D3's product-tile icon), inline SVG.
+  function barcodeSvg() {
+    var widths = [2, 1, 3, 1, 2, 3, 1, 2, 1, 3, 1, 2, 2, 1, 3, 1, 2, 1];
+    var bars = "", xp = 6;
+    for (var i = 0; i < widths.length; i++) {
+      if (i % 2 === 0) bars += '<rect x="' + xp + '" y="6" width="' + widths[i] + '" height="34" fill="#fff"/>';
+      xp += widths[i] + 1;
+    }
+    return '<svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">' + bars +
+      '<text x="30" y="56" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">ORDER</text></svg>';
+  }
+  // Green product tile (D3's Pre-Pour product card): item, ordered CY, slump.
+  function productTile(p) {
+    var name = (p.item_code || "") + " (" + (p.description || "") + " )";
+    return (
+      '<div class="tile" style="position: relative; background-color: rgb(69, 139, 0); cursor: default; display: block;">' +
+      '<div class="tileContainer"><div class="tileIcon">' + barcodeSvg() + "</div>" +
+      '<div class="tileInfoSection"><div class="tileCell">' +
+      '<div class="tileSuperTitle">' + esc(name) + "</div>" +
+      '<div class="tileTitle"><span style="font-size:16px;font-weight:bold">' + esc(half(p.qty)) + " CY</span></div>" +
+      '<div class="tileSubTitle">SLUMP: ' + esc(p.slump != null ? p.slump : "") + " IN</div>" +
+      "</div></div></div></div>"
+    );
+  }
+
   function render(d) {
     setText("d3-title", "ORDER " + d.order_code + "-" + mdShort(d.order_date));
-    setText("d3-subtitle", d.delivery_addr1 || d.project_name || "");
-    setText("d3-status", (STATUS[d.status] || d.status) + " - " + (d.customer_name || ""));
+    setText("d3-subtitle", (d.delivery_addr1 || d.project_name || "").toUpperCase());
+    setText("d3-status", (STATUS[d.status] || d.status) + " - " + shortCustomer(d.customer_name));
 
-    var nt = splitTime(d.next_truck);
-    var pf = splitTime(d.pour_finish);
     var hdr = document.getElementById("d3-header-tiles");
-    if (hdr) {
-      hdr.innerHTML =
-        tile1x1("NEXT TRUCK", nt.v, nt.sub) +
-        tile1x1("POUR FINISH", pf.v, pf.sub) +
-        tile1x1("TRUCKS", String(d.trucks || 0), "MAP");
-    }
     var det = document.getElementById("d3-detail-tiles");
-    if (det) {
-      det.innerHTML =
-        tile1x1("ORDERED", half(d.ordered_cy), "CY") +
-        tile1x1("TICKETED", half(d.ticketed_cy), "CY", "window.top.location.href='/orders/" + ID + "/tickets'") +
-        tile1x1("ON JOB", half(d.on_job_cy), "CY") +
-        '<div style="width: 100%; height: 1px; clear: both"></div>' +
-        weatherTile(d.weather);
+
+    if (d.status === "PRE_POUR") {
+      // Pre-Pour layout (D3): STATUS / ON JOB / RATE, then a product tile per product.
+      if (hdr) {
+        hdr.innerHTML =
+          tile1x1("STATUS", d.dispatch_status || "—", "") +
+          tile1x1("ON JOB", onJobTime(d.scheduled_time_raw), onJobDate(d.scheduled_time_raw)) +
+          tile1x1("RATE", d.delivery_rate != null ? Number(d.delivery_rate).toFixed(2) : "—", "CY/HR");
+      }
+      if (det) {
+        det.innerHTML =
+          (d.products || []).map(productTile).join("") +
+          '<div style="width: 100%; height: 1px; clear: both"></div>' +
+          weatherTile(d.weather);
+      }
+    } else if (d.status === "COMPLETED") {
+      // Completed layout (D3 COMPLETE spec): LOADS / LOADS %ON TIME / POURED, then
+      // POUR RATE / DOLESE (producer) delay / <customer> delay, weather (Final Update)
+      // and the evaporation-rate tile.
+      var onTime = d.on_time_pct != null ? d.on_time_pct : 0;
+      var otColor = onTime >= 90 ? GREEN : onTime >= 60 ? YELLOW : RED; // spec colour bands
+      var dd = d.dolese_delay_min || 0;
+      var cd = d.customer_delay_min != null ? d.customer_delay_min : (d.job_delay_min || 0);
+      var producer = ((d.customer_name || "").split(/\s+/)[0] || "CUSTOMER").toUpperCase();
+      if (hdr) {
+        hdr.innerHTML =
+          // LOADS → ticket summary; the onclick makes tile1x1 add the corner dogear.
+          tile1x1("LOADS", String(d.loads || 0), "", "window.top.location.href='/orders/" + ID + "/tickets'") +
+          tile1x1("LOADS", onTime + " %", "ON TIME", null, otColor) +
+          tile1x1("POURED", half(d.poured_cy), "CY");
+      }
+      if (det) {
+        det.innerHTML =
+          tile1x1("POUR RATE", (d.pour_rate != null ? Number(d.pour_rate).toFixed(2) : "0.00"), "CY/HR") +
+          tile1x1("DOLESE", String(dd), "DELAY MIN", dd > 0 ? "window.top.location.href='/orders/" + ID + "/delays'" : null, dd > 0 ? RED : BLUE) +
+          tile1x1(producer, String(cd), "DELAY MIN", cd > 0 ? "window.top.location.href='/orders/" + ID + "/delays'" : null, cd > 0 ? RED : BLUE) +
+          '<div style="width: 100%; height: 1px; clear: both"></div>' +
+          weatherTile(d.weather, true) +
+          '<div style="width: 100%; height: 1px; clear: both"></div>' +
+          evaporationTile(d.evaporation);
+      }
+    } else {
+      // In-Process / Complete layout.
+      var nt = splitTime(d.next_truck);
+      var pf = splitTime(d.pour_finish);
+      if (hdr) {
+        // NEXT TRUCK links to the Truck Arrival page (active trucks heading to / on the
+        // job). TRUCKS "MAP" opens the Truck Map (D3's TruckMap) — map + truck table.
+        var taHref = "window.top.location.href='/orders/" + ID + "/truck-arrival'";
+        var mapHref = "window.top.location.href='/orders/" + ID + "/truckmap'";
+        hdr.innerHTML =
+          tile1x1("NEXT TRUCK", nt.v, nt.sub, taHref) +
+          tile1x1("POUR FINISH", pf.v, pf.sub) +
+          tile1x1("TRUCKS", String(d.trucks || 0), "MAP", mapHref);
+      }
+      if (det) {
+        det.innerHTML =
+          tile1x1("ORDERED", half(d.ordered_cy), "CY", "window.top.location.href='/orders/" + ID + "/details'") +
+          tile1x1("TICKETED", half(d.ticketed_cy), "CY", "window.top.location.href='/orders/" + ID + "/tickets'") +
+          tile1x1("ON JOB", half(d.on_job_cy), "CY") +
+          '<div style="width: 100%; height: 1px; clear: both"></div>' +
+          weatherTile(d.weather) +
+          // D3 also shows the Evaporation Rate tile on in-process orders (below weather).
+          '<div style="width: 100%; height: 1px; clear: both"></div>' +
+          evaporationTile(d.evaporation);
+      }
     }
     chartBase = dayBase(d.order_date);
     renderCharts(d.charts);
+    renderDelayOverview(d.status === "COMPLETED" ? d.delay_loads : null);
     renderChat(d.activity, d);
   }
 

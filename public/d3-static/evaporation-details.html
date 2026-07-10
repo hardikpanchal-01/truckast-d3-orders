@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<!-- D3 "evaporationdetails" shell, made self-dynamic. evaporation-details-live.js reads
+     the order id from /orders/{id}/evaporation, fetches /api/order-detail and fills the
+     Status / Evaporation Rate / Concrete Temp / Order / Ticket rows. The Evaporation tile
+     on the order page links here. -->
+<html xmlns="http://www.w3.org/1999/xhtml" class="k-webkit k-webkit149"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="format-detection" content="telephone=no">
+        <title></title>
+
+        <script src="./Order_files/d3_complete_nohc.js"></script>
+        <link href="./Order_files/d3_complete.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/highcharts.js"></script>
+        <script src="./Order_files/highcharts-more.js"></script>
+        <script src="./Order_files/data.js"></script>
+        <script src="./Order_files/jquery.rateit.min.js"></script>
+        <link href="./Order_files/rateit.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/hopscotch.min.js"></script>
+        <link href="./Order_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/chardinjs.min.js"></script>
+        <link href="./Order_files/chardinjs.css" rel="stylesheet" type="text/css">
+        <link href="./Order_files/bootstrap2-toggle.min.css" rel="stylesheet">
+        <script src="./Order_files/bootstrap2-toggle.min.js"></script>
+
+        <style media="print" type="text/css">
+            a:after { content:''; } a[href]:after { content: none !important; }
+        </style>
+    </head>
+    <body>
+        <script>
+            $(document).ready(function () { hideLoadingIndicator(); loadLogin(); });
+            $(window).unload(function () { hideLoadingIndicator(); saveLogin(); });
+        </script>
+
+<div class="d3-page">
+
+<div class="navbar navbar-fixed-top navbar-inverse">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
+            </a>
+            <a id="header-bar-title" class="brand">TRUCKAST</a>
+            <div class="nav-collapse collapse">
+                <ul class="nav">
+                    <li><a href="/">MARKETS</a></li>
+                    <li><a href="/settings">SETTINGS</a></li>
+                    <li><a href="/publish">PUBLISH</a></li>
+                    <li><a href="/admin">ADMIN</a></li>
+                    <li><a href="/order-request">ORDER</a></li>
+                    <li><a href="/rollout/search">ROLLOUT</a></li>
+                    <li><a href="/projects">PROJECTS</a></li>
+                    <li><a href="https://d3.truckast.com/dv/v1/dolese/Truckast/Help?App=truckast&amp;HelpPage=evaporationdetails">HELP</a></li>
+                    <li><a href="/login">LOGOUT</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div id="error-box" class="alert alert-error" style="display: none"><h4 id="error-title" style="margin-bottom: 5px">Error!</h4><p id="error-text"></p></div>
+    <div id="warning-box" class="alert alert-block" style="display: none"><h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4><p id="warning-text"></p></div>
+    <div id="success-box" class="alert alert-success" style="display: none"><h4 id="success-title" style="margin-bottom: 5px">Success!</h4><p id="success-text"></p></div>
+    <div id="information-box" class="alert alert-info" style="display: none"><h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4><p id="information-text"></p></div>
+
+<form id="evaporationdetails" method="POST">
+
+<div class="navbar">
+    <div class="navbar-inner">
+        <div class="container">
+            <table style="width:100%">
+                <tbody><tr>
+                    <td style="width:38px">
+                        <a style="cursor:pointer" onclick="history.back();hideLoadingIndicator();">
+                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./Order_files/arrow-big-01@2x.png">
+                        </a>
+                    </td>
+                    <td>
+                    <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                        <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                            <span style="font-size: 16px"><strong id="d3-ev-title">Evaporation Details</strong></span><br>
+                            <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                        </div>
+                    </div>
+                    </td>
+                    <td style="width:38px">
+                        <a style="cursor:pointer" onclick="location.reload()">
+                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./Order_files/arrow-small-27@2x.png">
+                        </a>
+                    </td>
+                </tr>
+            </tbody></table>
+        </div>
+    </div>
+</div>
+            <div id="Header" class="d3-label" style="width: 100%;"></div>
+
+<div style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 40%"><div class="d3-label" style="width: 100%;">Status:</div></td>
+            <td style="vertical-align: middle; width: 60%"><div id="d3-ev-status" class="d3-label" style="width: 100%;"></div></td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 40%"><div class="d3-label" style="width: 100%;"> Evaporation Rate:</div></td>
+            <td style="vertical-align: middle; width: 60%"><div id="d3-ev-rate" class="d3-label" style="width: 100%;"></div></td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 40%"><div class="d3-label" style="width: 100%;"> Concrete Temp:</div></td>
+            <td style="vertical-align: middle; width: 60%"><div id="d3-ev-temp" class="d3-label" style="width: 100%;"></div></td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 40%"><div class="d3-label" style="width: 100%;">Order Number:</div></td>
+            <td style="vertical-align: middle; width: 60%"><div id="d3-ev-order" class="d3-label" style="width: 100%;"></div></td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 40%"><div class="d3-label" style="width: 100%;">Current Ticket Number:</div></td>
+            <td style="vertical-align: middle; width: 60%"><div id="d3-ev-ticket" class="d3-label" style="width: 100%;"></div></td>
+        </tr>
+    </tbody>
+</table>
+</div>
+        <br>
+
+                High evaporation rates create a condition in which special precautions need to be taken to ensure proper handling, placing, finishing and curing of concrete. Hot weather problems are most frequently encountered in the summer, but the associated climatic factors of high winds and dry air can occur at any time of the year, contributing to high evaporation rates.<br><br>
+				The three most common effects of high evaporation rates are crazing, plastic shrinkage cracking and drying shrinkage cracking.<br><br>
+				<b>Crazing</b> is a pattern of fine cracks that do not penetrate much below the surface and are usually a cosmetic problem only.<a href="https://d3.truckast.com/dv/v1/dolese/Truckast/evaporationdetailspdf?pdfid=4D05EBD3-1ACD-4B56-9158-CED9BB7D601E">NRMCA Concrete in Practice #3: Crazing Concrete Surfaces</a><br><br>
+				<b>Plastic shrinkage cracking</b> can occur water evaporates from the surface of freshly placed concrete faster than it is replaced by bleed water.<a href="https://d3.truckast.com/dv/v1/dolese/Truckast/evaporationdetailspdf?pdfid=8B99C22F-0E5F-494E-8925-07388A7D34DE">NRMCA Concrete in Practice #5: Plastic Shrinkage Cracking</a><br><br>
+				<b>Drying shrinkage</b> is the most common cause of concrete cracking. Because almost all concrete is mixed with more water than is needed to hydrate the cement, much of the remaining water evaporates, causing the concrete to shrink.<a href="https://d3.truckast.com/dv/v1/dolese/Truckast/evaporationdetailspdf?pdfid=DD2AB243-7200-4573-ACD0-BA4D4D9E3DB3">NRMCA Concrete in Practice #4: Cracking Concrete Surfaces </a><br><br>
+
+                Dolese Bros. Co. recommends the following practices to reduce the effects of adverse weather on concrete:<br><br>
+				<ul><li>Pour during cooler temperatures, such as early morning or at night.</li>
+				<li>Don't get too spread out - Have enough manpower to quickly place, finish and cure the concrete.</li>
+				<li>Moisten the subgrade and form work prior to concrete placement.</li>
+				<li>Limit the effect of wind and sun by using windbreaks and sunshades.</li>
+				<li>Use a superplasticizer, if needed, for a concrete consistency that allows rapid placement. Try not to add water - more water = more potential for cracking.</li>
+				<li>Prevent loss of surface moisture from the plastic concrete through use of evaporation retarders.</li>
+				<li>Ask our Dispatch Department or your local Dolese Bros. Co. Sales Representative about using synthetic fibers to help control plastic shrinkage cracks.</li>
+				<li>Provide the recommend curing methods as soon as possible after the concrete finishing processes have been completed.
+				</li></ul><br>
+				<b>References</b><br><br>
+				ACI 305, "Hot Weather Concreting," ACI Manual of Concrete Practice, Part 2. American Concrete Institute, P.O. Box 19150, Detroit, Michigan 48219.
+
+</form>
+
+</div>
+
+</div>
+
+<script src="/d3-static/evaporation-details-live.js"></script>
+</body></html>

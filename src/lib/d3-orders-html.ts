@@ -1,6 +1,6 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
-import type { DoleseOrderListItem, OrderStatus } from "@/actions/orderActions";
+import type { DoleseOrderListItem, OrderStatus, DoleseAnnouncement } from "@/actions/orderActions";
 
 /* ------------------------------------------------------------------ */
 /*  Hybrid renderer: takes the EXACT D3 export (public/d3-static/       */
@@ -41,12 +41,18 @@ function tileColor(o: DoleseOrderListItem): string {
   // Pre-Pour: a FIRM (committed) order is green; a WILL-CALL order is yellow.
   // "Active" is a firm/confirmed state too, so it's green alongside "Firm".
   if (o.status === "PRE_POUR") return ds === "Firm" || ds === "Active" ? TILE_GREEN : TILE_YELLOW;
-  // In-Process / Complete: by poured speed vs planned (≥90 green, 60–89 yellow, <60 red).
-  const pct = o.pour_pct;
-  if (pct == null) return TILE_GREEN;
-  if (pct >= 90) return TILE_GREEN;
-  if (pct >= 60) return TILE_YELLOW;
-  return TILE_RED;
+  // Completed orders are always green in D3 (a finished pour, regardless of the speed
+  // it ran at) — verified against the JobsForFixedNodeID export.
+  if (o.status === "COMPLETED") return TILE_GREEN;
+  // In-Process: colour by how well the pour is KEEPING UP WITH DELIVERIES — poured ÷
+  // delivered (ticketed) — NOT pour speed. Verified against the live D3 board (7/9):
+  // 40502 poured 96% of delivered → green; 41206/20705/26508 poured 75/50/33% → yellow
+  // even though 41206 pours FASTER than planned (so speed is not the signal). Orders that
+  // haven't begun pouring (poured 0) read green — they're just delivering, not behind.
+  // In-Process is never red on the D3 board; red comes only from Hold/Cancelled (above).
+  if (o.poured_cy <= 0) return TILE_GREEN;
+  const keptUp = o.ticketed_cy > 0 ? o.poured_cy / o.ticketed_cy : 1;
+  return keptUp >= 0.85 ? TILE_GREEN : TILE_YELLOW;
 }
 
 // Concrete is ordered in half-yard increments, so D3 shows CY to the nearest 0.50
@@ -103,9 +109,11 @@ function orderTile(o: DoleseOrderListItem): string {
   const addr = o.delivery_addr1 || o.project_name || "";
   const title = `${start} ${addr}`.trim().toUpperCase();
   const subTitle = (o.customer_name || "").toUpperCase();
-  // Pie fill = volume delivered ÷ volume ordered (per the D3 JOBS HELP), NOT the
-  // speed % (that only drives the colour).
-  const pourFrac = o.ordered_cy > 0 ? (o.poured_cy / o.ordered_cy) * 100 : 0;
+  // Pie fill = volume DELIVERED (ticketed) ÷ volume ordered (per the D3 JOBS HELP), NOT the
+  // poured-out volume and NOT the speed % (that only drives the colour). D3 fills the pie by
+  // what's been shipped to the job, so an order with 4 loads delivered but only 1 poured out
+  // (e.g. 26508: 42 of 73.5 delivered, 10.5 poured) reads ~57% full, not a near-empty 14%.
+  const pourFrac = o.ordered_cy > 0 ? (o.ticketed_cy / o.ordered_cy) * 100 : 0;
   const icon = isCancelled
     ? `<div class="tileIcon"><img src="${ASSET}/Cancelled.png"></div>`
     : isComplete
@@ -125,25 +133,29 @@ function orderTile(o: DoleseOrderListItem): string {
   );
 }
 
-/* ---- fuel-surcharge promo tile (D3's exact first cell) ---- */
-function fuelTile(): string {
+/* ---- fuel-surcharge / announcement promo tile (D3's exact first cell) ----
+ * Driven by the live `announcements` row (getActiveAnnouncement). Renders nothing
+ * when no promo is published/active today, so the tile is never stale. */
+function fuelTile(ann?: DoleseAnnouncement | null): string {
+  if (!ann) return "";
+  const bg = (ann.color || "red").trim().toLowerCase();
   return (
-    `<div class="tile" style="position: relative; background-color: red; cursor: pointer; display: block;" ` +
+    `<div class="tile" style="position: relative; background-color: ${esc(bg)}; cursor: pointer; display: block;" ` +
     `onclick="window.top.location.href='/fuel-surcharges'">` +
     `<img src="${ASSET}/dogear.png" style="position: absolute; right: 0px; bottom: 0px; ">` +
     `<div class="tileContainer"><div class="tileIcon"><img src="${ASSET}/DOLESEPUBLISH.PNG"></div>` +
     `<div class="tileInfoSection"><div class="tileCell">` +
-    `<div class="tileSuperTitle">June 29th thru July 3rd, 2026</div>` +
-    `<div class="tileTitle">Current Fuel Surcharge</div>` +
-    `<div class="tileSubTitle">$25.00 per load *Click for Details</div>` +
+    `<div class="tileSuperTitle">${esc(ann.tagline || "")}</div>` +
+    `<div class="tileTitle">${esc(ann.title || "")}</div>` +
+    `<div class="tileSubTitle">${esc(ann.subtitle || "")}</div>` +
     `</div></div></div></div>`
   );
 }
 
 /** The order-tiles markup (fuel promo + one tile per order) — also served
  *  on its own from /api/orders-tiles so the client can re-render it live. */
-export function renderTiles(orders: DoleseOrderListItem[]): string {
-  return fuelTile() + orders.map(orderTile).join("");
+export function renderTiles(orders: DoleseOrderListItem[], announcement?: DoleseAnnouncement | null): string {
+  return fuelTile(announcement) + orders.map(orderTile).join("");
 }
 
 export async function buildOrdersHtml(): Promise<string> {

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<!-- D3 "Delay Details" (TicketStatusDetails) shell, made self-dynamic. The table is
+     rendered by ticket-status-details-live.js from /api/order-detail (delay_loads). -->
+<html xmlns="http://www.w3.org/1999/xhtml" class="k-webkit k-webkit149"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="format-detection" content="telephone=no">
+        <title></title>
+
+        <script src="./Order_files/d3_complete_nohc.js"></script>
+        <link href="./Order_files/d3_complete.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/highcharts.js"></script>
+        <script src="./Order_files/highcharts-more.js"></script>
+        <script src="./Order_files/data.js"></script>
+        <script src="./Order_files/jquery.rateit.min.js"></script>
+        <link href="./Order_files/rateit.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/hopscotch.min.js"></script>
+        <link href="./Order_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/chardinjs.min.js"></script>
+        <link href="./Order_files/chardinjs.css" rel="stylesheet" type="text/css">
+        <link href="./Order_files/bootstrap2-toggle.min.css" rel="stylesheet">
+        <script src="./Order_files/bootstrap2-toggle.min.js"></script>
+
+        <style media="print" type="text/css">
+            a:after { content:''; }
+            a[href]:after { content: none !important; }
+        </style>
+        <!-- D3's TicketStatusDetails inline dataTables styling (verbatim). -->
+        <style type="text/css">
+            .dataTables_filter label { float: right }
+            .dataTables_paginate ul { float: right }
+            .pagination { margin: 0px 0; }
+            .table { margin-bottom: 8px; }
+        </style>
+    </head>
+    <body>
+        <script>
+            $(document).ready(function () { hideLoadingIndicator(); loadLogin(); });
+            $(window).unload(function () { hideLoadingIndicator(); saveLogin(); });
+        </script>
+
+<div class="d3-page">
+
+<div class="navbar navbar-fixed-top navbar-inverse">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
+            </a>
+            <a id="header-bar-title" class="brand">TRUCKAST</a>
+            <div class="nav-collapse collapse">
+                <ul class="nav">
+                    <li><a href="/">MARKETS</a></li>
+                    <li><a href="/settings">SETTINGS</a></li>
+                    <li><a href="/publish">PUBLISH</a></li>
+                    <li><a href="/admin">ADMIN</a></li>
+                    <li><a href="/order-request">ORDER</a></li>
+                    <li><a href="/rollout/search">ROLLOUT</a></li>
+                    <li><a href="/projects">PROJECTS</a></li>
+                    <li><a href="https://d3.truckast.com/dv/v1/dolese/Truckast/Help?App=truckast&amp;HelpPage=TicketStatusDetails">HELP</a></li>
+                    <li><a href="/login">LOGOUT</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div id="Header" class="d3-label" style="width: 100%;"></div>
+
+<div class="navbar">
+    <div class="navbar-inner">
+        <div class="container">
+            <table style="width:100%">
+                <tbody><tr>
+                    <td style="width:38px">
+                        <a style="cursor:pointer" onclick="history.back()">
+                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./Order_files/arrow-big-01@2x.png">
+                        </a>
+                    </td>
+                    <td>
+                    <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                        <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                            <span style="font-size: 16px"><strong>Delay Details</strong></span><br>
+                            <span style="font-size: 11px; padding: 0"><strong id="d3-dd-subtitle">ORDER</strong></span>
+                        </div>
+                    </div>
+                    </td>
+                    <td style="width:38px">
+                        <a style="cursor:pointer" onclick="location.reload()">
+                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./Order_files/arrow-small-27@2x.png">
+                        </a>
+                    </td>
+                </tr>
+            </tbody></table>
+        </div>
+    </div>
+</div>
+
+    <a href="#" class="btn btn-danger btn-small" style="width: 100px; display: none">Download PDF</a>
+
+    <br>
+    <br>
+
+    <div style="float:right;padding:5px;visibility:visible"><a id="d3-dd-xls" href="javascript:void(0)"><img alt="Download" src="./Order_files/excel-xls-icon.48x48pixel.png"></a></div>
+
+    <br>
+    <br>
+
+    <div id="d3-delay-detail" style="display: block; width: 100%"></div>
+
+</div>
+
+</div>
+
+<script src="/d3-static/ticket-status-details-live.js"></script>
+</body></html>

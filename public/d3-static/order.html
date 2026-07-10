@@ -74,14 +74,14 @@
             <div class="nav-collapse collapse">
                 <ul class="nav">
                                             <li><a href="/">MARKETS</a></li>
-                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/truckast/Settings">SETTINGS</a></li>
+                                            <li><a href="/settings">SETTINGS</a></li>
                                             <li><a href="/publish">PUBLISH</a></li>
-                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/TKAdmin/UserSearch">ADMIN</a></li>
-                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/OrderRequest/DoleseOrderRequestDashboardV2">ORDER</a></li>
-                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/Rollout/Search">ROLLOUT</a></li>
-                                            <li><a href="https://d3.truckast.com/dv/v1/dolese/Project/InviteTo">PROJECTS</a></li>
+                                            <li><a href="/admin">ADMIN</a></li>
+                                            <li><a href="/order-request">ORDER</a></li>
+                                            <li><a href="/rollout/search">ROLLOUT</a></li>
+                                            <li><a href="/projects">PROJECTS</a></li>
                                             <li><a href="https://d3.truckast.com/dv/v1/dolese/Truckast/Help?App=truckast&amp;HelpPage=Order">HELP</a></li>
-                                            <li><a href="https://d3.truckast.com/dv/v1/d3/Accounts/Logout">LOGOUT</a></li>
+                                            <li><a href="/login">LOGOUT</a></li>
 
                 </ul>
             </div>
@@ -129,7 +129,7 @@
                     </div>                    
                     </td>
                     <td style="width:38px">
-                        <a href="https://d3.truckast.com/dv/v1/dolese/truckast/Order?OrderID=335810CB-BF73-F111-82CC-9F6F49760254">
+                        <a style="cursor:pointer" onclick="location.reload()">
                             <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./Order_files/arrow-small-27@2x.png">
                             
                         </a>                    
@@ -436,6 +436,12 @@
 
 <div id="job-inventory-chart1" style="width: 100%; height: 300px; margin: 0 auto; display: block; float:left; padding-top:5px; padding-bottom:5px" data-highcharts-chart="2"></div>
 
+                <div id="d3-delay-overview" style="width:100%; clear:both; display:block"></div>
+
+                <!-- Legacy static delay table + POUR LOG/QC buttons from the D3 export.
+                     Superseded by the live #d3-delay-overview above; hidden so its stray
+                     <br> spacers don't add empty vertical space before the message box. -->
+                <div style="display:none">
                 <div id="cf1ca495-111d-462b-98df-35ad1add5417" class="d3-label" style="width: 100%;display: none;"><h4>Delay Overview</h4></div>
 
 
@@ -563,6 +569,7 @@
 
 
 
+</div>
 <div id="social-table" style="display: block; width:100%">
 <table class="table table-hover">
     <tbody>
@@ -667,5 +674,5 @@
 
     
 
-<script src="/d3-static/order-live.js?v=5"></script>
+<script src="/d3-static/order-live.js?v=17"></script>
 </body></html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<!-- D3 "OrderDetails" shell, made self-dynamic. The header tiles (STATUS / ON JOB /
+     RATE), the product cards and the weather tile are rendered by
+     order-details-live.js from /api/order-detail. -->
+<html xmlns="http://www.w3.org/1999/xhtml" class="k-webkit k-webkit149"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="format-detection" content="telephone=no">
+        <title></title>
+
+        <script src="./Order_files/d3_complete_nohc.js"></script>
+        <link href="./Order_files/d3_complete.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/highcharts.js"></script>
+        <script src="./Order_files/highcharts-more.js"></script>
+        <script src="./Order_files/data.js"></script>
+        <script src="./Order_files/jquery.rateit.min.js"></script>
+        <link href="./Order_files/rateit.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/hopscotch.min.js"></script>
+        <link href="./Order_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/chardinjs.min.js"></script>
+        <link href="./Order_files/chardinjs.css" rel="stylesheet" type="text/css">
+        <link href="./Order_files/bootstrap2-toggle.min.css" rel="stylesheet">
+        <script src="./Order_files/bootstrap2-toggle.min.js"></script>
+
+        <style media="print" type="text/css">
+            a:after { content:''; }
+            a[href]:after { content: none !important; }
+        </style>
+    </head>
+    <body>
+        <script>
+            $(document).ready(function () { hideLoadingIndicator(); loadLogin(); });
+            $(window).unload(function () { hideLoadingIndicator(); saveLogin(); });
+        </script>
+
+<div class="d3-page">
+
+<div class="navbar navbar-fixed-top navbar-inverse">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
+            </a>
+            <a id="header-bar-title" class="brand">TRUCKAST</a>
+            <div class="nav-collapse collapse">
+                <ul class="nav">
+                    <li><a href="/">MARKETS</a></li>
+                    <li><a href="/settings">SETTINGS</a></li>
+                    <li><a href="/publish">PUBLISH</a></li>
+                    <li><a href="/admin">ADMIN</a></li>
+                    <li><a href="/order-request">ORDER</a></li>
+                    <li><a href="/rollout/search">ROLLOUT</a></li>
+                    <li><a href="/projects">PROJECTS</a></li>
+                    <li><a href="https://d3.truckast.com/dv/v1/dolese/Truckast/Help?App=truckast&amp;HelpPage=OrderDetails">HELP</a></li>
+                    <li><a href="/login">LOGOUT</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div id="error-box" class="alert alert-error" style="display: none">
+        <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+        <p id="error-text"></p>
+    </div>
+    <div id="warning-box" class="alert alert-block" style="display: none">
+        <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+        <p id="warning-text"></p>
+    </div>
+    <div id="success-box" class="alert alert-success" style="display: none">
+        <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+        <p id="success-text"></p>
+    </div>
+    <div id="information-box" class="alert alert-info" style="display: none">
+        <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+        <p id="information-text"></p>
+    </div>
+
+<form id="order-details" method="POST">
+
+<div class="navbar">
+    <div class="navbar-inner">
+        <div class="container">
+            <table style="width:100%">
+                <tbody><tr>
+                    <td style="width:38px">
+                        <a style="cursor:pointer" onclick="history.back();hideLoadingIndicator();">
+                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./Order_files/arrow-big-01@2x.png">
+                        </a>
+                    </td>
+                    <td>
+                    <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                        <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                            <span style="font-size: 16px"><strong id="d3-od-title">ORDER</strong></span><br>
+                            <span style="font-size: 11px; padding: 0"><strong id="d3-od-subtitle"></strong></span>
+                        </div>
+                    </div>
+                    </td>
+                    <td style="width:38px">
+                        <a style="cursor:pointer" onclick="location.reload()">
+                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./Order_files/arrow-small-27@2x.png">
+                        </a>
+                    </td>
+                </tr>
+            </tbody></table>
+        </div>
+    </div>
+</div>
+            <div id="Header" class="d3-label" style="width: 100%;"></div>
+
+    <div id="d3-od-status" class="d3-label" style="width: 100%;"></div>
+    <br>
+
+    <!-- Header tiles: STATUS / ON JOB / RATE. Each tile group mirrors D3's exact
+         markup — a width:100% block whose leading clear:both spacer sets the spacing
+         and clears the floated tiles from the group above. -->
+    <div style="width: 100%; display: block">
+        <div style="width: 100%; height: 1px; clear: both"></div>
+        <div id="d3-od-header" style="display: inline-block;"></div>
+    </div>
+
+    <!-- Product cards + weather tile -->
+    <div style="width: 100%; display: block">
+        <div style="width: 100%; height: 1px; clear: both"></div>
+        <div id="d3-od-products" style="display: inline-block; width: 100%;"></div>
+    </div>
+
+</form>
+
+</div>
+
+</div>
+
+<script src="/d3-static/order-details-live.js"></script>
+</body></html>
