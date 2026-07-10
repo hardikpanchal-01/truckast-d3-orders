@@ -239,10 +239,14 @@
     tiles();
     summary();
   }
-  // Title-bar refresh button (top-right) re-pulls the live feeds for THIS page
-  // instead of navigating to the external d3.truckast.com site. Unchanged data is a
-  // no-op (see tiles()), so a click never needlessly replays the pie animation.
-  window.d3Refresh = refresh;
+  // Title-bar refresh button (top-right): do a genuine full page reload — the same
+  // thing D3's own reload button does — so the whole list visibly refreshes. (The
+  // earlier silent AJAX repaint looked like "nothing happened" when the data was
+  // unchanged.) The 30s auto-tick below still uses the quiet refresh() so the pies
+  // don't re-animate on their own every half-minute.
+  window.d3Refresh = function () {
+    window.location.reload();
+  };
   function init() {
     wireDates();
     wirePlant();

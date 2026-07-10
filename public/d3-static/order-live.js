@@ -45,12 +45,16 @@
     var click = onclick ? ' onclick="' + onclick + '"' : "";
     var cur = onclick ? "pointer" : "default";
     var dog = onclick ? '<img src="' + ASSET + '/dogear.png" style="position:absolute;right:0;bottom:0">' : "";
+    // Shrink the big centre value so a long word (e.g. "COMPLETE", "CANCELLED", "IN PROCESS")
+    // fits INSIDE the 88px tile instead of spilling over its edge; numbers/times stay 24px.
+    var ttl = String(title == null ? "" : title);
+    var fs = ttl.length <= 6 ? 24 : ttl.length <= 8 ? 18 : ttl.length <= 10 ? 15 : 13;
     return (
       '<div class="tile" style="position: relative; width: 88px; height: 90px; margin-right:5px; margin-bottom: 5px; background-color: ' +
       (bg || BLUE) + "; float: left; color:white; cursor:" + cur + '; display:block"' + click + ">" + dog +
       '<div style="padding:5px">' +
       '<div style="text-align:center;font-size:12px;font-weight:bold">' + esc(tagline) + "</div>" +
-      '<div style="width:100%;height:40px;line-height:40px;text-align:center;font-weight:bold;font-size:24px">' + esc(title) + "</div>" +
+      '<div style="width:100%;height:40px;line-height:40px;text-align:center;font-weight:bold;overflow:hidden;white-space:nowrap;font-size:' + fs + 'px">' + esc(ttl) + "</div>" +
       '<div style="text-align:center;font-size:12px">' + esc(subtitle || "") + "</div>" +
       "</div></div>"
     );
@@ -106,11 +110,15 @@
   // d3_complete.css (already loaded on the page). Contractor Delay is signed: red
   // when positive (over the allotted pour), green when zero/negative.
   function delayOverviewHtml(loads) {
-    if (!loads || !loads.length) return "";
+    // null => not a completed order; render nothing. An empty array => a completed order
+    // with no per-load delay data: D3 still shows the table shell with a "No data
+    // available in table" row and the Delay Details button, so reproduce that instead of
+    // collapsing the section.
+    if (!loads) return "";
     // Column widths as PERCENTAGES of D3's rendered dataTable (210/139/205/233/303 px)
     // so the columns spread across the full width exactly like D3's, at any container size.
     var W = ["19.3%", "12.7%", "18.8%", "21.4%", "27.8%"];
-    var rows = loads.map(function (l, idx) {
+    var rows = loads.length ? loads.map(function (l, idx) {
       var cd = l.contractor_delay;
       var color = cd > 0 ? "red" : "green";
       var rowClass = idx % 2 === 0 ? "gradeA odd" : "gradeA even";
@@ -121,7 +129,8 @@
         '<td style="border-top:0" class=" ">' + esc(l.wait_to_pour) + "</td>" +
         '<td style="border-top:0" class=" "><font color="' + color + '">' + esc(cd) + "</font></td>" +
         "</tr>";
-    }).join("");
+    }).join("")
+      : '<tr class="odd"><td valign="top" colspan="5" class="dataTables_empty">No data available in table</td></tr>';
     return '<div class="d3-label" style="width: 100%;"><h4>Delay Overview</h4></div>' +
       '<div style="display: block; width: 100%">' +
       '<div class="dataTables_wrapper form-inline" role="grid">' +
@@ -237,10 +246,29 @@
       // instead of at the first event (~02:06).
       var truckData = (c.trucks || []).slice();
       if (!truckData.length) {
-        // Pre-pour / will-call order — no truck movement yet. D3 collapses the "Trucks
-        // on the Job" chart entirely (the chat follows the Pour Speed chart directly),
-        // so hide the container instead of leaving an empty 300px chart with a title.
-        trucks.style.display = "none";
+        // No truck movement in the data yet. D3 does NOT collapse the "Trucks on the Job"
+        // chart — it renders the titled chart frame and shows Highcharts' "Loading..."
+        // overlay (its CSV hasn't populated). Reproduce that: an empty area chart with the
+        // same title/subtitle, then showLoading().
+        trucks.style.display = "";
+        var loadingChart = new window.Highcharts.Chart({
+          chart: { renderTo: trucks, type: "area", spacingRight: 10, spacingLeft: 10, spacingTop: 10, spacingBottom: 10 },
+          colors: ["#434348", "#90ed7d"],
+          title: { text: "Trucks on the Job" },
+          subtitle: { text: ZOOM_SUB },
+          // Draw no axes/grid while loading — an empty datetime chart would otherwise
+          // render a stray x-axis baseline (and tick labels) across the frame. Blank them
+          // so the loading state is just the title + "Loading..." on white, like D3.
+          xAxis: { type: "datetime", title: { text: null }, lineWidth: 0, tickWidth: 0, labels: { enabled: false } },
+          yAxis: { min: 0, title: { text: "" }, gridLineWidth: 0, labels: { enabled: false } },
+          tooltip: TOOLTIP,
+          // No legend while loading — the "Waiting"/"Pouring" keys stay hidden until the
+          // chart actually has data (D3 shows only the title + "Loading..." here).
+          legend: { enabled: false },
+          credits: { enabled: false },
+          series: [{ name: '"Waiting"', data: [] }, { name: '"Pouring"', data: [] }],
+        });
+        loadingChart.showLoading();
       } else {
         trucks.style.display = "";
         var startT = (typeof c.tMin === "number") ? c.tMin : truckData[0].t;
@@ -414,8 +442,9 @@
       }
     } else if (d.status === "COMPLETED") {
       // Completed layout (D3 COMPLETE spec): LOADS / LOADS %ON TIME / POURED, then
-      // POUR RATE / DOLESE (producer) delay / <customer> delay, weather (Final Update)
-      // and the evaporation-rate tile.
+      // POUR RATE / DOLESE (producer) delay / <customer> delay, the weather card
+      // (Final Update) and the evaporation-rate tile. With no loads, %ON TIME is 100
+      // (green) — the API defaults it there, never 0.
       var onTime = d.on_time_pct != null ? d.on_time_pct : 0;
       var otColor = onTime >= 90 ? GREEN : onTime >= 60 ? YELLOW : RED; // spec colour bands
       var dd = d.dolese_delay_min || 0;
@@ -429,10 +458,19 @@
           tile1x1("POURED", half(d.poured_cy), "CY");
       }
       if (det) {
+        // D3 completed-order layout: POUR RATE / DOLESE (producer) delay / <customer>
+        // delay, then the weather card (Final Update) and the evaporation-rate tile.
+        // Delay tiles are GREEN at zero minutes (on time) and RED once over — matching
+        // D3, which never shows the neutral blue here. Weather is data-driven
+        // (weatherTile returns "" when the order has no weather data).
         det.innerHTML =
           tile1x1("POUR RATE", (d.pour_rate != null ? Number(d.pour_rate).toFixed(2) : "0.00"), "CY/HR") +
-          tile1x1("DOLESE", String(dd), "DELAY MIN", dd > 0 ? "window.top.location.href='/orders/" + ID + "/delays'" : null, dd > 0 ? RED : BLUE) +
-          tile1x1(producer, String(cd), "DELAY MIN", cd > 0 ? "window.top.location.href='/orders/" + ID + "/delays'" : null, cd > 0 ? RED : BLUE) +
+          // Producer (DOLESE) delay → D3's AggProducerDelay breakdown page, which lists one
+          // truck tile per late load (TRUCK n DUE : t / <ticket>: N MIN DELAY / ARRIVED: t).
+          tile1x1("DOLESE", String(dd), "DELAY MIN", dd > 0 ? "window.top.location.href='/orders/" + ID + "/producer-delay'" : null, dd > 0 ? RED : GREEN) +
+          // Customer (contractor) delay → D3's AggCustomerDelay breakdown page, which lists
+          // one tile per delayed load (PLAN / <ticket>: N MIN DELAY / ACTUAL).
+          tile1x1(producer, String(cd), "DELAY MIN", cd > 0 ? "window.top.location.href='/orders/" + ID + "/customer-delay'" : null, cd > 0 ? RED : GREEN) +
           '<div style="width: 100%; height: 1px; clear: both"></div>' +
           weatherTile(d.weather, true) +
           '<div style="width: 100%; height: 1px; clear: both"></div>' +
