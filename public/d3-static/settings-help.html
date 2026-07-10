@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no">
+    <title>Help</title>
+
+    <!-- Required javascript and css all rolled up in one -->
+    <script src="./MarketSummary_files/d3_complete_nohc.js"></script>
+    <link href="./MarketSummary_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+    <!-- Highcharts -->
+    <script src="./MarketSummary_files/highcharts.js"></script>
+    <script src="./MarketSummary_files/highcharts-more.js"></script>
+    <script src="./MarketSummary_files/data.js"></script>
+
+    <!-- need to rollup into d3_complete upon approval -->
+    <script src="./MarketSummary_files/jquery.rateit.min.js"></script>
+    <link href="./MarketSummary_files/rateit.css" rel="stylesheet" type="text/css">
+    <script src="./MarketSummary_files/hopscotch.min.js"></script>
+    <link href="./MarketSummary_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+    <script src="./MarketSummary_files/chardinjs.min.js"></script>
+    <link href="./MarketSummary_files/chardinjs.css" rel="stylesheet" type="text/css">
+
+    <link href="./MarketSummary_files/bootstrap2-toggle.min.css" rel="stylesheet">
+    <script src="./MarketSummary_files/bootstrap2-toggle.min.js"></script>
+
+    <style media="print" type="text/css">
+        a:after { content:''; }
+        a[href]:after { content: none !important; }
+    </style>
+
+    <style>
+        .dataTables_filter label { float: right }
+        .dataTables_paginate ul { float: right }
+        .pagination { margin: 0px 0; }
+        .table { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <script>
+        // document load initialization
+        $(document).ready(function () {
+            hideLoadingIndicator();
+            loadLogin();
+        });
+        $(window).unload(function () {
+            hideLoadingIndicator();
+            saveLogin();
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var errormsg = getParameterByName("pageerror");
+            if (errormsg != null && errormsg.length > 0) {
+                displayError('ERROR', trimString(errormsg));
+            }
+            Highcharts.setOptions({
+                colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+            });
+        });
+    </script>
+
+    <div class="d3-page">
+
+        <div class="navbar navbar-fixed-top navbar-inverse">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+
+                    <a id="header-bar-title" class="brand" href="/">TRUCKAST</a>
+
+                    <div class="nav-collapse collapse">
+                        <ul class="nav">
+                            <li><a href="/">MARKETS</a></li>
+                            <li><a href="/settings">SETTINGS</a></li>
+                            <li><a href="/publish">PUBLISH</a></li>
+                            <li><a href="/admin">ADMIN</a></li>
+                            <li><a href="/order-request">ORDER</a></li>
+                            <li><a href="/rollout-search">ROLLOUT</a></li>
+                            <li><a href="/projects">PROJECTS</a></li>
+                            <li class="active"><a href="/settings-help">HELP</a></li>
+                            <li><a href="/login">LOGOUT</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="error-box" class="alert alert-error" style="display: none">
+                <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                <p id="error-text"></p>
+            </div>
+            <div id="warning-box" class="alert alert-block" style="display: none">
+                <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                <p id="warning-text"></p>
+            </div>
+            <div id="success-box" class="alert alert-success" style="display: none">
+                <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                <p id="success-text"></p>
+            </div>
+            <div id="information-box" class="alert alert-info" style="display: none">
+                <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                <p id="information-text"></p>
+            </div>
+
+            <form id="help" method="POST">
+                <div id="Header" class="d3-label" style="width: 100%;"></div>
+
+                <div class="navbar">
+                    <div class="navbar-inner">
+                        <div class="container">
+                            <table style="width:100%">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:38px">
+                                            <a onclick="history.back();hideLoadingIndicator();" style="cursor:pointer">
+                                                <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./MarketSummary_files/arrow-big-01@2x.png">
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                                                <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                                    <span style="font-size: 16px"><strong>HELP</strong></span><br>
+                                                    <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="width:38px">
+                                            <a href="/settings" style="cursor:pointer">
+                                                <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./MarketSummary_files/arrow-small-27@2x.png">
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contact Information Section -->
+                <div style="display: block; width: 100%">
+                    <table cellpadding="0" cellspacing="0" border="0" class="table" id="contact-info-table" style="width: 100%;">
+                        <thead style="display: none">
+                            <tr style="display: none">
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="even gradeA">
+                                <td style="border-top:0">
+                                    Have questions about the TRUCKAST app? Please call or email us.<br><br>
+                                    Call: <a href="tel:8667671676">(866)767-1676</a><br><br>
+                                    Email: <a href="mailto:noreply@truckast.com?Subject=TRUCKAST%20Help">noreply@truckast.com</a><br><br>
+                                    <a href="/privacy-policy">Privacy Policy</a><br>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- TRUCKAST - SETTINGS HELP Section -->
+                <div style="display: block; width: 100%">
+                    <table cellpadding="0" cellspacing="0" border="0" class="table" id="settings-help-table" style="width: 100%;">
+                        <thead style="display: none">
+                            <tr style="display: none">
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="even gradeA">
+                                <td style="border-top:0">
+                                    <h3>TRUCKAST - SETTINGS HELP</h3>
+                                    Manage your notifications using this form<br>
+                                    <b>Switch Producers</b> - If you have access to multiple producers, you can switch between them using this dropdown. If you only have access to 1 producer, you won't see this option<br>
+                                    <b>Mobile Number</b> - Update your mobile number<br>
+                                    <b>Time Format</b> - Choose how you would like to view time stamps<br><br>
+                                    <b>Notifications</b><br>
+                                    Notifications can be delivered by SMS or email as shown on the screen. Check the box if you'd like to receive a notification<br>
+                                    <b>New Order</b> - A new order has been created<br>
+                                    <b>Updated Order</b> - An order has changed<br>
+                                    <b>Will Call Reminder</b> - When an order is a Will Call, a reminder to firm it up. One will be sent 24 hours before the pour, and again 90 minutes before the start of the pour<br>
+                                    <b>First Truck</b> - The first truck is on the way to the job<br>
+                                    <b>Last Truck</b> - The last truck for an order has been ticketed<br>
+                                    <b>Late Truck</b> - The truck is going to be late to the job. For the first load, if we don't see a ticket being loaded within the planned travel time to the jobsite (plus the late allowance), we'll let you know that we don't see any trucks being loaded for you<br>
+                                    <b>Plus Load</b> - Loads in excess of the base order quantity that are going to be late to the job. Other names for this include Call Back or Add-On<br>
+                                    <b>New Post</b> - A user created a post<br>
+                                    <b>New Comment</b> - A user commented on a post<br>
+                                    <b>New Order Request</b> - An Order Request has been submitted<br>
+                                    <b>Order Request has Changed</b> - An Order Request has changed<br>
+                                    <b>Order Request Accepted</b> - An Order Request has been accepted
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </form>
+        </div>
+
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            $('#contact-info-table').dataTable({
+                "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'><'span6'p>>",
+                "sPaginationType": "bootstrap",
+                "bPaginate": false,
+                "bFilter": false,
+                "bSort": false,
+                "oLanguage": {
+                    "sLengthMenu": "_MENU_ records per page"
+                }
+            });
+
+            $('#settings-help-table').dataTable({
+                "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'><'span6'p>>",
+                "sPaginationType": "bootstrap",
+                "bPaginate": false,
+                "bFilter": false,
+                "bSort": false,
+                "oLanguage": {
+                    "sLengthMenu": "_MENU_ records per page"
+                }
+            });
+        });
+    </script>
+</body>
+</html>

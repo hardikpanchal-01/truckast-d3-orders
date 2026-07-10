@@ -85,18 +85,31 @@ const TAB_HREF: Record<string, string> = {
   ORDER: "/order-request",
 };
 
+// Context-aware HELP routes — each section has its own help page.
+const HELP_HREF: Record<string, string> = {
+  rollout: "/rollout-help",
+  order: "/order-help",
+  projects: "/project-help",
+  settings: "/settings-help",
+  default: "/help",
+};
+
 export function TopNav() {
   const pathname = usePathname();
   const isRollout = pathname?.startsWith("/rollout") ?? false;
   const isOrder = pathname?.startsWith("/order-request") ?? false;
   const isProjects = pathname?.startsWith("/projects") ?? false;
+  const isSettings = pathname?.startsWith("/settings") ?? false;
   const brand = isRollout ? "ROLLOUT" : isOrder ? "ORDER REQUEST" : isProjects ? "PROJECTS" : "TRUCKAST";
   const tabs: readonly string[] = isRollout ? ROLLOUT_TABS : isOrder ? ORDER_TABS : isProjects ? PROJECTS_TABS : MARKETS_TABS;
   // First tab is the active/highlighted tab in the markets nav; the others have none.
   const active = isRollout || isOrder || isProjects ? "" : MARKETS_TABS[0];
   const [open, setOpen] = React.useState(false);
   const renderTab = (tab: string, inMenu = false) => {
-    const href = TAB_HREF[tab];
+    // Context-aware HELP route based on current section
+    const href = tab === "HELP"
+      ? (isRollout ? HELP_HREF.rollout : isOrder ? HELP_HREF.order : isProjects ? HELP_HREF.projects : isSettings ? HELP_HREF.settings : HELP_HREF.default)
+      : TAB_HREF[tab];
     const isActive = tab === active;
     // Desktop tabs turn white when active/hovered; mobile-menu items stay gray (only the
     // dark hover background changes). Colours/spacing live in d3-chrome.module.css.

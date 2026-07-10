@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no">
+    <title>Privacy Policy</title>
+
+    <!-- Required javascript and css all rolled up in one -->
+    <script src="./MarketSummary_files/d3_complete_nohc.js"></script>
+    <link href="./MarketSummary_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+    <!-- Highcharts -->
+    <script src="./MarketSummary_files/highcharts.js"></script>
+    <script src="./MarketSummary_files/highcharts-more.js"></script>
+    <script src="./MarketSummary_files/data.js"></script>
+
+    <!-- need to rollup into d3_complete upon approval -->
+    <script src="./MarketSummary_files/jquery.rateit.min.js"></script>
+    <link href="./MarketSummary_files/rateit.css" rel="stylesheet" type="text/css">
+    <script src="./MarketSummary_files/hopscotch.min.js"></script>
+    <link href="./MarketSummary_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+    <script src="./MarketSummary_files/chardinjs.min.js"></script>
+    <link href="./MarketSummary_files/chardinjs.css" rel="stylesheet" type="text/css">
+
+    <link href="./MarketSummary_files/bootstrap2-toggle.min.css" rel="stylesheet">
+    <script src="./MarketSummary_files/bootstrap2-toggle.min.js"></script>
+
+    <style media="print" type="text/css">
+        a:after { content:''; }
+        a[href]:after { content: none !important; }
+    </style>
+</head>
+<body>
+    <script>
+        // document load initialization
+        $(document).ready(function () {
+            hideLoadingIndicator();
+            loadLogin();
+        });
+        $(window).unload(function () {
+            hideLoadingIndicator();
+            saveLogin();
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var errormsg = getParameterByName("pageerror");
+            if (errormsg != null && errormsg.length > 0) {
+                displayError('ERROR', trimString(errormsg));
+            }
+            Highcharts.setOptions({
+                colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+            });
+        });
+    </script>
+
+    <div class="d3-page">
+
+        <div class="navbar navbar-fixed-top navbar-inverse">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+
+                    <a id="header-bar-title" class="brand"></a>
+
+                    <div class="nav-collapse collapse">
+                        <ul class="nav">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="error-box" class="alert alert-error" style="display: none">
+                <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                <p id="error-text"></p>
+            </div>
+            <div id="warning-box" class="alert alert-block" style="display: none">
+                <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                <p id="warning-text"></p>
+            </div>
+            <div id="success-box" class="alert alert-success" style="display: none">
+                <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                <p id="success-text"></p>
+            </div>
+            <div id="information-box" class="alert alert-info" style="display: none">
+                <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                <p id="information-text"></p>
+            </div>
+
+            <form id="Paragraph-form" method="POST">
+
+                <div class="navbar">
+                    <div class="navbar-inner">
+                        <div class="container">
+                            <table style="width:100%">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:38px">
+                                            <a onclick="history.back();hideLoadingIndicator();" style="cursor:pointer">
+                                                <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./MarketSummary_files/arrow-big-01@2x.png">
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                                                <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                                    <span style="font-size: 16px"><strong>TRUCKAST</strong></span><br>
+                                                    <span style="font-size: 11px; padding: 0"><strong>Privacy Policy</strong></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="width:38px">
+                                            <a href="/" style="cursor:pointer">
+                                                <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./MarketSummary_files/arrow-small-27@2x.png">
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <br>
+                <br>
+
+                <div id="privacy-policy-title" class="d3-label" style="width: 100%;"><h1>TRUCKAST Privacy Policy</h1></div>
+
+                <br>
+                <br>
+
+                <p>1.General. This privacy policy (referred to in this document as this "Privacy Policy") governs information that you provide or that we collect in connection with your use of the following (collectively, the "Services"): (a) www.truckast.com and all other Internet websites owned or operated by TRUCKAST, INC., or any of its affiliates (referred to in this document as "Company") on which this Privacy Policy is posted (all such sites are collectively referred to in this document as the "Site"), as well as any content, products, services, features, functions or other resources offered on any of those sites ; and (b) any Company-branded application for your mobile, tablet or other device ("Truckast Application"), including any services made available through the Truckast Application. By accessing or using any of the Services, you are acknowledging that you have received notice of, and are accepting the practices described in, this Privacy Policy. References in this Privacy Policy to "you" or "your" or variations thereof shall mean individual users of the Services, and references to "we," "our," "us" or variations of any of these, shall mean the Company. For the avoidance of doubt, this Privacy Policy does not apply to information collected from customers who purchase or subscribe to our products or services and enter into a signed written agreement governing such products or services ("Agreements"), except to the extent otherwise expressly provided in such Agreements. In such cases, use of information collected in connection with the purchase of products and/or services shall be governed by the applicable Agreement.</p>
+
+                <br>
+
+                <p>2.Changes. This Privacy Policy may be modified from time to time by us at any time in our sole discretion, and you should review this Privacy Policy periodically. We will notify you of substantive changes by posting a public notice on the Site, or by other reasonable means, stating that changes have been made, and advising you to review the revised Privacy Policy. Your continued use of any of the Services constitutes your acceptance of the modified version of this Privacy Policy. You can determine when this Privacy Policy was last revised by looking at date listed by the "Last Updated" legend at the top of this Privacy Policy. If, at any time, you choose not to accept this Privacy Policy (including any amendments), please cease use of the Services.</p>
+
+                <br>
+
+                <p>3.Information We Collect. We collect the following types of information in connection with your use of the Services.(a) Personal information that is specific to an individual and that can be used to identify the individual. This includes such things as your e-mail address, name, title, mailing address, phone number, credit card number, and other such information. This type of information is sometimes called "personal information." In almost all cases, we do not obtain any personal information about you unless you choose to reveal it. You are not required to disclose any personally identifiable information to us, although certain parts of the Services may not be available to you unless you do so.(b) General information includes non-personal information from visitors to the Site (such as the time of day a visitor access the Site, the IP address of the visitor, which pages of our Site the visitor visits, etc.). We also track and compile aggregate statistical data regarding use of the Services.(c) A user's login information (username and password) for the Truckast Application.(d) Generic data defining the type of mobile device that is use to access the Truckast Application. (e) User provided content consists of information that users provide that is posted in chat rooms, blogs, comment boxes, and other such forums, which may include opinions, ideas, text, pictures, audio and video content, and other such content. This is referred to as "user provided content". (f) User input is information you provide in response to prompts from the Site or the Truckast Application. For example, a user may provide ordering and scheduling information in the Truckast Application. Alternatively, we may ask users to complete and submit surveys. User input may include information that is specific to an individual but that does not identify the individual (e.g., is not personal information).</p>
+
+                <br>
+
+                <p>4.How We Collect Information. We collect information in the following ways.(a) In some cases, we, our unaffiliated service providers, or other trusted unaffiliated parties with which we have a strategic relationship ("Strategic Partners"), ask you to provide the information in connection with the Services. For example, to access certain portions of the Site or the service provided through the Truckast Application, you may be required to become a registered member, and to register, we may ask you to provide certain information (such as name, email address, phone number, title, username, password, content you post, etc.). Additionally, if you subscribe to any paid features on Site, purchase products from the Site, or purchase a paid subscription to the service provided through the Truckast Application, you may be required to provide certain additional information (such as credit card information, billing address, etc.). Additionally, you may also provide information in connection with votes or surveys we are conducting on the Site, or areas of the site which permit you to provide user provided content.(b) We also collect information indirectly through the use of cookies and web beacons and other similar means. A cookie is a small file that is stored on a user's computer or mobile device for record-keeping purposes, and we place cookies on your computer. We may also place cookies on your mobile device to store your login information so that you don't have to type it on every login. Web beacons are similar to cookies and can be used to monitor a user's activities. We may use web beacons to monitor the number of people using the Site, number of people opening e-mails sent from us, or other data collection. Users who disable the ability of their web browser or mobile device to accept cookies will be able to use the Services, but will not be able to use certain features. We do not allow any third party to place cookies, web beacons or other tracking code on the Services.(c) California Do Not Track Disclosure. We employ technology that recognizes "do-not-track" requests from your browser, and the Site will comply with such requests when you are browsing public areas of the Site. However, the Site will ignore such requests when you use any area of the Services that requires a login, and we will monitor your activities in such areas.</p>
+
+                <br>
+
+                <p>5.How We Use Information We Collect.(a) Personal information.(i) We use personal information we collect to provide you with information, products or services you order or subscribe to. Where the information, product or service is one that is offered through a Service but provided by a third party, or where our Service facilitates the communication of information between you and a third party, we will provide your personal information to that third party solely for the purpose of providing you the information, product or service that you order or subscribe to. Unless you authorize us to, as further discussed below, the third party will be instructed not to use any of your information that we provide to it for the purpose of offering you any other information, product or service.(ii) We may provide your personal information to our service providers or Strategic Partners, but they will only be permitted to use that information in connection with services they provide to us. For example: (1) if you order a product, we may provide your name and address to our fulfillment provider so they can complete your order; (2) we may store your data on servers that are owned and operated by our hosting services provider; or (3) we may provide your name, email address, phone number and title to service providers and/or Strategic Partners we have engaged to contact you about subscribing to new Services.(iii) To use certain Services, we may require credit or debit card, bank account/ACH, PayPal and other similar financial information. We pass this information to our third-party payment processor solely to process and collect account payments you make in the standard course of subscribing to certain Services, to contact you if there is a problem processing a payment, and to provide fraud detection services. We do not store any of this information, but our third-party payment processor may store this information so you can make payments for Services more easily in the future. We do not use or disclose this financial information for marketing, promotional or any other purposes.</p>
+
+                <p>(iv) As part of subscriptions to certain Services, we may use personal information to send you communications, such as product/service announcements and administrative messages. These communications are considered part of Service subscription and you will not be able to opt out of receiving certain types of communications. However, you will have the ability to opt out of other communications from us by changing your preferences on the Settings page. We do not use personal information (including any corresponding general information) to provide you information about other products or services offered by us.(v) We may use personal information that is coupled with general information to improve our Site and our users experience on our Site by providing users with information, including advertisements, that is relevant to that specific user.(vi) We may periodically view or access personal information in individual records for the purpose of resolving a problem or dispute, a support issue, a suspected violation of the Terms of Service("Terms"), or as may be required by law.(vii) We may provide your personal information to our affiliated entities and joint venture partners who may use the personal information for the same purposes as us.(viii) Except as set forth in this section, we will not provide personal information we collect (excluding associated general data and performance data) to unaffiliated third parties, and we will not sell, license or otherwise distribute your personal information.(ix) We may store and process personal information in the United States and other countries.(b) General Information and De-Identified Personal Information. We may take personal information, and de-personalize it and/or aggregate it, such that it cannot be traced to a specific individual. We may use this de-personalized and/or aggregated information and general information, as well as the combination of these two, for any purpose, including: (i) to determine characteristics of visitors to or users of our Services, which characteristics may be used to improve our Services or their features or to better market our Services or their features; (ii) to determine the popularity or effectiveness of certain features of the Services, and to improve the Services' appeal to users; (iii) improving security, diagnosing and resolving technical problems; and (iv) monitoring, preventing and investigating user fraud and abuse. We also may share this information with third parties.(c) How We Use User Provided Content. The Truckast Application allows you to post comments that are visible to other users and to materials producers who are connected to the Truckast Application. What you have written may be seen, disclosed to or collected by third parties and may be used by others in ways we are unable to control or predict, including to contact you for unauthorized purposes. As such, we too are free to use user provided content in any manner whatsoever and without any restriction, including free to use, copy, display, perform, execute, distribute, modify and otherwise exploit in any manner the user provided content.</p>
+
+                <br>
+
+                <p>6.How We Use Feedback to Company. The Truckast Application has a support and feedback link within the Help area that allows you to submit comments, suggestions, or to convey bugs found with the Site. We may collect your name or username and email address to follow up with you or thank you for a suggestion. This Privacy Policy does not apply to content, business information, ideas, concepts or inventions that you transmit to us (these are defined in the Terms as Submissions). If you want to keep Submissions, do not send them to us. Submissions you do send to us are subject to the terms applicable to Submissions in the Terms.</p>
+
+                <br>
+
+                <p>7. Security. We care about protecting the security and integrity of your personal information. To that end, we have put in place reasonable security procedures and practices to protect your personal information from unauthorized access, destruction, use, modification, or disclosure. However, no method of transmission over the Internet, or method of electronic storage, is 100% secure. Unauthorized entry or use, hardware or software failure, and other factors may compromise the security of user information at any time. Therefore, while we strive to use commercially acceptable means to protect your personal information, we cannot guarantee its absolute security. Of course, you are responsible for maintaining the confidentiality and security of your username and password. Please also note that, as further described above, Company provides several third-party service providers and marketers with access to various types of user personal information solely for the purpose of permitting such parties to furnish services to users or the Services. To our knowledge, such parties employ reasonable security measures to protect user information against unauthorized access or use. We cannot monitor or control handling of user information by these parties, however, and their use of such information is accordingly governed by the privacy policies and terms of service of those parties.</p>
+
+                <br>
+
+                <p>8.Information Provided to Third Party Sites Linked to Our Services. The Services may contain links to other sites operated by unaffiliated third parties. We refer to these as "third party sites". Company is not responsible for the privacy practices of third party sites. Company encourages users to be aware when they leave our Services and to read the privacy statements of third party sites they link to. This Privacy Policy applies only to information collected through our Services.</p>
+
+                <br>
+
+                <p>9.Correction/Updating of Personal Information. You will have the ability to review and change or correct certain account and personal information in the Settings area of the Truckast Application. You may also change your password for the Truckast Application by following a link displayed when you log in. However, you must contact us by phone if you wish to review, change or correct other personal information collected through the Services.</p>
+
+                <br>
+
+                <p>10.Business or Asset Transfer or Sale. Our business, or portions thereof, may be sold or otherwise transferred to third parties through various means (e.g., sale of stock, sale of assets, merger, etc.). In such transactions, we may, and likely will, transfer information collected through the Services, or give the acquirer a license to use that information.</p>
+
+                <br>
+
+                <p>11.Release of Information for Legal Reasons. We may release information about you, including personal information, when we believe in good faith that such release is appropriate to comply with the law (for example, pursuant to a statutory demand, subpoena, warrant, or court order), to protect against fraudulent, abusive or unlawful use of the Services, to protect our property rights, to enforce any contract between you and us, or if we reasonably believe that a situation involving danger of death or injury to any person requires disclosure.</p>
+
+                <br>
+
+                <p>12.Protection of Minors. Use of the Services is not intended for children under the age of 13. Children under the age of 13 are not permitted to register for the Services or purchase subscriptions, or use any functionality for which registration or subscription is required. We will not knowingly collect information from these children. If your child has submitted personal information and you would like to request that such information be removed, please contact us at privacy@truckast.com. Any information submitted by a child under the age of 13 onto a public forum controlled by Company will remain public until we have been notified of such publication and have had reasonable opportunity to remove that information accordingly.</p>
+
+                <br>
+
+                <p>13.Contacting the Company. For questions and information about this Privacy Policy, you may contact the Company by email privacy@truckast.com or by first class mail at: Attn: Legal Notices, Truckast, Inc., 9355 Wilshire Blvd., Suite 200, Beverly Hills, CA 90210.</p>
+
+                <br>
+
+                <p>14.California Customers. California customers should also review the following California Privacy Rights statement.</p>
+
+                <br>
+
+                <p>YOUR CALIFORNIA PRIVACY RIGHTS</p>
+
+                <br>
+
+                <p>(As provided by California Civil Code Section 1798.83)</p>
+
+                <br>
+
+                <p>Last Updated: March 24, 2019</p>
+
+                <br>
+
+                <p>A California resident who has provided personal information to a business with whom he/she has established a business relationship for personal, family, or household purposes ("California customer") is entitled to request information about whether the business has disclosed personal information to any third parties for the third parties' direct marketing purposes, subject to certain exceptions. In general, subject to certain exceptions, if the business has made such a disclosure of personal information, upon receipt of a request by a California customer, the business is required to provide a list of all third parties to whom personal information was disclosed in the preceding calendar year, as well as a list of the categories of personal information that were disclosed.</p>
+
+                <br>
+
+                <p>However, under the law, a business is required to provide the above-described lists only if the business discloses the customer's personal information to third parties and the business knows or reasonably should know that the third parties use the personal information for the third parties' direct marketing purposes. As stated in our Privacy Policy, we provide information to third parties for the sole purpose of providing services to us, and we do not permit these third parties to use that information for any other purpose, including direct marketing purposes. Accordingly, we do not know or have any reason to believe that any third parties use information disclosed by us for direct marketing purposes.</p>
+
+                <br>
+
+                <p>California customers may request further information about our compliance with this law by sending an e-mail to californiaprivacy@truckast.com.</p>
+
+                <br>
+
+            </form>
+        </div>
+
+    </div>
+</body>
+</html>
