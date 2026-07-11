@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="format-detection" content="telephone=no" />
+        <title>Settings</title>
+
+        <!-- Required javascript and css all rolled up in one -->
+        <script src="./MarketSummary_files/d3_complete_nohc.js"></script>
+        <link href="./MarketSummary_files/d3_complete.css" rel="stylesheet" type="text/css" />
+
+        <!-- Highcharts -->
+        <script src="./MarketSummary_files/highcharts.js"></script>
+        <script src="./MarketSummary_files/highcharts-more.js"></script>
+        <script src="./MarketSummary_files/data.js"></script>
+
+        <!-- need to rollup into d3_complete upon approval -->
+        <script src="./MarketSummary_files/jquery.rateit.min.js"></script>
+        <link href="./MarketSummary_files/rateit.css" rel="stylesheet" type="text/css" />
+        <script src="./MarketSummary_files/hopscotch.min.js"></script>
+        <link href="./MarketSummary_files/hopscotch.min.css" rel="stylesheet" type="text/css" />
+        <script src="./MarketSummary_files/chardinjs.min.js"></script>
+        <link href="./MarketSummary_files/chardinjs.css" rel="stylesheet" type="text/css" />
+
+        <link href="./MarketSummary_files/bootstrap2-toggle.min.css" rel="stylesheet">
+        <script src="./MarketSummary_files/bootstrap2-toggle.min.js"></script>
+
+        <style media="print" type="text/css">
+            a:after { content:''; }
+            a[href]:after { content: none !important; }
+        </style>
+    </head>
+    <body>
+        <script>
+            // document load initialization
+            $(document).ready(function () {
+                hideLoadingIndicator();
+                loadLogin();
+            });
+            $(window).unload(function () {
+                hideLoadingIndicator();
+                saveLogin();
+            });
+        </script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        var errormsg = getParameterByName("pageerror");
+        if (errormsg != null && errormsg.length > 0) {
+            displayError('ERROR', trimString(errormsg));
+        }
+        Highcharts.setOptions({
+            colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+        });
+    });
+</script>
+
+<div class="d3-page">
+
+<div class="navbar navbar-fixed-top navbar-inverse">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+
+            <a id="header-bar-title" class="brand" href="/">TRUCKAST</a>
+
+            <div class="nav-collapse collapse">
+                <ul class="nav">
+                    <li><a href="/">MARKETS</a></li>
+                    <li class="active"><a href="/settings">SETTINGS</a></li>
+                    <li><a href="/publish">PUBLISH</a></li>
+                    <li><a href="/admin">ADMIN</a></li>
+                    <li><a href="/order-request">ORDER</a></li>
+                    <li><a href="/rollout/search">ROLLOUT</a></li>
+                    <li><a href="/projects">PROJECTS</a></li>
+                    <li><a href="/settings-help">HELP</a></li>
+                    <li><a href="/login">LOGOUT</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+                <div class="container">
+                    <div id="error-box" class="alert alert-error" style="display: none">
+                        <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                        <p id="error-text"></p>
+                    </div>
+                    <div id="warning-box" class="alert alert-block" style="display: none">
+                        <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                        <p id="warning-text"></p>
+                    </div>
+                    <div id="success-box" class="alert alert-success" style="display: none">
+                        <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                        <p id="success-text"></p>
+                    </div>
+                    <div id="information-box" class="alert alert-info" style="display: none">
+                        <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                        <p id="information-text"></p>
+                    </div>
+
+<form id="settings-form" method="POST">
+
+<div class="navbar">
+    <div class="navbar-inner">
+        <div class="container">
+            <table style="width:100%">
+                <tr>
+                    <td style="width:38px">
+                        <a onclick="history.back();hideLoadingIndicator();">
+                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./MarketSummary_files/arrow-big-01@2x.png" >
+                        </a>
+                    </td>
+                    <td>
+                    <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                        <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                            <span style="font-size: 16px"><strong>SETTINGS</strong></span><br />
+                            <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                        </div>
+                    </div>
+                    </td>
+                    <td style="width:38px">
+                        <a href="/settings">
+                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./MarketSummary_files/arrow-small-27@2x.png" >
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+            <div id="Header" class="d3-label" style="width: 100%;"></div>
+
+            <div id="welcome-label" class="d3-label" style="width: 100%;">Welcome, Kurt!</div>
+
+        <br/>
+
+        <select id="tenantswitch" name="tenantswitch" style="width: 100%; margin-bottom: 0; display: block;" >
+                    <option value="">Loading tenants...</option>
+        </select>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        // Load tenants from API
+        $.ajax({
+            url: '/api/tenants',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.tenants) {
+                    var $select = $('#tenantswitch');
+                    $select.empty();
+
+                    // Get selected tenant from cookie or default to first
+                    var selectedTenant = getCookie('selected_tenant') || '';
+
+                    $.each(response.tenants, function(index, tenant) {
+                        // Use d3_tenant_name for display (short name like "DOLESE")
+                        var displayName = (tenant.d3_tenant_name || tenant.name).toUpperCase();
+                        var isSelected = (selectedTenant.toLowerCase() === tenant.name.toLowerCase()) ||
+                                        (selectedTenant === '' && index === 0);
+                        $select.append($('<option>', {
+                            value: tenant.name,
+                            text: displayName,
+                            selected: isSelected
+                        }));
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Failed to load tenants:', error);
+                $('#tenantswitch').html('<option value="">Failed to load tenants</option>');
+            }
+        });
+
+        // Handle tenant switch
+        $('#tenantswitch').change(function () {
+            var value = $('#tenantswitch').val();
+            if (value != null && value.length > 0) {
+                // Save selected tenant via API
+                $.ajax({
+                    url: '/api/settings/tenant',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ tenant: value }),
+                    success: function(response) {
+                        if (response.success) {
+                            // Redirect to market page
+                            window.location.href = '/';
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Failed to switch tenant:', error);
+                    }
+                });
+            }
+        });
+    });
+
+    // Helper function to get cookie value
+    function getCookie(name) {
+        var value = "; " + document.cookie;
+        var parts = value.split("; " + name + "=");
+        if (parts.length == 2) return parts.pop().split(";").shift();
+        return null;
+    }
+</script>
+
+<div id="mobile-number-section" style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+            <div class="d3-label" style="width: 100%;">Mobile Number:</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+        <input id="mobile" name="mobile" value="(310)555-5555" style="margin-bottom: 0; width: 95%; display: block; " type="text" placeholder="" >
+            </td>
+        </tr>
+    </tbody>
+</table>
+</div>
+
+<div id="datetime-format-section" style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+            <div class="d3-label" style="width: 100%;">Time Format:</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+        <select id="datetimeformat" name="datetimeformat" style="width: 100%; margin-bottom: 0; display: block;" >
+                    <option value="250e1309-5f88-e311-9438-22000a98ac24" selected="selected">Friendly (Based on timing, makes it easy to understand)</option>
+                    <option value="cb52b213-5f88-e311-9438-22000a98ac24">Timestamp (mm/dd @ hh:mm)</option>
+        </select>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#datetimeformat').change(function () {
+            var value = $('#datetimeformat').val();
+            if (value != null && value.length > 4) {
+                var uvalue = value.toUpperCase();
+                if (uvalue.substring(0, 4) == "HTTP") {
+                    window.location.href = value;
+                }
+            }
+        });
+    });
+</script>
+            </td>
+        </tr>
+    </tbody>
+</table>
+</div>
+
+<div id="measurement-section" style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+            <div class="d3-label" style="width: 100%;">Measurement System:</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+        <select id="measurementtypeid" name="measurementtypeid" style="width: 100%; margin-bottom: 0; display: block;" >
+                    <option value="045C88A1-FF84-E211-8776-9BD4F74E3C8C" selected="selected">STANDARD</option>
+                    <option value="349483A7-FF84-E211-8776-9BD4F74E3C8C">METRIC</option>
+        </select>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#measurementtypeid').change(function () {
+            var value = $('#measurementtypeid').val();
+            if (value != null && value.length > 4) {
+                var uvalue = value.toUpperCase();
+                if (uvalue.substring(0, 4) == "HTTP") {
+                    window.location.href = value;
+                }
+            }
+        });
+    });
+</script>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+            <div class="d3-label" style="width: 100%;">Time Zone:</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+        <select id="timezoneid" name="timezoneid" style="width: 100%; margin-bottom: 0; display: block;" >
+                    <option value="388a7a8f-c3b6-4b81-9bf1-1836000834bc">(UTC-10:00) Hawaii</option>
+                    <option value="92a8f713-f86f-4ff9-b255-61b1d25cb412">(UTC-07:00) Mountain Time (US &amp; Canada)</option>
+                    <option value="16c0ad4a-1366-4404-8a74-64aaf4b0a308">(UTC-05:00) Eastern Time (US &amp; Canada)</option>
+                    <option value="e7152892-49ba-4a2a-bb8e-90210848e64b" selected="selected">(UTC-06:00) Central Time (US &amp; Canada)</option>
+                    <option value="c0d161f8-0359-4ece-8464-e52c723fe073">(UTC-07:00) Arizona</option>
+                    <option value="e4b2729f-8464-4d27-b0df-f0dd4b7d72c9">(UTC-08:00) Pacific Time (US &amp; Canada)</option>
+        </select>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#timezoneid').change(function () {
+            var value = $('#timezoneid').val();
+            if (value != null && value.length > 4) {
+                var uvalue = value.toUpperCase();
+                if (uvalue.substring(0, 4) == "HTTP") {
+                    window.location.href = value;
+                }
+            }
+        });
+    });
+</script>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+            <div class="d3-label" style="width: 100%;">Market Summary View:</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+        <select id="marketsummaryid" name="marketsummaryid" style="width: 100%; margin-bottom: 0; display: block;" >
+                    <option value="COMPANY" selected="selected">COMPANY</option>
+                    <option value="PROJECT">PROJECT</option>
+        </select>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#marketsummaryid').change(function () {
+            var value = $('#marketsummaryid').val();
+            if (value != null && value.length > 4) {
+                var uvalue = value.toUpperCase();
+                if (uvalue.substring(0, 4) == "HTTP") {
+                    window.location.href = value;
+                }
+            }
+        });
+    });
+</script>
+            </td>
+        </tr>
+    </tbody>
+</table>
+</div>
+
+        <br/>
+
+        <div style="display: block; width: 100%">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="topicname" style="width: 100%; ">
+            <thead><tr>
+            <th>NOTIFICATIONS</th>
+            <th>EMAIL</th>
+            <th>SMS</th>
+        </tr></thead>
+        <tbody>
+                <tr class="even gradeA">
+                <td style="">New Order</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_53FE7F06-2651-E111-84F4-0022190823E9" value="53FE7F06-2651-E111-84F4-0022190823E9"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Updated Order</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_4983F9BB-2F8F-E111-9378-9EF3ACB14DA6" value="4983F9BB-2F8F-E111-9378-9EF3ACB14DA6"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">First Truck</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_941CCCD8-5D8E-E111-9378-9EF3ACB14DA6" value="941CCCD8-5D8E-E111-9378-9EF3ACB14DA6"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Last Truck</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_8BA22422-678E-E111-9378-9EF3ACB14DA6" value="8BA22422-678E-E111-9378-9EF3ACB14DA6"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">Late Truck</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_5679777F-058B-E111-9378-9EF3ACB14DA6" value="5679777F-058B-E111-9378-9EF3ACB14DA6"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Plus Load</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_0AF6693E-0C56-E311-9433-22000A98AC24" value="0AF6693E-0C56-E311-9433-22000A98AC24"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">Will Call Order Reminder</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_41CED1C7-308F-E111-9378-9EF3ACB14DA6" value="41CED1C7-308F-E111-9378-9EF3ACB14DA6"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">New Post</td>
+                <td style=""><input type="checkbox" name="email_CBF6A0E0-3301-E311-9962-B5F293CD4A97" value="CBF6A0E0-3301-E311-9962-B5F293CD4A97"></td>
+                <td style=""><input type="checkbox" name="sms_CBF6A0E0-3301-E311-9962-B5F293CD4A97" value="CBF6A0E0-3301-E311-9962-B5F293CD4A97"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">New Comment</td>
+                <td style=""><input type="checkbox" name="email_86A9BBF2-3301-E311-9962-B5F293CD4A97" value="86A9BBF2-3301-E311-9962-B5F293CD4A97"></td>
+                <td style=""><input type="checkbox" name="sms_86A9BBF2-3301-E311-9962-B5F293CD4A97" value="86A9BBF2-3301-E311-9962-B5F293CD4A97"></td>
+            </tr>
+        </tbody>
+        </table>
+        </div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table {  margin-bottom: 8px; }
+</style>
+<script>
+            $(document).ready(function () {
+                $('#topicname').dataTable({
+                    "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'><'span6'p>>",
+                    "sPaginationType": "bootstrap",
+                    "bPaginate": false,
+                    "bFilter": false,
+                    "bSort": false,
+                    "oLanguage": {
+                        "sLengthMenu": "_MENU_ records per page"
+                    }
+                });
+            });
+</script>
+
+        <br/>
+
+        <div style="display: block; width: 100%">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="topicnameorderrequest" style="width: 100%; ">
+            <thead><tr>
+            <th>ORDER REQUEST NOTIFICATIONS</th>
+            <th>EMAIL</th>
+            <th>SMS</th>
+        </tr></thead>
+        <tbody>
+                <tr class="even gradeA">
+                <td style=""><div style="width:701px; display:block; box-sizing:border-box; padding:4px 0;">New Order Request</div></td>
+                <td style=""><div style="width:236px; display:block; box-sizing:border-box; text-align:left; padding:4px 0;"><input type="checkbox" name="email_28CC89D8-0885-E211-9178-F31FE83B2753" value="28CC89D8-0885-E211-9178-F31FE83B2753"></div></td>
+                <td style=""><div style="width:181px; display:block; box-sizing:border-box; text-align:left; padding:4px 0;"><input type="checkbox" name="sms_28CC89D8-0885-E211-9178-F31FE83B2753" value="28CC89D8-0885-E211-9178-F31FE83B2753"></div></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style=""><div style="width:701px; display:block; box-sizing:border-box; padding:4px 0;">Order Request Accepted\Rejected</div></td>
+                <td style=""><div style="width:236px; display:block; box-sizing:border-box; text-align:left; padding:4px 0;"><input type="checkbox" name="email_F378E6DE-8146-E311-8466-A7697EBE67DC" value="F378E6DE-8146-E311-8466-A7697EBE67DC"></div></td>
+                <td style=""><div style="width:181px; display:block; box-sizing:border-box; text-align:left; padding:4px 0;"><input type="checkbox" name="sms_F378E6DE-8146-E311-8466-A7697EBE67DC" value="F378E6DE-8146-E311-8466-A7697EBE67DC"></div></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style=""><div style="width:701px; display:block; box-sizing:border-box; padding:4px 0;">New Post / New Comment</div></td>
+                <td style=""><div style="width:236px; display:block; box-sizing:border-box; text-align:left; padding:4px 0;"><input type="checkbox" name="email_NewPostComment" value="NewPostComment"></div></td>
+                <td style=""><div style="width:181px; display:block; box-sizing:border-box; text-align:left; padding:4px 0;"><input type="checkbox" name="sms_NewPostComment" value="NewPostComment"></div></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style=""><script>
+                    setTimeout(function(){
+                        var rows = document.querySelectorAll('#topicnameorderrequest tr');
+                        var lastRow = rows[rows.length - 1];
+                        if(lastRow){
+                            var cells = lastRow.querySelectorAll('td');
+                            if(cells.length >= 3){
+                                cells[0].setAttribute('colspan','3');
+                                cells[0].style.cssText +=
+                                    'width:100%!important;'
+                                    + 'max-width:none!important;'
+                                    + 'border-right:none!important;';
+                                cells[1].innerHTML = '';
+                                cells[2].innerHTML = '';
+                                cells[1].style.display = 'none';
+                                cells[2].style.display = 'none';
+                            }
+                        }
+                    }, 200);
+                    setTimeout(function(){
+                        var table = document.getElementById('topicnameorderrequest');
+                        if(!table) return;
+                        var rows = table.querySelectorAll('tr');
+                        var headerRow = null;
+                        for(var i=0; i<rows.length; i++){
+                            if(rows[i].querySelector('th')){
+                                headerRow = rows[i];
+                                break;
+                            }
+                        }
+                        if(headerRow){
+                            var cells = headerRow.querySelectorAll('th');
+                            if(cells.length > 0){
+                                var selectHTML = '<span style="font-weight:bold;">Requests:</span> <select id="userType" name="userType">' +
+                                    '<option value="my"selected>My</option>' +
+                                    '<option value="company">Company</option>' +
+                                    '</select>';
+                                cells[0].innerHTML = cells[0].innerHTML + '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;' + selectHTML;
+                            }
+                        }
+                    }, 200);
+                </script>
+                <div style="display:block;padding:4px 0;">
+                    Truckast Order Requests are monitored Monday through Friday, from 7:30 AM to 5:00 PM. Dolese will respond to all order submissions received during normal business hours within 30 minutes of the request being submitted. Any order submitted outside of normal business hours will be reviewed and followed up on by 8:00 AM on the next business day. An order will be considered valid and confirmed once the requested delivery time and order details have been acknowledged and confirmed by Dolese, either through Truckast communication or direct phone contact.
+                </div></td>
+                <td style=""></td>
+                <td style=""></td>
+            </tr>
+        </tbody>
+        </table>
+        </div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table {  margin-bottom: 8px; }
+</style>
+<script>
+            $(document).ready(function () {
+                $('#topicnameorderrequest').dataTable({
+                    "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'><'span6'p>>",
+                    "sPaginationType": "bootstrap",
+                    "bPaginate": false,
+                    "bFilter": false,
+                    "bSort": false,
+                    "oLanguage": {
+                        "sLengthMenu": "_MENU_ records per page"
+                    }
+                });
+            });
+</script>
+
+        <div style="display: block; width: 100%">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="tiletable" style="width: 100%; ">
+            <thead><tr>
+            <th>OPTION</th>
+            <th>Hide</th>
+        </tr></thead>
+        <tbody>
+                <tr class="even gradeA">
+                <td style="">Loads Tile</td>
+                <td style=""><input type="checkbox" name="remove_Loads_Tile" value="89283446-5832-E511-80F2-22000B39E0BB"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">On Time Tile</td>
+                <td style=""><input type="checkbox" name="remove_OnTime_Tile" value="8A283446-5832-E511-80F2-22000B39E0BB"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">Volume Tile</td>
+                <td style=""><input type="checkbox" name="remove_Volume_Tile" value="8B283446-5832-E511-80F2-22000B39E0BB"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Pour Rate Tile</td>
+                <td style=""><input type="checkbox" name="remove_PourRate_Tile" value="8C283446-5832-E511-80F2-22000B39E0BB"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">Producer Delay Tile</td>
+                <td style=""><input type="checkbox" name="remove_ProdDelay_Tile" value="8D283446-5832-E511-80F2-22000B39E0BB"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Customer Delay Tile</td>
+                <td style=""><input type="checkbox" name="remove_CustDelay_Tile" value="8E283446-5832-E511-80F2-22000B39E0BB"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">Pour Speed Chart</td>
+                <td style=""><input type="checkbox" name="remove_PourSpeed_Chart" value="8F283446-5832-E511-80F2-22000B39E0BB"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Trucks On Job Chart</td>
+                <td style=""><input type="checkbox" name="remove_TrucksOnJob_Chart" value="90283446-5832-E511-80F2-22000B39E0BB"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">Tickets With Status Times Table</td>
+                <td style=""><input type="checkbox" name="remove_TicketsWithTimes_Table" value="91283446-5832-E511-80F2-22000B39E0BB"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Delay Details Button</td>
+                <td style=""><input type="checkbox" name="remove_DelayDetails_Button" value="6290D5DC-B251-E511-80F2-22000B39E0BB"></td>
+            </tr>
+        </tbody>
+        </table>
+        </div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table {  margin-bottom: 8px; }
+</style>
+<script>
+            $(document).ready(function () {
+                $('#tiletable').dataTable({
+                    "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'><'span6'p>>",
+                    "sPaginationType": "bootstrap",
+                    "bPaginate": false,
+                    "bFilter": false,
+                    "bSort": false,
+                    "oLanguage": {
+                        "sLengthMenu": "_MENU_ records per page"
+                    }
+                });
+            });
+</script>
+
+        <br/>
+
+            <a id="admin-settings-btn" href="/admin-settings" class="btn btn-success " style="width: 120px; display: inline-block" >ADMIN Settings</a>
+
+        <button id="submit-button" class="btn btn-danger " type="button" onclick="onSubmit_settings_form()" style="width: 150px" >Save</button>
+
+</form>
+
+<script>
+    function onValidate__settings_form() {
+        // these are necessary instantiations, do not remove
+        var message = "";
+        var regex;
+        var input;
+
+        return message;
+    }
+    function onSubmit_settings_form() {
+
+        // validate the form content
+        var validationMessage = onValidate__settings_form();
+        if (validationMessage != null && validationMessage.length > 0) {
+            $('#error-box').css('display', 'block');
+            $('#error-title').html('One or more fields were not properly filled out');
+            $('#error-text').html(validationMessage);
+            goToByScroll('error-box');
+            return;
+        }
+
+        // Collect form data
+        var formData = $('#settings-form').serialize();
+
+        // AJAX save
+        $.ajax({
+            url: '/api/settings',
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                $('#success-box').css('display', 'block');
+                $('#success-title').html('Success!');
+                $('#success-text').html('Settings saved successfully.');
+                goToByScroll('success-box');
+            },
+            error: function(xhr, status, error) {
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error!');
+                $('#error-text').html('Failed to save settings. Please try again.');
+                goToByScroll('error-box');
+            }
+        });
+    }
+
+    function goToByScroll(id) {
+        $('html,body').animate({scrollTop: $("#" + id).offset().top - 60}, 'slow');
+    }
+</script>
+
+                </div>
+</div>
+    </body>
+</html>

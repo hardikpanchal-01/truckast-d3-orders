@@ -12,7 +12,11 @@ export async function GET() {
     const tenants = await getTenants();
     return NextResponse.json({
       success: true,
-      tenants: tenants.map(t => ({ id: t.id, name: t.name }))
+      tenants: tenants.map(t => ({
+        id: t.id,
+        name: t.name,
+        d3_tenant_name: t.d3_tenant_name || t.name // Use d3_tenant_name if available, otherwise fall back to name
+      }))
     });
   } catch (error) {
     console.error("Error fetching tenants:", error);
