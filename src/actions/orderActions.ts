@@ -16,7 +16,7 @@ import supabaseServer from "@/supabase/server";
 import orderSequences from "@/data/dolese-order-sequence.json";
 import { getExcludedPatterns } from "@/actions/exclusionActions";
 import { filterExcludedOrders } from "@/lib/order-filters";
-import { getTenantSupabaseClient, getSelectedTenant } from "@/actions/tenantActions";
+import { getTenantSupabaseClient, getSelectedTenant, getSelectedTenantDisplayName } from "@/actions/tenantActions";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 // Helper to get the appropriate Supabase client (tenant-specific or default)
@@ -653,13 +653,15 @@ export async function getDoleseSummary(dateStr: string, dateToStr?: string): Pro
   const to = dateToStr ? dayRange(dateToStr).to : dayRange(dateStr).to;
 
   // Get tenant-specific Supabase client and selected tenant name
-  const [supabase, selectedTenant, exclusionPatterns] = await Promise.all([
+  const [supabase, selectedTenant, exclusionPatterns, tenantDisplayName] = await Promise.all([
     getSupabaseClient(),
     getSelectedTenant(),
     getExcludedPatterns(),
+    getSelectedTenantDisplayName(),
   ]);
 
-  const tenantName = selectedTenant || "DOLESE";
+  // Use the D3 display name (short name like "DOLESE" instead of "Dolese Ready Mix")
+  const tenantName = tenantDisplayName || selectedTenant || "DOLESE";
 
   // Paginate through all orders (Supabase default limit is 1000)
   const PAGE_SIZE = 1000;

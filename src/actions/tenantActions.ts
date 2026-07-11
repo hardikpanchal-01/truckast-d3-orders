@@ -87,12 +87,14 @@ export interface Tenant {
   id: number;
   uuid: string;
   name: string;
+  d3_tenant_name?: string | null;
 }
 
 export interface TenantWithCredentials extends Tenant {
   supabase_url: string | null;
   supabase_service_key: string | null;
   supabase_anon_key?: string | null;
+  d3_tenant_name?: string | null;
 }
 
 const TENANT_COOKIE = "selected_tenant";
@@ -101,7 +103,7 @@ export async function getTenants(): Promise<Tenant[]> {
   const { data, error } = await supabaseAuth
     .schema("auth_tenant")
     .from("tenants")
-    .select("id, uuid, name")
+    .select("id, uuid, name, d3_tenant_name")
     .eq("status", "active")
     .is("deleted_at", null)
     .order("name", { ascending: true });
@@ -155,7 +157,7 @@ export async function getTenantCredentials(tenantName: string): Promise<TenantWi
   const { data, error } = await supabaseAuth
     .schema("auth_tenant")
     .from("tenants")
-    .select("id, uuid, name, supabase_url, supabase_service_key, supabase_anon_key")
+    .select("id, uuid, name, supabase_url, supabase_service_key, supabase_anon_key, d3_tenant_name")
     .eq("name", tenantName)
     .eq("status", "active")
     .is("deleted_at", null)
@@ -211,4 +213,25 @@ export async function getTenantSupabaseClient(): Promise<SupabaseClient | null> 
   return createClient(tenant.supabase_url, tenant.supabase_service_key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+}
+
+/**
+ * Get the D3 display name for the selected tenant.
+ * Returns d3_tenant_name if available, otherwise falls back to the tenant name.
+ */
+export async function getSelectedTenantDisplayName(): Promise<string> {
+  const selectedTenant = await getSelectedTenant();
+
+  if (!selectedTenant) {
+    return "DOLESE"; // Default display name
+  }
+
+  const tenant = await getTenantCredentials(selectedTenant);
+
+  if (!tenant) {
+    return selectedTenant.toUpperCase();
+  }
+
+  // Use d3_tenant_name if available, otherwise use the tenant name
+  return (tenant.d3_tenant_name || tenant.name || selectedTenant).toUpperCase();
 }
