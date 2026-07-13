@@ -1,11 +1,14 @@
-import { MapPin } from "lucide-react";
-import { getRolloutCustomer, getProjectBasic } from "@/actions/orderActions";
+import { getRolloutCustomer, getProjectBasic, getReferencedOrders } from "@/actions/orderActions";
+import JobAddressField from "./JobAddressField";
 
 export const dynamic = "force-dynamic";
 
+// Matches D3's .form-control: grey fill, 4px left accent bar, square corners, 42px tall.
 const INP =
-  "w-full rounded-[4px] border border-[#e6e6e6] bg-[#f7f7f7] px-3 py-2 text-sm text-[#333] outline-none focus:border-[#66afe9]";
+  "block h-[42px] w-full rounded-none border border-[#f6f6f6] border-l-4 border-l-[#cfcfcf] bg-[#f6f6f6] px-3 py-1 text-sm text-[#555] outline-none focus:border-[#ffcb05] focus:border-l-[#ffcb05]";
 
+// Matches D3's <li class="form-group badge-li"> + absolute .number-badge (25px yellow circle
+// in the left gutter). The gutter itself comes from the <ol> content-box margin below.
 function Field({
   n,
   label,
@@ -18,18 +21,17 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex gap-3 py-3">
-      <span className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#f5c518] text-[12px] font-bold text-black">
+    <li className="relative mb-5 pl-[25px]">
+      <span className="absolute left-[-30px] top-[-1px] flex h-[25px] w-[25px] items-center justify-center rounded-full bg-[#ffcb05] text-[14px] font-bold text-black">
         {n}
       </span>
-      <div className="min-w-0 flex-1">
-        <label className="mb-1 block text-sm text-[#333]">
-          {label}
-          {required ? <span className="text-red-500"> *</span> : null}
-        </label>
-        {children}
-      </div>
-    </div>
+      {/* D3 .wizard-form-text-label: inline, 15px/500/#575757, no margin (block input drops below). */}
+      <label className="text-[15px] font-medium text-[#575757]">
+        {label}
+        {required ? <span className="text-red-500"> *</span> : null}
+      </label>
+      {children}
+    </li>
   );
 }
 
@@ -51,6 +53,12 @@ export default async function OrderRequestFormPage({
     companyName = cust?.name || "";
   }
 
+  // Referenced Order (#2) options — the customer's recent orders, newest first.
+  const referencedOrders = await getReferencedOrders({
+    projectId: project ? Number(project) : undefined,
+    customerId: customer ? Number(customer) : undefined,
+  });
+
   // On Job Date — the next 30 days starting today, e.g. "TUE, JUN 30".
   const DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const MON = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
@@ -71,30 +79,43 @@ export default async function OrderRequestFormPage({
 
   return (
     <div className="space-y-4">
-      {/* Yellow title bar with the DOLESE logo (square corners) */}
-      <div className="relative mx-auto flex max-w-[1140px] items-center border-t-[3px] border-[#00502f] bg-[#f5c518] px-5 py-4 shadow-[0_2px_10px_rgba(0,0,0,0.12)]">
-        <span className="w-full text-center text-[26px] font-bold text-[#00502f]">Order Request Form</span>
+      {/* D3 .header-banner: yellow bar, 5px slate top border, 30px title (left-aligned on
+          narrow widths), logo pinned right. */}
+      <div className="relative mx-auto w-full min-[768px]:max-w-[750px] min-[992px]:max-w-[970px] min-[1200px]:max-w-[1170px] border-t-[5px] border-[#44525d] bg-[#ffcb05] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.12)]">
+        <span className="block text-center text-[30px] font-bold text-[#00502f] max-[980px]:text-left max-[631px]:text-[25px] max-[431px]:text-[15px]">
+          Order Request Form
+        </span>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="https://d3.truckast.com/images/logos/dolese-logo.svg"
           alt="DOLESE"
-          className="absolute right-5 top-1/2 h-9 w-auto -translate-y-1/2"
+          className="absolute right-[10px] top-[3px] h-[35px] w-auto"
         />
       </div>
 
-      <form className="mx-auto max-w-[1140px] rounded-[10px] border border-[#e5e5e5] bg-white p-6 shadow-[0_2px_16px_rgba(0,0,0,0.12)]">
+      {/* D3 .order-request-form--wrapper: 40px padding, soft shadow, square-ish card. */}
+      <form className="mx-auto w-full min-[768px]:max-w-[750px] min-[992px]:max-w-[970px] min-[1200px]:max-w-[1170px] rounded-[10px] bg-white p-10 shadow-[0_0_12px_2px_rgba(0,0,0,0.16)]">
+        {/* D3 .order-form-content-box: 3em side inset (1em on ≤600px) — the field gutter. */}
+        <ol className="mx-12 list-none p-0 max-[600px]:mx-4">
         <Field n={1} label="Company">
-          <select className={INP} defaultValue={companyName}>
+          {/* Read-only: the company is fixed by the customer/project the form was opened for. */}
+          <select className={`${INP} cursor-not-allowed opacity-90`} defaultValue={companyName} disabled>
             <option>{companyName || "Select Company"}</option>
           </select>
         </Field>
         <Field n={2} label="Referenced Order">
-          <select className={INP}>
-            <option>SELECT RECENT ORDERS</option>
+          <select className={INP} defaultValue="">
+            <option value="">SELECT RECENT ORDERS</option>
+            {referencedOrders.map((o) => (
+              <option key={o.order_id} value={o.order_id}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </Field>
         <Field n={3} label="Job Name">
-          <input className={INP} placeholder="Enter Job Name" defaultValue={jobName} />
+          {/* Read-only: the job name comes from the selected project. */}
+          <input className={`${INP} cursor-not-allowed`} readOnly value={jobName} placeholder="Enter Job Name" />
         </Field>
         <Field n={4} label="Customer Job Number">
           <input className={INP} placeholder="Enter Customer Job Number" />
@@ -133,14 +154,7 @@ export default async function OrderRequestFormPage({
           </select>
         </Field>
         <Field n={11} label="Job Address" required>
-          <div className="flex items-stretch gap-2">
-            <span className="flex w-10 shrink-0 items-center justify-center rounded-[4px] bg-[#f5c518] text-[#1f3a2d]">
-              <MapPin className="h-5 w-5" strokeWidth={2} />
-            </span>
-            <input className={INP} placeholder="Enter Job Address Or Set Pin From Map Icon" />
-          </div>
-          <label className="mb-1 mt-3 block text-sm text-[#333]">Region</label>
-          <input className={INP} placeholder="Region Will Be Populated Based On the Job Adress" />
+          <JobAddressField />
         </Field>
         <Field n={12} label="Usage" required>
           <select className={INP}>
@@ -197,9 +211,10 @@ export default async function OrderRequestFormPage({
           <input className={INP} placeholder="Select Other Products" />
         </Field>
         <Field n={22} label="Notes & Comments">
-          <textarea className={`${INP} h-24 resize-none`} placeholder="Enter Notes, Comments, Delivery Instructions, etc." />
+          <textarea className={`${INP} !h-[100px] resize-none`} placeholder="Enter Notes, Comments, Delivery Instructions, etc." />
         </Field>
 
+        </ol>
         <div className="pt-4 text-center">
           <button
             type="submit"
