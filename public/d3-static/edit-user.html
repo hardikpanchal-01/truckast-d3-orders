@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<!-- saved from url=(0014)about:internet -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no">
+    <title>Edit User</title>
+
+    <!-- Required javascript and css all rolled up in one -->
+    <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
+    <link href="./JobsForFixedNodeID_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+    <!-- Highcharts -->
+    <script src="./JobsForFixedNodeID_files/highcharts.js"></script>
+    <script src="./JobsForFixedNodeID_files/highcharts-more.js"></script>
+    <script src="./JobsForFixedNodeID_files/data.js"></script>
+
+    <!-- need to rollup into d3_complete upon approval -->
+    <script src="./JobsForFixedNodeID_files/jquery.rateit.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/rateit.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/hopscotch.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/chardinjs.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/chardinjs.css" rel="stylesheet" type="text/css">
+
+    <link href="./JobsForFixedNodeID_files/bootstrap2-toggle.min.css" rel="stylesheet">
+    <script src="./JobsForFixedNodeID_files/bootstrap2-toggle.min.js"></script>
+
+    <style media="print" type="text/css">
+        a:after { content:''; }
+        a[href]:after { content: none !important; }
+    </style>
+</head>
+
+<body>
+    <script>
+        // document load initialization
+        $(document).ready(function () {
+            hideLoadingIndicator();
+            loadLogin();
+        });
+        $(window).unload(function () {
+            hideLoadingIndicator();
+            saveLogin();
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var errormsg = getParameterByName("pageerror");
+            if (errormsg != null && errormsg.length > 0) {
+                displayError('ERROR', trimString(errormsg));
+            }
+            Highcharts.setOptions({
+                colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+            });
+        });
+    </script>
+    <div class="d3-page">
+
+        <div class="navbar navbar-fixed-top navbar-inverse">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+
+                    <a id="header-bar-title" class="brand">ADMIN</a>
+
+                    <div class="nav-collapse collapse">
+                        <ul class="nav">
+                            <li><a href="/d3-static/user-search.html">USERS</a></li>
+                            <li><a href="/d3-static/internal.html">INTERNAL</a></li>
+                            <li><a href="/d3-static/roles.html">ROLES</a></li>
+                            <li><a href="/d3-static/plants.html">PLANTS</a></li>
+                            <li><a href="/d3-static/qc.html">QC</a></li>
+                            <li><a href="/admin/customers">CUSTOMER</a></li>
+                            <li><a href="/">TRUCKAST</a></li>
+                            <li><a href="/settings">SETTINGS</a></li>
+                            <li><a href="/login">LOGOUT</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="error-box" class="alert alert-error" style="display: none">
+                <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                <p id="error-text"></p>
+            </div>
+            <div id="warning-box" class="alert alert-block" style="display: none">
+                <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                <p id="warning-text"></p>
+            </div>
+            <div id="success-box" class="alert alert-success" style="display: none">
+                <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                <p id="success-text"></p>
+            </div>
+            <div id="information-box" class="alert alert-info" style="display: none">
+                <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                <p id="information-text"></p>
+            </div>
+
+            <form id="invite-form" method="POST" onsubmit="return false;">
+                <input type="hidden" name="userId" id="userId" value="" />
+
+                <div class="navbar">
+                    <div class="navbar-inner">
+                        <div class="container">
+                            <table style="width:100%">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:38px">
+                                            <a onclick="history.back(); return false;" style="cursor:pointer">
+                                                <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png">
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                                                <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                                    <span id="page-title" style="font-size: 16px"><strong>LOADING...</strong></span><br>
+                                                    <span id="page-subtitle" style="font-size: 11px; padding: 0"><strong></strong></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="width:38px">
+                                            <a href="javascript:location.reload();">
+                                                <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-small-27@2x.png">
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="user-form-container" style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 10%">
+                                    <div class="d3-label" style="width: 100%;">First Name:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 90%">
+                                    <input id="firstname" name="firstname" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 10%">
+                                    <div class="d3-label" style="width: 100%;">Last Name:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 90%">
+                                    <input id="lastname" name="lastname" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 10%">
+                                    <div class="d3-label" style="width: 100%;">Username/Email:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 90%">
+                                    <input id="email" name="email" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="Enter a valid email address" disabled>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 10%">
+                                    <div class="d3-label" style="width: 100%;">Title:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 90%">
+                                    <input id="labeltitle" name="labeltitle" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 10%">
+                                    <div class="d3-label" style="width: 100%;">Mobile Number:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 90%">
+                                    <input id="smartphonenumber" name="smartphonenumber" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 10%">
+                                    <div class="d3-label" style="width: 100%;">Measurement System:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 90%">
+                                    <select id="measurementtypeid" name="measurementtypeid" style="width: 100%; margin-bottom: 0; display: block;">
+                                        <option value="STANDARD" selected="selected">STANDARD</option>
+                                        <option value="METRIC">METRIC</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 10%">
+                                    <div class="d3-label" style="width: 100%;">Invite From:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 90%">
+                                    <select id="brandfixednodeid" name="brandfixednodeid" style="width: 100%; margin-bottom: 0; display: block;">
+                                        <option value="" id="invite-from-option">Loading...</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 10%">
+                                    <div class="d3-label" style="width: 100%;"></div>
+                                </td>
+                                <td style="vertical-align: middle; width: 90%">
+                                    <a id="edit-customer-access-button" href="#" class="btn btn-success" style="width: 180px; display: inline-block">EDIT COMPANY ACCESS</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 10%">
+                                    <div class="d3-label" style="width: 100%;">Company:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 90%">
+                                    <div style="height:125px; overflow:hidden; margin:0; padding: 0; border:1px solid #d3d3d3; position:relative;">
+                                        <div id="company-wrapper" style="height:100%; width:100%; overflow:auto;">
+                                            <div>
+                                                <ul id="company-list" style="height:100px; padding:0; list-style-type: none;">
+                                                    <li><label class="checkbox"><input name="company-placeholder" type="checkbox" disabled>Loading companies...</label></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <button id="submit-button" class="btn btn-danger" type="button" onclick="onSubmit_invite_form()" style="width: 150px">SUBMIT</button>
+
+                <br/>
+                <br/>
+                <br/>
+                <br/>
+                <br/>
+                <br/>
+                <br/>
+                <br/>
+                <br/>
+            </form>
+
+<script>
+    // Get parameters from URL
+    function getUrlParam(name) {
+        var params = new URLSearchParams(window.location.search);
+        return params.get(name);
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // Format phone number for display
+    function formatPhone(phone) {
+        if (!phone) return '';
+        var cleaned = phone.replace(/\D/g, '');
+        if (cleaned.length === 10) {
+            return '(' + cleaned.slice(0, 3) + ') ' + cleaned.slice(3, 6) + '-' + cleaned.slice(6);
+        }
+        return phone;
+    }
+
+    // Parse name into first and last
+    function parseName(fullName) {
+        if (!fullName) return { first: '', last: '' };
+        var parts = fullName.trim().split(' ');
+        if (parts.length === 1) {
+            return { first: parts[0], last: '' };
+        }
+        var first = parts[0];
+        var last = parts.slice(1).join(' ');
+        return { first: first, last: last };
+    }
+
+    // Load user info
+    function loadUserInfo() {
+        var userId = getUrlParam('id') || getUrlParam('userId') || getUrlParam('UserID');
+
+        if (!userId) {
+            $('#page-title').html('<strong>ERROR</strong>');
+            $('#error-box').css('display', 'block');
+            $('#error-title').html('Error');
+            $('#error-text').html('No user ID provided');
+            return;
+        }
+
+        $('#userId').val(userId);
+        showLoadingIndicator();
+
+        // Fetch user details
+        $.ajax({
+            url: '/api/admin/users/' + userId,
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                hideLoadingIndicator();
+
+                if (response.success && response.data) {
+                    var user = response.data;
+                    var name = user.name || '';
+                    var nameParts = parseName(name);
+                    var email = user.email || '';
+                    var customerName = user.customer_name || '';
+
+                    // Set title - format: "COMPANY NAME: Edit User Name" like D3
+                    var titleText = '';
+                    if (customerName) {
+                        titleText = customerName.toUpperCase() + ': Edit ' + name;
+                    } else {
+                        // If no customer, use tenant name
+                        var tenantName = user.tenant_name || 'ADMIN';
+                        titleText = tenantName.toUpperCase() + ': Edit ' + name;
+                    }
+                    $('#page-title').html('<strong>' + escapeHtml(titleText) + '</strong>');
+                    document.title = titleText;
+
+                    // Fill form fields
+                    $('#firstname').val(nameParts.first);
+                    $('#lastname').val(nameParts.last);
+                    $('#email').val(email);
+                    $('#labeltitle').val(user.title || '');
+                    $('#smartphonenumber').val(formatPhone(user.phone || ''));
+
+                    // Set measurement system
+                    if (user.measurement_system) {
+                        $('#measurementtypeid').val(user.measurement_system.toUpperCase());
+                    }
+
+                    // Set invite from (tenant/brand)
+                    var tenantName = user.tenant_name || user.brand_name || 'DOLESE';
+                    $('#invite-from-option').val(tenantName).text(tenantName.toUpperCase());
+
+                    // Set edit company access button link
+                    $('#edit-customer-access-button').attr('href', '/admin/users/' + userId + '/companies');
+
+                    // Load companies
+                    loadUserCompanies(userId);
+                } else {
+                    $('#page-title').html('<strong>ERROR</strong>');
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html('User not found');
+                }
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#page-title').html('<strong>ERROR</strong>');
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to load user: ' + error);
+            }
+        });
+    }
+
+    // Load user's companies
+    function loadUserCompanies(userId) {
+        $.ajax({
+            url: '/api/admin/users/' + userId + '/companies',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                var companyList = $('#company-list');
+                companyList.empty();
+
+                if (response.success && response.data && response.data.length > 0) {
+                    response.data.forEach(function(company) {
+                        var checked = company.has_access ? 'checked' : '';
+                        var li = '<li><label class="checkbox"><input name="company-' + company.id + '" type="checkbox" ' + checked + ' disabled>' + escapeHtml(company.name) + '</label></li>';
+                        companyList.append(li);
+                    });
+                } else {
+                    companyList.html('<li><label class="checkbox"><input type="checkbox" disabled>CLICK BUTTON TO ADD OR REMOVE ACCESS TO COMPANIES</label></li>');
+                }
+            },
+            error: function() {
+                $('#company-list').html('<li><label class="checkbox"><input type="checkbox" disabled>CLICK BUTTON TO ADD OR REMOVE ACCESS TO COMPANIES</label></li>');
+            }
+        });
+    }
+
+    // Validate form
+    function onValidate__invite_form() {
+        var message = "";
+        var regex;
+        var input;
+
+        // Validation for First Name
+        input = $("#firstname").val();
+        if (!input || input.trim().length === 0) {
+            message = message + 'First Name is required.<br/>';
+        }
+
+        // Validation for Last Name
+        input = $("#lastname").val();
+        if (!input || input.trim().length === 0) {
+            message = message + 'Last Name is required.<br/>';
+        }
+
+        // Validation for Email
+        regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        input = $("#email").val();
+        if (!regex.test(input)) {
+            message = message + 'Please enter a valid email address.<br/>';
+        }
+
+        return message;
+    }
+
+    // Submit form
+    function onSubmit_invite_form() {
+        // Hide all alert boxes
+        $('#error-box').css('display', 'none');
+        $('#success-box').css('display', 'none');
+        $('#warning-box').css('display', 'none');
+        $('#information-box').css('display', 'none');
+
+        // Validate
+        var validationMessage = onValidate__invite_form();
+        if (validationMessage != null && validationMessage.length > 0) {
+            $('#error-box').css('display', 'block');
+            $('#error-title').html('One or more fields were not properly filled out');
+            $('#error-text').html(validationMessage);
+            goToByScroll('error-box');
+            return;
+        }
+
+        var userId = $('#userId').val();
+        var firstName = $('#firstname').val().trim();
+        var lastName = $('#lastname').val().trim();
+        var fullName = firstName + ' ' + lastName;
+        var title = $('#labeltitle').val().trim();
+        var phone = $('#smartphonenumber').val().trim();
+        var measurementSystem = $('#measurementtypeid').val();
+
+        // Show loading indicator
+        showLoadingIndicator();
+
+        // Send update request
+        $.ajax({
+            url: '/api/admin/users/' + userId + '/update',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: fullName,
+                title: title,
+                phone: phone,
+                measurement_system: measurementSystem
+            }),
+            success: function(response) {
+                hideLoadingIndicator();
+
+                if (response.success) {
+                    $('#success-box').css('display', 'block');
+                    $('#success-title').html('Success');
+                    $('#success-text').html('User information has been updated successfully.');
+                    goToByScroll('success-box');
+                } else {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error || 'Failed to update user.');
+                    goToByScroll('error-box');
+                }
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to update user: ' + error);
+                goToByScroll('error-box');
+            }
+        });
+    }
+
+    // Initialize on page load
+    $(document).ready(function() {
+        loadUserInfo();
+    });
+</script>
+        </div>
+
+    </div>
+    <script type="text/javascript">
+    </script>
+
+</body>
+</html>
