@@ -73,6 +73,19 @@ const PROJECTS_TABS = [
   "LOGOUT",
 ] as const;
 
+// The Admin section uses its own brand + tab set.
+const ADMIN_TABS = [
+  "USERS",
+  "INTERNAL",
+  "ROLES",
+  "PLANTS",
+  "QC",
+  "CUSTOMER",
+  "TRUCKAST",
+  "SETTINGS",
+  "LOGOUT",
+] as const;
+
 // Routes wired so far; tabs without an entry render as inert labels.
 const TAB_HREF: Record<string, string> = {
   MARKETS: "/",
@@ -83,6 +96,13 @@ const TAB_HREF: Record<string, string> = {
   PROJECTS: "/projects",
   ROLLOUT: "/rollout/search",
   ORDER: "/order-request",
+  // Admin section routes
+  USERS: "/d3-static/user-search.html",
+  INTERNAL: "/admin/internal",
+  ROLES: "/admin/roles",
+  PLANTS: "/admin/plants",
+  QC: "/admin/qc",
+  CUSTOMER: "/admin/customers",
 };
 
 // Context-aware HELP routes — each section has its own help page.
@@ -100,15 +120,16 @@ export function TopNav() {
   const isOrder = pathname?.startsWith("/order-request") ?? false;
   const isProjects = pathname?.startsWith("/projects") ?? false;
   const isSettings = pathname?.startsWith("/settings") ?? false;
-  const brand = isRollout ? "ROLLOUT" : isOrder ? "ORDER REQUEST" : isProjects ? "PROJECTS" : "TRUCKAST";
-  const tabs: readonly string[] = isRollout ? ROLLOUT_TABS : isOrder ? ORDER_TABS : isProjects ? PROJECTS_TABS : MARKETS_TABS;
+  const isAdmin = pathname?.startsWith("/admin") ?? false;
+  const brand = isAdmin ? "ADMIN" : isRollout ? "ROLLOUT" : isOrder ? "ORDER REQUEST" : isProjects ? "PROJECTS" : "TRUCKAST";
+  const tabs: readonly string[] = isAdmin ? ADMIN_TABS : isRollout ? ROLLOUT_TABS : isOrder ? ORDER_TABS : isProjects ? PROJECTS_TABS : MARKETS_TABS;
   // First tab is the active/highlighted tab in the markets nav; the others have none.
-  const active = isRollout || isOrder || isProjects ? "" : MARKETS_TABS[0];
+  const active = isAdmin || isRollout || isOrder || isProjects ? "" : MARKETS_TABS[0];
   const [open, setOpen] = React.useState(false);
   const renderTab = (tab: string, inMenu = false) => {
     // Context-aware HELP route based on current section
     const href = tab === "HELP"
-      ? (isRollout ? HELP_HREF.rollout : isOrder ? HELP_HREF.order : isProjects ? HELP_HREF.projects : isSettings ? HELP_HREF.settings : HELP_HREF.default)
+      ? (isAdmin ? HELP_HREF.default : isRollout ? HELP_HREF.rollout : isOrder ? HELP_HREF.order : isProjects ? HELP_HREF.projects : isSettings ? HELP_HREF.settings : HELP_HREF.default)
       : TAB_HREF[tab];
     const isActive = tab === active;
     // Desktop tabs turn white when active/hovered; mobile-menu items stay gray (only the
