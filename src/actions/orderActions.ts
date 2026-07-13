@@ -1106,12 +1106,22 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     delivery_rate_per_hour?: number | null;
     number_of_loads?: number | null;
   };
-  const firstSchedule = rawProducts
-    .flatMap((p) => (p.order_product_schedules || []) as ScheduleData[])
-    .find((s) => s.start_time);
+  const allSchedules = rawProducts.flatMap((p) => (p.order_product_schedules || []) as ScheduleData[]);
+  const firstSchedule = allSchedules.find((s) => s.start_time);
   const spacingMinutes = firstSchedule?.truck_space ?? null;
   const deliveryRatePerHour = firstSchedule?.delivery_rate_per_hour ?? null;
   const numberOfLoads = firstSchedule?.number_of_loads ?? null;
+
+  // An order can carry MULTIPLE schedule "waves" for its mix — D3 splits a pour into
+  // streams (e.g. 24304: a 03:00/1-load stream + a 03:45/11-load stream, both 42 CY/HR).
+  // The per-load delay/finish math uses the per-wave rate + spacing above (which matches
+  // D3's delay tiles), but the chart's "Ordered" reference line is the COMBINED requested
+  // throughput across all waves: D3 shows 84 = 42 + 42, drawn across all 12 loads. Sum the
+  // waves for the chart only (a single-wave order reduces to the same single rate/count).
+  const chartOrderedRate =
+    allSchedules.reduce((s, sc) => s + (Number(sc.delivery_rate_per_hour) || 0), 0) || (deliveryRatePerHour ?? 0);
+  const totalScheduledLoads =
+    allSchedules.reduce((s, sc) => s + (Number(sc.number_of_loads) || 0), 0) || (numberOfLoads ?? 0);
 
   // Plant name: Get from first ticket (matches D3 production behavior)
   // D3 shows the plant from the first ticket, not from order_product_schedules
@@ -1242,8 +1252,10 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   // 30 when the rate is genuinely absent (null/undefined).
   const scheduleRate = deliveryRatePerHour != null ? deliveryRatePerHour : 30;
   // The delivered/poured-rate cap uses a positive fallback so a 0/absent schedule rate
-  // never clamps real delivered speeds to 0.
-  const maxRateCap = (scheduleRate > 0 ? scheduleRate : 30) * 1.5;
+  // never clamps real delivered speeds to 0. It (and the first-point seed below) use the
+  // COMBINED ordered rate — the same 84 the "Ordered" line uses — so D3's Delivered line
+  // starts at the ordered rate and has the same headroom, rather than the per-wave 42.
+  const maxRateCap = (chartOrderedRate > 0 ? chartOrderedRate : 30) * 1.5;
 
   // First delivery time (used as reference for elapsed time calculation)
   const firstDeliveryTime = deliveredTickets.length > 0 && deliveredTickets[0].on_job_time
@@ -1257,8 +1269,9 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
 
     let rate: number;
     if (index === 0 || !firstDeliveryTime) {
-      // First delivery: use schedule rate
-      rate = scheduleRate;
+      // First delivery: no elapsed window yet — seed at the combined ordered rate (D3's
+      // Delivered line starts at the Ordered rate, then trends to the real delivered speed).
+      rate = chartOrderedRate;
     } else {
       // Calculate elapsed hours from first delivery
       const elapsedMs = deliveryTime - firstDeliveryTime;
@@ -1266,7 +1279,7 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
       if (elapsedHours > 0) {
         rate = Math.min(cumD / elapsedHours, maxRateCap);
       } else {
-        rate = scheduleRate;
+        rate = chartOrderedRate;
       }
     }
     return { t: tsMin(t.on_job_time)!, v: r2(rate), ts: t.on_job_time || undefined };
@@ -1284,7 +1297,7 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
 
     let rate: number;
     if (!firstDeliveryTime) {
-      rate = scheduleRate;
+      rate = chartOrderedRate;
     } else {
       // Calculate elapsed hours from first delivery
       const elapsedMs = pourTime - firstDeliveryTime;
@@ -1292,7 +1305,7 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
       if (elapsedHours > 0) {
         rate = Math.min(cumP / elapsedHours, maxRateCap);
       } else {
-        rate = scheduleRate;
+        rate = chartOrderedRate;
       }
     }
     return { t: tsMin(pourOutTime(t))!, v: r2(rate), ts: pourOutTime(t) || undefined };
@@ -1360,7 +1373,7 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   // otherwise the x-axis stretches hours past the real data. Matches D3, which
   // draws "Ordered" only across the current pour window.
   const scheduledOrderPoints: { t: number; v: number; ts?: string }[] = [];
-  if (scheduledTime && spacingMinutes && spacingMinutes > 0 && numberOfLoads && numberOfLoads > 0) {
+  if (scheduledTime && spacingMinutes && spacingMinutes > 0 && totalScheduledLoads && totalScheduledLoads > 0) {
     const startMin = tsMin(scheduledTime);
     const startMs = new Date(scheduledTime).getTime();
     // D3 spaces the "Ordered" points by the EXACT per-load interval — loadCY ÷
@@ -1373,8 +1386,8 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     const ticketLoads = [...cyByTicket.values()].filter((x) => x > 0).sort((a, b) => a - b);
     const perLoadCY = ticketLoads.length
       ? ticketLoads[Math.floor(ticketLoads.length / 2)]
-      : numberOfLoads > 0
-        ? ordered / numberOfLoads
+      : totalScheduledLoads > 0
+        ? ordered / totalScheduledLoads
         : 0;
     const stepMin =
       deliveryRatePerHour && deliveryRatePerHour > 0 && perLoadCY > 0
@@ -1385,14 +1398,14 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     // counts the whole order (e.g. 29), so projecting all of them and capping at tMax
     // leaves trailing points past the tickets that actually exist. Using the printed-
     // ticket count tracks D3: as each new ticket prints, one more Ordered node appears.
-    const orderedCount = tickets.length > 0 ? Math.min(numberOfLoads, tickets.length) : numberOfLoads;
+    const orderedCount = tickets.length > 0 ? Math.min(totalScheduledLoads, tickets.length) : totalScheduledLoads;
     if (startMin != null && !Number.isNaN(startMs)) {
       for (let i = 0; i < orderedCount; i++) {
         const t = startMin + i * stepMin;
         if (tMax > 0 && t > tMax && scheduledOrderPoints.length > 0) break;
         scheduledOrderPoints.push({
           t,
-          v: r2(scheduleRate),
+          v: r2(chartOrderedRate),
           ts: new Date(startMs + i * stepMin * 60000).toISOString(),
         });
       }
@@ -1402,7 +1415,7 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   const charts = {
     tMin,
     tMax,
-    ordered: r2(scheduleRate), // Scheduled delivery rate (CY/HR)
+    ordered: r2(chartOrderedRate), // Combined scheduled delivery rate across all waves (CY/HR)
     orderedPoints: scheduledOrderPoints, // Points at each scheduled truck arrival
     delivered,
     poured,
@@ -2067,15 +2080,17 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
     .eq("ticket_id", ticketId)
     .limit(50);
 
-  // D3 shows the extra-charge line(s) FIRST (charge_type ≠ "0", e.g. the fuel surcharge),
-  // then the remaining products in REVERSE storage order (newest ticket_products row →
-  // oldest), so the concrete MIX — which is stored first — lands LAST. Verified against
-  // ticket 24269229: stored A6511(mix), 20811, MSX90660(surcharge) → D3 renders
-  // MSX90660, 20811, A6511. (A plain mix-first rank mis-ordered this ticket.)
+  // Product tile order: extra-charge line(s) first (charge_type ≠ "0", e.g. the fuel
+  // surcharge), then the remaining products in natural storage order — so the concrete
+  // MIX, stored first, shows FIRST. Verified against ticket 578713 (A405A0 mix, 20001) →
+  // D3 renders A405A0 (green mix) first. NOTE: D3's ordering isn't fully consistent — a
+  // surcharge-bearing ticket (24269229) renders MSX90660, 20811, A6511, which no single
+  // ticket_products column reproduces for BOTH tickets; this rule matches the common
+  // "mix first" case and keeps charges pinned on top.
   const isCharge = (p: { charge_type?: string | number | null }) =>
     p.charge_type != null && String(p.charge_type) !== "0" ? 0 : 1;
   const orderedTp = (tp || []).slice().sort(
-    (a, b) => isCharge(a) - isCharge(b) || Number(b.id || 0) - Number(a.id || 0),
+    (a, b) => isCharge(a) - isCharge(b) || Number(a.id || 0) - Number(b.id || 0),
   );
 
   // ORDER product cards (mix shown green in the UI). Quantity is the DELIVERED amount
@@ -2111,15 +2126,16 @@ export async function getDoleseTicketDetail(ticketId: number): Promise<DoleseTic
     return r == null || r === "" ? null : String(r);
   };
 
-  // Blue truck-status card. verifi === false → no VERIFI sub-line; a string/null
-  // renders "VERIFI: {clock}" / "VERIFI: N/A" (D3 shows N/A when the sensor missed it).
+  // Blue truck-status card. The VERIFI sub-line is shown ONLY when there is an actual
+  // sensor reading — D3 omits the line entirely when there's none (it does NOT print
+  // "VERIFI: N/A"). So a missing/empty/false verifi value renders no sub-line at all.
   const stage = (icon: string, label: string, ts: string | null, verifi: string | null | false) => {
     if (!has(ts)) return;
     events.push({
       icon,
       title: `TRUCK ${truck} ${label}:`,
       value: (fmtTime(ts, true) || "").replace(/\s+/g, ""),
-      sub: verifi === false ? undefined : `VERIFI: ${verifi || "N/A"}`,
+      sub: verifi ? `VERIFI: ${verifi}` : undefined,
       dark: false,
     });
   };
@@ -2905,6 +2921,10 @@ export interface OrderProjectCard {
   customer_name: string | null;
   customer_code: string | null;
   recent_orders: number;
+  /** True if the project has any user_projects rows (access-scoped) — drives the
+   *  restricted vs unrestricted tile glyph. Tenant-wide binary: the app has a single
+   *  shared login, so we can't compute a true per-user restriction. */
+  restricted: boolean;
 }
 
 export interface OrderProjectSearch {
@@ -2912,57 +2932,137 @@ export interface OrderProjectSearch {
   projects: OrderProjectCard[];
 }
 
+interface OrderProjectRow {
+  id: number;
+  code: string | null;
+  name: string;
+  customer_name: string | null;
+  customer_code: string | null;
+}
+
 export async function searchOrderProjects(q: string): Promise<OrderProjectSearch> {
   const term = q.trim().replace(/[,%()*]/g, " ").trim();
-  if (!term) return { customers: [], projects: [] };
 
   // Get tenant-specific Supabase client
   const supabase = await getSupabaseClient();
 
-  const { data: custs, error } = await supabase
-    .from("customers")
-    .select("id, code, name")
-    .or(`name.ilike.%${term}%,code.ilike.%${term}%`)
-    .order("name", { ascending: true })
-    .limit(20);
-  if (error) {
-    console.error("[ERROR] searchOrderProjects:", error.message);
-    return { customers: [], projects: [] };
-  }
-  const custIds = (custs || []).map((c) => c.id);
-  if (!custIds.length) return { customers: [], projects: [] };
+  const PAGE_SIZE = 1000;
+  let custs: { id: number; code: string | null; name: string | null }[] = [];
+  let projs: OrderProjectRow[] = [];
 
-  const { data: projs } = await supabase
-    .from("projects")
-    .select("id, code, name, customer_name, customer_code")
-    .in("customer_id", custIds)
-    .order("name", { ascending: true })
-    .limit(500);
-
-  const projIds = (projs || []).map((p) => p.id);
-  const counts = new Map<number, number>();
-  if (projIds.length) {
-    const { data: ords } = await supabase
-      .from("orders")
-      .select("project_id")
-      .in("project_id", projIds)
-      .limit(20000);
-    for (const o of ords || []) {
-      if (o.project_id != null) counts.set(o.project_id, (counts.get(o.project_id) || 0) + 1);
+  if (!term) {
+    // Blank search → the whole book (mirrors D3's wildcard result). Paginate: the
+    // customer list alone can be several thousand rows (Supabase caps a page at 1000).
+    let offset = 0;
+    let hasMore = true;
+    while (hasMore && offset < 5000) {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("id, code, name, sort_name")
+        .is("inactive", null)
+        .order("sort_name", { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) {
+        console.error("[ERROR] searchOrderProjects (customers):", error.message);
+        break;
+      }
+      if (data && data.length) {
+        custs = custs.concat(data.map((c) => ({ id: c.id, code: c.code, name: c.name })));
+        offset += data.length;
+        hasMore = data.length === PAGE_SIZE;
+      } else hasMore = false;
     }
+
+    offset = 0;
+    hasMore = true;
+    while (hasMore && offset < 8000) {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, code, name, customer_name, customer_code")
+        .order("customer_name", { ascending: true })
+        .order("name", { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) {
+        console.error("[ERROR] searchOrderProjects (projects):", error.message);
+        break;
+      }
+      if (data && data.length) {
+        projs = projs.concat(data as OrderProjectRow[]);
+        offset += data.length;
+        hasMore = data.length === PAGE_SIZE;
+      } else hasMore = false;
+    }
+  } else {
+    // Term search → customers matching name/code, then their projects.
+    const { data: cust, error } = await supabase
+      .from("customers")
+      .select("id, code, name")
+      .or(`name.ilike.%${term}%,code.ilike.%${term}%`)
+      .order("name", { ascending: true })
+      .limit(50);
+    if (error) {
+      console.error("[ERROR] searchOrderProjects:", error.message);
+      return { customers: [], projects: [] };
+    }
+    custs = cust || [];
+    const custIds = custs.map((c) => c.id);
+    if (!custIds.length) return { customers: [], projects: [] };
+
+    const { data: proj } = await supabase
+      .from("projects")
+      .select("id, code, name, customer_name, customer_code")
+      .in("customer_id", custIds)
+      .order("name", { ascending: true })
+      .limit(500);
+    projs = (proj || []) as OrderProjectRow[];
   }
 
-  const projects: OrderProjectCard[] = (projs || []).map((p) => ({
+  const projIds = projs.map((p) => p.id);
+
+  // Recent-orders count over a rolling 90-day window (D3's "Recent Orders N" is a
+  // recent-window count, not all-time). Cutoff = today − 90 days.
+  const counts = new Map<number, number>();
+  // Restriction flag: a project with any user_projects row is access-scoped.
+  const restrictedIds = new Set<number>();
+  if (projIds.length) {
+    const now = new Date();
+    const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 90))
+      .toISOString()
+      .slice(0, 10);
+    // Batch the id lists: a blank "show all" search yields thousands of project ids, and
+    // an .in() with all of them overflows PostgREST's URL limit (the query then silently
+    // returns nothing). Chunk so each request stays well under the limit.
+    const CHUNK = 300;
+    const chunks: number[][] = [];
+    for (let i = 0; i < projIds.length; i += CHUNK) chunks.push(projIds.slice(i, i + CHUNK));
+    await Promise.all(
+      chunks.map(async (ids) => {
+        const [ordersRes, userProjRes] = await Promise.all([
+          supabase.from("orders").select("project_id").in("project_id", ids).gte("order_date", cutoff).limit(20000),
+          supabase.from("user_projects").select("project_id").in("project_id", ids).limit(20000),
+        ]);
+        for (const o of ordersRes.data || []) {
+          if (o.project_id != null) counts.set(o.project_id, (counts.get(o.project_id) || 0) + 1);
+        }
+        for (const up of userProjRes.data || []) {
+          if (up.project_id != null) restrictedIds.add(up.project_id);
+        }
+      }),
+    );
+  }
+
+  const projects: OrderProjectCard[] = projs.map((p) => ({
     project_id: p.id,
     project_name: p.name,
     project_code: p.code,
     customer_name: p.customer_name,
     customer_code: p.customer_code,
     recent_orders: counts.get(p.id) || 0,
+    restricted: restrictedIds.has(p.id),
   }));
 
   return {
-    customers: (custs || []).map((c) => ({ id: c.id, name: c.name, code: c.code })),
+    customers: custs.map((c) => ({ id: c.id, name: c.name, code: c.code })),
     projects,
   };
 }
@@ -2980,6 +3080,89 @@ export async function getProjectBasic(
     .eq("id", projectId)
     .maybeSingle();
   return data ? { name: data.name, customer_name: data.customer_name } : null;
+}
+
+export interface ReferencedOrderOption {
+  order_id: number;
+  order_code: string;
+  /** "APR 16 @ 8:00AM, 401 N 4TH AVE, ORDER # 48301" */
+  label: string;
+}
+
+/** "APR 16 @ 8:00AM" — start_time is a CST clock stored in a UTC field, so read UTC parts. */
+function fmtReferenceStamp(ts: string | null): string {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return "";
+  let h = d.getUTCHours();
+  const m = d.getUTCMinutes();
+  const ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${MONTHS[d.getUTCMonth()].toUpperCase()} ${d.getUTCDate()} @ ${h}:${String(m).padStart(2, "0")}${ap}`;
+}
+
+/**
+ * Recent orders for the Order Request Form's "Referenced Order" dropdown (#2). Scoped to
+ * the WHOLE customer (all its projects), newest first — matches D3's multi-address list.
+ * Resolve the customer from the project (or take it directly on the customer path), gather
+ * that customer's project ids, then the most recent orders across them.
+ */
+export async function getReferencedOrders(opts: {
+  projectId?: number;
+  customerId?: number;
+}): Promise<ReferencedOrderOption[]> {
+  const supabase = await getSupabaseClient();
+
+  let customerId = opts.customerId ?? null;
+  if (!customerId && opts.projectId) {
+    const { data: p } = await supabase
+      .from("projects")
+      .select("customer_id")
+      .eq("id", opts.projectId)
+      .maybeSingle();
+    customerId = (p as { customer_id?: number } | null)?.customer_id ?? null;
+  }
+  if (!customerId) return [];
+
+  const { data: projs } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("customer_id", customerId)
+    .limit(2000);
+  const projIds = (projs || []).map((p) => p.id);
+  if (!projIds.length) return [];
+
+  // Newest orders across the customer's projects. Chunk the id list so a customer with
+  // many projects doesn't overflow the .in() URL limit.
+  type RefRow = {
+    order_id: number;
+    order_code: string | null;
+    order_date: string | null;
+    delivery_addr1: string | null;
+    order_products?: { order_product_schedules?: { start_time: string | null }[] }[] | null;
+  };
+  const CHUNK = 300;
+  let rows: RefRow[] = [];
+  for (let i = 0; i < projIds.length; i += CHUNK) {
+    const ids = projIds.slice(i, i + CHUNK);
+    const { data } = await supabase
+      .from("orders")
+      .select("order_id, order_code, order_date, delivery_addr1, order_products(order_product_schedules(start_time))")
+      .in("project_id", ids)
+      .order("order_date", { ascending: false })
+      .limit(50);
+    if (data) rows = rows.concat(data as unknown as RefRow[]);
+  }
+
+  rows.sort((a, b) => String(b.order_date || "").localeCompare(String(a.order_date || "")));
+
+  return rows.slice(0, 15).map((o) => {
+    const start = earliestStart((o.order_products || []) as OrderProductRow[]);
+    const stamp = fmtReferenceStamp(start || o.order_date);
+    const addr = (o.delivery_addr1 || "").toUpperCase();
+    const label = [stamp, addr, `ORDER # ${o.order_code || ""}`].filter(Boolean).join(", ");
+    return { order_id: o.order_id, order_code: o.order_code || "", label };
+  });
 }
 
 /** Get all projects for the Order By Project page (no search required). */
@@ -3007,6 +3190,7 @@ export async function getAllProjects(): Promise<OrderProjectCard[]> {
     customer_name: p.customer_name,
     customer_code: p.customer_code,
     recent_orders: 0, // Not counting orders for performance
+    restricted: false, // Not computed here (searchOrderProjects derives the real flag)
   }));
 }
 
@@ -3158,89 +3342,149 @@ export interface OrderRequestItem {
   status: "active" | "scheduled" | "cancelled";
 }
 
-export async function getOrderRequests(): Promise<OrderRequestItem[]> {
-  const supabase = await getSupabaseClient();
-
-  // Get today's orders only. order_date is a full timestamp (e.g.
-  // 2026-07-09T01:00:00+00:00), so an equality match on a date-only string never hits —
-  // filter on the [day, next-day) range like the rest of the order-list queries.
+/** Rolling window [today − days, today + days] as [from, toExclusive) date strings. */
+function rollingWindow(days: number): { from: string; to: string } {
   const today = new Date().toISOString().slice(0, 10);
-  const { from, to } = dayRange(today);
+  const [y, m, d] = today.split("-").map(Number);
+  const from = new Date(Date.UTC(y, m - 1, d - days)).toISOString().slice(0, 10);
+  // toExclusive is the day AFTER the last day we want to include (+days), so use lt().
+  const to = new Date(Date.UTC(y, m - 1, d + days + 1)).toISOString().slice(0, 10);
+  return { from, to };
+}
 
-  const { data: orders, error } = await supabase
-    .from("orders")
-    .select(
-      "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products(order_qty, order_qty_unit, is_mix, order_product_schedules(start_time))"
-    )
-    .gte("order_date", from)
-    .lt("order_date", to)
-    .order("order_code", { ascending: true })
-    .limit(100);
+interface OrderRequestRow {
+  order_id: number | string;
+  order_code: string | null;
+  order_date: string | null;
+  customer_name: string | null;
+  delivery_addr1: string | null;
+  project_name: string | null;
+  current_status: number | null;
+  removed: boolean | null;
+  remove_reason_code: string | null;
+  order_products: (OrderProductRow & { order_product_schedules?: { start_time: string | null }[] })[];
+}
 
-  if (error) {
-    console.error("[ERROR] getOrderRequests:", error.message);
-    return [];
+export async function getOrderRequests(): Promise<OrderRequestItem[]> {
+  const [supabase, exclusionPatterns] = await Promise.all([
+    getSupabaseClient(),
+    getExcludedPatterns(),
+  ]);
+
+  // The Order Request Dashboard is a rolling queue of open requests, NOT a single day —
+  // the D3 snapshot's start_times span weeks around today. Use a ±2-week window on
+  // order_date (a full timestamp) via a [from, next-day-after-to) range.
+  const { from, to } = rollingWindow(14);
+
+  // Paginate: the Supabase default cap is 1000 and a two-week window can exceed 100
+  // (the old limit silently truncated the board, dropping orders).
+  const PAGE_SIZE = 1000;
+  let allOrders: OrderRequestRow[] = [];
+  let offset = 0;
+  let hasMore = true;
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(
+        "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products(order_qty, order_qty_unit, is_mix, item_code, order_product_schedules(start_time))"
+      )
+      .gte("order_date", from)
+      .lt("order_date", to)
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      console.error("[ERROR] getOrderRequests:", error.message);
+      break;
+    }
+    if (data && data.length > 0) {
+      allOrders = allOrders.concat(data as unknown as OrderRequestRow[]);
+      offset += data.length;
+      hasMore = data.length === PAGE_SIZE;
+    } else {
+      hasMore = false;
+    }
   }
 
-  if (!orders) return [];
+  // Keep only OPEN requests with a cubic-yard mix product. Two filters:
+  //  - Cubic-yard: accept CY, YDQ, … via the shared helper (an exact "CY" match dropped
+  //    YDQ-unit tenants).
+  //  - Open: drop Completed orders (current_status 4). The request board is a queue of
+  //    live requests — the D3 snapshot has NO "completed" category (only Restarted /
+  //    Scheduled / Cancelled), so a finished order falls off the board.
+  const cyOrders = allOrders.filter(
+    (o) =>
+      Number(o.current_status) !== 4 &&
+      (o.order_products || []).some((p) => isCubicYardUnit(p.order_qty_unit)),
+  );
 
-  return orders.map((o) => {
-    // Calculate ordered CY
-    const products = (o.order_products || []) as {
-      order_qty: number | null;
-      order_qty_unit: string | null;
-      is_mix: boolean | null;
-      order_product_schedules?: { start_time: string | null }[];
-    }[];
+  // Apply the same exclusion-pattern filtering as the rest of the board (matches D3).
+  const filteredOrders = filterExcludedOrders(
+    cyOrders.map((o) => ({
+      order_id: Number(o.order_id),
+      order_code: o.order_code || "",
+      customer_name: o.customer_name,
+      delivery_addr1: o.delivery_addr1,
+      order_products: o.order_products,
+    })),
+    exclusionPatterns,
+  );
+  const keptIds = new Set(filteredOrders.map((o) => o.order_id));
 
-    let orderedCY = 0;
-    let startTime: string | null = null;
+  const items = cyOrders
+    .filter((o) => keptIds.has(Number(o.order_id)))
+    .map((o) => {
+      const products = (o.order_products || []) as (OrderProductRow & {
+        order_product_schedules?: { start_time: string | null }[];
+      })[];
 
-    for (const p of products) {
-      if (p.is_mix && p.order_qty_unit === "CY") {
-        orderedCY += p.order_qty || 0;
-      }
-      // Get earliest start time
-      for (const s of p.order_product_schedules || []) {
-        if (s.start_time && (!startTime || s.start_time < startTime)) {
-          startTime = s.start_time;
+      let orderedCY = 0;
+      for (const p of products) {
+        if (p.is_mix && isCubicYardUnit(p.order_qty_unit)) {
+          orderedCY += Number(p.order_qty || 0);
         }
       }
-    }
 
-    // Determine status: active (in process) or scheduled (pre-pour)
-    const currentStatus = o.current_status as number | null;
-    const isRemoved = o.removed === true;
-    const hasStarted = currentStatus !== null && currentStatus > 0;
+      // Raw earliest scheduled start — the sort key (untimed → sorts last) and the source
+      // of the "M/D HH:MM" label shown on the tile.
+      const startRaw = earliestStart(products);
+      let formattedTime = "";
+      if (startRaw) {
+        const d = new Date(startRaw);
+        formattedTime = `${d.getUTCMonth() + 1}/${d.getUTCDate()} ${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+      }
 
-    // Format start time
-    let formattedTime = "";
-    if (startTime) {
-      const d = new Date(startTime);
-      const month = d.getUTCMonth() + 1;
-      const day = d.getUTCDate();
-      const hours = String(d.getUTCHours()).padStart(2, "0");
-      const minutes = String(d.getUTCMinutes()).padStart(2, "0");
-      formattedTime = `${month}/${day} ${hours}:${minutes}`;
-    }
+      // Map dispatch current_status → request-tile colour (matches D3's
+      // DoleseOrderRequestDashboardV2). Uses the same code scheme as DISPATCH_STATUS_LABELS:
+      //   removed / 5 (Cancelled) → red "Cancelled"
+      //   2 (Active, in-process)  → blue "Restarted"
+      //   else (0 Firm / 1 W/C / 3 Hold / null, i.e. not yet started) → green "Scheduled".
+      // Completed (4) orders were already filtered off the board above.
+      const cs = Number(o.current_status);
+      const isCancelled = o.removed === true || cs === 5;
+      const status: OrderRequestItem["status"] = isCancelled
+        ? "cancelled"
+        : cs === 2
+          ? "active"
+          : "scheduled";
 
-    // Removed/cancelled → red "Cancelled"; in-process → blue "Restarted"; else
-    // green "Scheduled" (matches D3's DoleseOrderRequestDashboardV2 tile colours).
-    const status: OrderRequestItem["status"] = isRemoved
-      ? "cancelled"
-      : hasStarted
-        ? "active"
-        : "scheduled";
+      return {
+        item: {
+          order_id: o.order_id,
+          order_code: o.order_code || "",
+          order_date: o.order_date || "",
+          start_time: formattedTime || null,
+          ordered_cy: Math.round(orderedCY * 100) / 100,
+          address: o.delivery_addr1 || o.project_name || null,
+          customer_name: o.customer_name || null,
+          status,
+        } as OrderRequestItem,
+        // Sort key: CST clock value stored in a UTC field; untimed (will-call) → last.
+        sortKey: startRaw ? new Date(startRaw).getTime() : Number.POSITIVE_INFINITY,
+      };
+    });
 
-    return {
-      order_id: o.order_id,
-      order_code: o.order_code || "",
-      order_date: o.order_date,
-      start_time: formattedTime || null,
-      ordered_cy: Math.round(orderedCY * 100) / 100,
-      address: o.delivery_addr1 || o.project_name || null,
-      customer_name: o.customer_name || null,
-      status,
-    };
-  });
+  // Order the board by scheduled start ascending. The client groups by status (stable
+  // sort), so within each status group tiles stay in this chronological order.
+  items.sort((a, b) => a.sortKey - b.sortKey);
+  return items.map((i) => i.item);
 }
