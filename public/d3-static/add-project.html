@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no">
+    <title>Add Project</title>
+
+    <!-- Required javascript and css all rolled up in one -->
+    <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
+    <link href="./JobsForFixedNodeID_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+    <!-- Highcharts -->
+    <script src="./JobsForFixedNodeID_files/highcharts.js"></script>
+    <script src="./JobsForFixedNodeID_files/highcharts-more.js"></script>
+    <script src="./JobsForFixedNodeID_files/data.js"></script>
+
+    <!-- need to rollup into d3_complete upon approval -->
+    <script src="./JobsForFixedNodeID_files/jquery.rateit.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/rateit.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/hopscotch.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/chardinjs.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/chardinjs.css" rel="stylesheet" type="text/css">
+
+    <link href="./JobsForFixedNodeID_files/bootstrap2-toggle.min.css" rel="stylesheet">
+    <script src="./JobsForFixedNodeID_files/bootstrap2-toggle.min.js"></script>
+
+    <style media="print" type="text/css">
+        a:after { content:''; }
+        a[href]:after { content: none !important; }
+    </style>
+    <style>
+        .dataTables_filter label { float: right }
+        .dataTables_paginate ul { float: right }
+        .pagination { margin: 0px 0; }
+        .table { margin-bottom: 8px; }
+    </style>
+</head>
+
+<body>
+    <script>
+        // document load initialization
+        $(document).ready(function () {
+            if (typeof hideLoadingIndicator === 'function') hideLoadingIndicator();
+            if (typeof loadLogin === 'function') loadLogin();
+        });
+        $(window).unload(function () {
+            if (typeof hideLoadingIndicator === 'function') hideLoadingIndicator();
+            if (typeof saveLogin === 'function') saveLogin();
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            if (typeof getParameterByName === 'function') {
+                var errormsg = getParameterByName("pageerror");
+                if (errormsg != null && errormsg.length > 0 && typeof displayError === 'function' && typeof trimString === 'function') {
+                    displayError('ERROR', trimString(errormsg));
+                }
+            }
+            Highcharts.setOptions({
+                colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+            });
+        });
+    </script>
+    <div class="d3-page">
+
+        <div class="navbar navbar-fixed-top navbar-inverse">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+
+                    <a id="header-bar-title" class="brand">ADMIN</a>
+
+                    <div class="nav-collapse collapse">
+                        <ul class="nav">
+                            <li><a href="/d3-static/user-search.html">USERS</a></li>
+                            <li><a href="/d3-static/internal.html">INTERNAL</a></li>
+                            <li><a href="/d3-static/roles.html">ROLES</a></li>
+                            <li><a href="/d3-static/plants.html">PLANTS</a></li>
+                            <li><a href="/d3-static/qc.html">QC</a></li>
+                            <li><a href="/d3-static/customer-search.html">CUSTOMER</a></li>
+                            <li><a href="/">TRUCKAST</a></li>
+                            <li><a href="/settings">SETTINGS</a></li>
+                            <li><a href="/login">LOGOUT</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="error-box" class="alert alert-error" style="display: none">
+                <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                <p id="error-text"></p>
+            </div>
+            <div id="warning-box" class="alert alert-block" style="display: none">
+                <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                <p id="warning-text"></p>
+            </div>
+            <div id="success-box" class="alert alert-success" style="display: none">
+                <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                <p id="success-text"></p>
+            </div>
+            <div id="information-box" class="alert alert-info" style="display: none">
+                <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                <p id="information-text"></p>
+            </div>
+
+            <form id="addproject" method="POST" onsubmit="return false;">
+
+                <div class="navbar">
+                    <div class="navbar-inner">
+                        <div class="container">
+                            <table style="width:100%">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:38px">
+                                            <a onclick="history.back(); if (typeof hideLoadingIndicator === 'function') hideLoadingIndicator(); return false;" style="cursor:pointer">
+                                                <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png">
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                                                <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                                    <span style="font-size: 16px"><strong>ADD PROJECT</strong></span><br />
+                                                    <span id="customer-subtitle" style="font-size: 11px; padding: 0"><strong id="customer-subtitle-text"></strong></span>
+                                                </div>
+                                                <script>
+                                                    // Set subtitle immediately when page loads
+                                                    (function() {
+                                                        var params = new URLSearchParams(window.location.search);
+                                                        var customerId = params.get('customerId') || params.get('customerid');
+                                                        var el = document.getElementById('customer-subtitle-text');
+                                                        if (el) {
+                                                            el.textContent = customerId ? 'Loading customer...' : 'No customer selected';
+                                                        }
+                                                    })();
+                                                </script>
+                                            </div>
+                                        </td>
+                                        <td style="width:38px">
+                                            <a href="javascript:location.reload();">
+                                                <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-small-27@2x.png">
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="project-form-section" style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Project Name</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <input id="proname" name="proname" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Project Number</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <input id="projecteid" name="projecteid" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Project Address</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <input id="proaddress" name="proaddress" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Project City</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <input id="procity" name="procity" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Project State</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <input id="prostate" name="prostate" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Is Active</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <div class="d3-label" style="width: 100%;"><input type="checkbox" name="isactive" value="1" unchecked></div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Restricted Products</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <div class="d3-label" style="width: 100%;"><input type="checkbox" name="Restrictedproduct" value="1" unchecked></div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Project Setup Date</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <script type="text/javascript">
+                                        $(document).ready(function () {
+                                            if (typeof $.fn.kendoDatePicker === 'function') {
+                                                $("#ksetupdate-input").kendoDatePicker();
+                                            }
+                                        });
+                                    </script>
+                                    <div id="ksetupdate" style="width: 125px; padding-right: 10px; float: left;">
+                                        <input id="ksetupdate-input" name="ksetupdate" value="" style="width: 125px">
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Project Expiration Date</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <script type="text/javascript">
+                                        $(document).ready(function () {
+                                            if (typeof $.fn.kendoDatePicker === 'function') {
+                                                $("#kexpirationdate-input").kendoDatePicker();
+                                            }
+                                        });
+                                    </script>
+                                    <div id="kexpirationdate" style="width: 125px; padding-right: 10px; float: left;">
+                                        <input id="kexpirationdate-input" name="kexpirationdate" value="" style="width: 125px">
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display: block; width: 100%">
+                    <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="products-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>ADD</th>
+                                <th>PRODUCT NAME</th>
+                                <th>DESCRIPTION</th>
+                                <th>Status</th>
+                                <th>UOM</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-tbody">
+                        </tbody>
+                    </table>
+                </div>
+
+                <script type="text/javascript">
+                    $(document).ready(function () {
+                        initProductsDataTable();
+                    });
+
+                    var dataTableInitialized = false;
+                    function initProductsDataTable() {
+                        try {
+                            if (typeof $ === 'undefined' || typeof $.fn === 'undefined' || typeof $.fn.dataTable === 'undefined') {
+                                return;
+                            }
+                            if ($('#products-tbody tr.gradeA').length === 0) {
+                                return;
+                            }
+                            // Skip if already initialized
+                            if (dataTableInitialized) {
+                                return;
+                            }
+                            dataTableInitialized = true;
+                            $('#products-table').dataTable({
+                                "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+                                "sPaginationType": "bootstrap",
+                                "bPaginate": false,
+                                "bFilter": true,
+                                "bSort": true,
+                                "bRetrieve": true,
+                                "oLanguage": {
+                                    "sLengthMenu": "_MENU_ records per page"
+                                }
+                            });
+                        } catch (e) {
+                            console.log('[Add Project] DataTable init skipped:', e.message);
+                        }
+                    }
+                </script>
+
+                <button id="messagetxtbtn" class="btn btn-primary" type="button" onclick="onSubmit_addproject()" style="width: 75px">save</button>
+
+            </form>
+
+<script>
+    // Store data globally
+    var customerData = null;
+    var productsData = [];
+
+    // Get customer ID from URL
+    function getCustomerId() {
+        var urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('customerId') || urlParams.get('customerid');
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // Format date as MM/DD/YYYY
+    function formatDateMMDDYYYY(date) {
+        if (!date) date = new Date();
+        if (typeof date === 'string') date = new Date(date);
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var day = String(date.getDate()).padStart(2, '0');
+        var year = date.getFullYear();
+        return month + '/' + day + '/' + year;
+    }
+
+    // Handle customer response
+    function handleCustomerResponse(response) {
+        if (typeof hideLoadingIndicator === 'function') hideLoadingIndicator();
+        console.log('[Add Project] Customer Response:', response);
+
+        if (response.error) {
+            showError('Error', response.error);
+            setSubtitle('Error loading customer');
+            return;
+        }
+
+        if (!response.customer) {
+            showError('Error', 'Customer data not found');
+            setSubtitle('Customer not found');
+            return;
+        }
+
+        customerData = response.customer;
+        console.log('[Add Project] Customer data:', customerData);
+
+        // Update subtitle with customer name and code
+        var customerName = customerData.name || '';
+        var customerCode = customerData.code || '';
+        var subtitle = customerName;
+        if (customerCode) {
+            subtitle += ' (' + customerCode + ')';
+        }
+        console.log('[Add Project] Setting subtitle to:', subtitle);
+
+        // Set subtitle
+        setSubtitle(subtitle);
+        document.title = 'Add Project - ' + customerName;
+
+        // Load products for this customer
+        loadProducts();
+    }
+
+    // Show error message
+    function showError(title, message) {
+        try {
+            if (typeof $ !== 'undefined') {
+                $('#error-box').css('display', 'block');
+                $('#error-title').html(title);
+                $('#error-text').html(message);
+            }
+        } catch(e) {}
+        // Vanilla JS fallback
+        var errorBox = document.getElementById('error-box');
+        var errorTitle = document.getElementById('error-title');
+        var errorText = document.getElementById('error-text');
+        if (errorBox) errorBox.style.display = 'block';
+        if (errorTitle) errorTitle.innerHTML = title;
+        if (errorText) errorText.innerHTML = message;
+    }
+
+    // Load customer info using fetch (with jQuery fallback)
+    function loadCustomerInfo() {
+        var customerId = getCustomerId();
+        if (!customerId) {
+            showError('Error', 'No customer ID provided. Please access this page from the Customer Details page.');
+            setSubtitle('No customer ID');
+            return;
+        }
+
+        if (typeof showLoadingIndicator === 'function') showLoadingIndicator();
+
+        var apiUrl = '/api/customers/' + encodeURIComponent(customerId);
+
+        // Use fetch API (modern browsers)
+        if (typeof fetch !== 'undefined') {
+            fetch(apiUrl)
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    handleCustomerResponse(data);
+                })
+                .catch(function(error) {
+                    if (typeof hideLoadingIndicator === 'function') hideLoadingIndicator();
+                    console.error('[Add Project] Fetch error:', error);
+                    showError('Error', 'Failed to load customer details: ' + error.message);
+                    setSubtitle('Error loading customer');
+                });
+        }
+        // Fallback to jQuery AJAX
+        else if (typeof $ !== 'undefined' && typeof $.ajax !== 'undefined') {
+            $.ajax({
+                url: apiUrl,
+                type: 'GET',
+                dataType: 'json',
+                success: handleCustomerResponse,
+                error: function(xhr, status, error) {
+                    if (typeof hideLoadingIndicator === 'function') hideLoadingIndicator();
+                    showError('Error', 'Failed to load customer details: ' + error);
+                    setSubtitle('Error loading customer');
+                }
+            });
+        } else {
+            showError('Error', 'Unable to load customer - no fetch or jQuery available');
+            setSubtitle('Unable to load');
+        }
+    }
+
+    // Load products
+    function loadProducts() {
+        var customerId = getCustomerId();
+
+        $.ajax({
+            url: '/api/projects/products?customerId=' + encodeURIComponent(customerId),
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                console.log('[Add Project] Products Response:', response);
+
+                if (response.error) {
+                    console.warn('[Add Project] Products warning:', response.error);
+                }
+
+                productsData = response.products || [];
+                renderProductsTable(productsData);
+            },
+            error: function(xhr, status, error) {
+                console.warn('[Add Project] Failed to load products:', error);
+                renderProductsTable([]);
+            }
+        });
+    }
+
+    // Render products table
+    function renderProductsTable(products) {
+        var tbody = $('#products-tbody');
+
+        // Destroy existing DataTable if any (with error handling)
+        try {
+            if ($.fn.dataTable && typeof $.fn.dataTable.isDataTable === 'function' && $.fn.dataTable.isDataTable('#products-table')) {
+                $('#products-table').DataTable().destroy();
+            }
+        } catch(e) {
+            console.log('[Add Project] DataTable destroy skipped:', e.message);
+        }
+
+        tbody.empty();
+
+        if (!products || products.length === 0) {
+            // Show empty rows like the original D3 (matches the screenshot)
+            for (var i = 0; i < 10; i++) {
+                var rowClass = i % 2 === 0 ? 'even gradeA' : 'odd gradeA';
+                var row = '<tr class="' + rowClass + '">' +
+                    '<td style=""><center><input type="checkbox" name="Give" value="" unchecked></center></td>' +
+                    '<td style=""></td>' +
+                    '<td style=""></td>' +
+                    '<td style=""></td>' +
+                    '<td style=""></td>' +
+                    '</tr>';
+                tbody.append(row);
+            }
+            // Re-initialize DataTable with empty rows
+            setTimeout(function() {
+                initProductsDataTable();
+            }, 100);
+            return;
+        }
+
+        $.each(products, function(index, product) {
+            var rowClass = index % 2 === 0 ? 'even gradeA' : 'odd gradeA';
+            var projectId = getCustomerId(); // Using customer ID for context
+            var row = '<tr class="' + rowClass + '">' +
+                '<td style=""><center><input type="checkbox" name="Give' + escapeHtml(product.id) + '" value="' + escapeHtml(product.id) + '" unchecked></center></td>' +
+                '<td style=""><a href="/d3-static/product-edit.html?productId=' + escapeHtml(product.id) + '">' + escapeHtml(product.name || product.code || '') + '</a></td>' +
+                '<td style="">' + escapeHtml(product.description || '') + '</td>' +
+                '<td style="">' + escapeHtml(product.status || '') + '</td>' +
+                '<td style="">' + escapeHtml(product.uom || 'CY') + '</td>' +
+                '</tr>';
+            tbody.append(row);
+        });
+
+        // Re-initialize DataTable
+        setTimeout(function() {
+            initProductsDataTable();
+        }, 100);
+    }
+
+    // Validate form
+    function validateForm() {
+        var errors = [];
+
+        var projectName = $('#proname').val().trim();
+        if (!projectName) {
+            errors.push('Project Name is required');
+        }
+
+        var projectCode = $('#projecteid').val().trim();
+        if (!projectCode) {
+            errors.push('Project Number is required');
+        }
+
+        return errors;
+    }
+
+    // Get selected product IDs
+    function getSelectedProducts() {
+        var selected = [];
+        $('input[type="checkbox"][name^="Give"]:checked').each(function() {
+            selected.push($(this).val());
+        });
+        return selected;
+    }
+
+    // Submit handler
+    function onSubmit_addproject() {
+        var customerId = getCustomerId();
+        if (!customerId) {
+            alert('No customer ID');
+            return;
+        }
+
+        // Validate
+        var errors = validateForm();
+        if (errors.length > 0) {
+            $('#error-box').css('display', 'block');
+            $('#error-title').html('One or more fields were not properly filled out');
+            $('#error-text').html(errors.join('<br>'));
+            if (typeof goToByScroll === 'function') goToByScroll('error-box');
+            return;
+        }
+
+        // Hide any previous messages
+        $('#error-box').css('display', 'none');
+        $('#success-box').css('display', 'none');
+
+        // Gather form data
+        var formData = {
+            customer_id: customerId,
+            name: $('#proname').val().trim(),
+            code: $('#projecteid').val().trim(),
+            address: $('#proaddress').val().trim(),
+            city: $('#procity').val().trim(),
+            state: $('#prostate').val().trim(),
+            is_active: $('input[name="isactive"]').is(':checked'),
+            restricted_products: $('input[name="Restrictedproduct"]').is(':checked'),
+            setup_date: $('#ksetupdate-input').val() || null,
+            expiration_date: $('#kexpirationdate-input').val() || null,
+            product_ids: getSelectedProducts()
+        };
+
+        console.log('[Add Project] Submitting:', formData);
+        if (typeof showLoadingIndicator === 'function') showLoadingIndicator();
+
+        $.ajax({
+            url: '/api/projects',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            dataType: 'json',
+            success: function(response) {
+                if (typeof hideLoadingIndicator === 'function') hideLoadingIndicator();
+                console.log('[Add Project] Create Response:', response);
+
+                if (response.error) {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error);
+                    if (typeof goToByScroll === 'function') goToByScroll('error-box');
+                    return;
+                }
+
+                $('#success-box').css('display', 'block');
+                $('#success-title').html('Success');
+                $('#success-text').html('Project created successfully!');
+                if (typeof goToByScroll === 'function') goToByScroll('success-box');
+
+                // Redirect back to customer details after 1.5 seconds
+                setTimeout(function() {
+                    window.location.href = '/d3-static/customer-details.html?id=' + encodeURIComponent(customerId);
+                }, 1500);
+            },
+            error: function(xhr, status, error) {
+                if (typeof hideLoadingIndicator === 'function') hideLoadingIndicator();
+                var errorMsg = 'Failed to create project: ' + error;
+                try {
+                    var resp = JSON.parse(xhr.responseText);
+                    if (resp.error) errorMsg = resp.error;
+                } catch (e) {}
+
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html(errorMsg);
+                if (typeof goToByScroll === 'function') goToByScroll('error-box');
+            }
+        });
+    }
+
+    // Set default dates
+    function setDefaultDates() {
+        var today = new Date();
+        $('#ksetupdate-input').val(formatDateMMDDYYYY(today));
+
+        // Default expiration date to 1 year from now
+        var nextYear = new Date(today);
+        nextYear.setFullYear(nextYear.getFullYear() + 1);
+        $('#kexpirationdate-input').val(formatDateMMDDYYYY(nextYear));
+    }
+
+    // Set subtitle helper function (works with or without jQuery)
+    function setSubtitle(text) {
+        console.log('[Add Project] setSubtitle called with:', text);
+        try {
+            if (typeof $ !== 'undefined') {
+                $('#customer-subtitle-text').text(text);
+                console.log('[Add Project] jQuery set subtitle');
+            }
+        } catch(e) {
+            console.log('[Add Project] jQuery error:', e);
+        }
+        var el = document.getElementById('customer-subtitle-text');
+        if (el) {
+            el.textContent = text;
+            el.style.display = 'inline';
+            console.log('[Add Project] Vanilla JS set subtitle, element:', el);
+        } else {
+            console.log('[Add Project] customer-subtitle-text element NOT found');
+        }
+    }
+
+    // Load on page ready - use both jQuery and vanilla JS
+    if (typeof $ !== 'undefined' && typeof $.fn !== 'undefined') {
+        $(document).ready(function() {
+            setDefaultDates();
+            renderProductsTable([]);
+            loadCustomerInfo();
+        });
+    } else {
+        // Fallback if jQuery not loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            setDefaultDates();
+            loadCustomerInfo();
+        });
+    }
+</script>
+        </div>
+
+    </div>
+    <script type="text/javascript">
+    </script>
+
+</body>
+</html>

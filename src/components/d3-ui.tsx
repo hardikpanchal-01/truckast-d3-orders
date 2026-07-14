@@ -102,7 +102,7 @@ const TAB_HREF: Record<string, string> = {
   ROLES: "/admin/roles",
   PLANTS: "/admin/plants",
   QC: "/admin/qc",
-  CUSTOMER: "/admin/customers",
+  CUSTOMER: "/d3-static/customer-search.html",
 };
 
 // Context-aware HELP routes — each section has its own help page.
