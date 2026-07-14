@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no">
+    <title>Product Edit</title>
+
+    <!-- Required javascript and css all rolled up in one -->
+    <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
+    <link href="./JobsForFixedNodeID_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+    <!-- Highcharts -->
+    <script src="./JobsForFixedNodeID_files/highcharts.js"></script>
+    <script src="./JobsForFixedNodeID_files/highcharts-more.js"></script>
+    <script src="./JobsForFixedNodeID_files/data.js"></script>
+
+    <!-- need to rollup into d3_complete upon approval -->
+    <script src="./JobsForFixedNodeID_files/jquery.rateit.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/rateit.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/hopscotch.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/chardinjs.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/chardinjs.css" rel="stylesheet" type="text/css">
+
+    <link href="./JobsForFixedNodeID_files/bootstrap2-toggle.min.css" rel="stylesheet">
+    <script src="./JobsForFixedNodeID_files/bootstrap2-toggle.min.js"></script>
+
+    <style media="print" type="text/css">
+        a:after { content:''; }
+        a[href]:after { content: none !important; }
+    </style>
+</head>
+
+<body>
+    <script>
+        // document load initialization
+        $(document).ready(function () {
+            if (typeof hideLoadingIndicator === 'function') hideLoadingIndicator();
+            if (typeof loadLogin === 'function') loadLogin();
+        });
+        $(window).unload(function () {
+            if (typeof hideLoadingIndicator === 'function') hideLoadingIndicator();
+            if (typeof saveLogin === 'function') saveLogin();
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            if (typeof getParameterByName === 'function') {
+                var errormsg = getParameterByName("pageerror");
+                if (errormsg != null && errormsg.length > 0 && typeof displayError === 'function' && typeof trimString === 'function') {
+                    displayError('ERROR', trimString(errormsg));
+                }
+            }
+            if (typeof Highcharts !== 'undefined') {
+                Highcharts.setOptions({
+                    colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+                });
+            }
+        });
+    </script>
+    <div class="d3-page">
+
+        <div class="navbar navbar-fixed-top navbar-inverse">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+
+                    <a id="header-bar-title" class="brand">ADMIN</a>
+
+                    <div class="nav-collapse collapse">
+                        <ul class="nav">
+                            <li><a href="/d3-static/user-search.html">USERS</a></li>
+                            <li><a href="/d3-static/internal.html">INTERNAL</a></li>
+                            <li><a href="/d3-static/roles.html">ROLES</a></li>
+                            <li><a href="/d3-static/plants.html">PLANTS</a></li>
+                            <li><a href="/d3-static/qc.html">QC</a></li>
+                            <li><a href="/d3-static/customer-search.html">CUSTOMER</a></li>
+                            <li><a href="/">TRUCKAST</a></li>
+                            <li><a href="/settings">SETTINGS</a></li>
+                            <li><a href="/login">LOGOUT</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="error-box" class="alert alert-error" style="display: none">
+                <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                <p id="error-text"></p>
+            </div>
+            <div id="warning-box" class="alert alert-block" style="display: none">
+                <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                <p id="warning-text"></p>
+            </div>
+            <div id="success-box" class="alert alert-success" style="display: none">
+                <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                <p id="success-text"></p>
+            </div>
+            <div id="information-box" class="alert alert-info" style="display: none">
+                <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                <p id="information-text"></p>
+            </div>
+
+            <form id="productedit" method="POST" onsubmit="return false;">
+
+                <div class="navbar">
+                    <div class="navbar-inner">
+                        <div class="container">
+                            <table style="width:100%">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:38px">
+                                            <a onclick="history.back(); return false;" style="cursor:pointer">
+                                                <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png">
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                                                <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                                    <span style="font-size: 16px"><strong>PRODUCT EDIT</strong></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="width:38px">
+                                            <a href="javascript:location.reload();">
+                                                <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-small-27@2x.png">
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="product-form-section" style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Mix Code</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <div id="mixcode-display" class="d3-label" style="width: 100%;">Loading...</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Description</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <input id="mixdesc" name="mixdesc" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Product Category</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <select id="producttype" name="producttype" style="width: 100%; margin-bottom: 0; display: block;">
+                                        <option value="">Loading...</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 30%">
+                                    <div class="d3-label" style="width: 100%;">Product UOM</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 70%">
+                                    <select id="productunit" name="productunit" style="width: 100%; margin-bottom: 0; display: block;">
+                                        <option value="">Loading...</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <button id="messagetxtbtn" class="btn btn-primary" type="button" onclick="onSubmit_productedit()" style="width: 75px">save</button>
+
+            </form>
+
+<script>
+    // Store data globally
+    var productData = null;
+    var productCategories = [];
+    var productUnits = [];
+
+    // Get product ID from URL
+    function getProductId() {
+        var urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('productId') || urlParams.get('productid') || urlParams.get('id');
+    }
+
+    // Get project ID from URL (for context)
+    function getProjectId() {
+        var urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('projectId') || urlParams.get('projectid');
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // Set subtitle (not used - header only shows PRODUCT EDIT)
+    function setSubtitle(text) {
+        // Subtitle removed to match D3 original
+    }
+
+    // Show error message
+    function showError(title, message) {
+        var errorBox = document.getElementById('error-box');
+        var errorTitle = document.getElementById('error-title');
+        var errorText = document.getElementById('error-text');
+        if (errorBox) errorBox.style.display = 'block';
+        if (errorTitle) errorTitle.innerHTML = title;
+        if (errorText) errorText.innerHTML = message;
+    }
+
+    // Show success message
+    function showSuccess(title, message) {
+        var successBox = document.getElementById('success-box');
+        var successTitle = document.getElementById('success-title');
+        var successText = document.getElementById('success-text');
+        if (successBox) successBox.style.display = 'block';
+        if (successTitle) successTitle.innerHTML = title;
+        if (successText) successText.innerHTML = message;
+    }
+
+    // Hide all messages
+    function hideMessages() {
+        var errorBox = document.getElementById('error-box');
+        var successBox = document.getElementById('success-box');
+        if (errorBox) errorBox.style.display = 'none';
+        if (successBox) successBox.style.display = 'none';
+    }
+
+    // Load product categories
+    function loadProductCategories() {
+        // Default product categories (from D3 source)
+        productCategories = [
+            { id: 'CONCRETE', name: 'CONCRETE' },
+            { id: 'AGGREGATE', name: 'AGGREGATE' },
+            { id: 'GROUT', name: 'GROUT' },
+            { id: 'NON-CONCRETE', name: 'NON-CONCRETE' },
+            { id: 'EXTRA CHARGE', name: 'EXTRA CHARGE' },
+            { id: 'FIBER', name: 'FIBER' },
+            { id: 'FLYASH', name: 'FLYASH' },
+            { id: 'WATER', name: 'WATER' },
+            { id: 'PLASTICIZER', name: 'PLASTICIZER' },
+            { id: 'OTHER ADMIXTURE', name: 'OTHER ADMIXTURE' },
+            { id: 'OTHER PRODUCT', name: 'OTHER PRODUCT' },
+            { id: 'AIR/NON-AIR', name: 'AIR/NON-AIR' },
+            { id: 'PSI', name: 'PSI' },
+            { id: 'ROCKSIZE', name: 'ROCKSIZE' },
+            { id: 'UNKNOWN', name: 'UNKNOWN' }
+        ];
+        renderProductCategories();
+    }
+
+    // Load product units
+    function loadProductUnits() {
+        // Default product units (from D3 source)
+        productUnits = [
+            { id: 'CY', name: 'CY', fullName: 'CUBIC YARDS' },
+            { id: 'TN', name: 'TN', fullName: 'TONS' },
+            { id: 'EA', name: 'EA', fullName: 'EACH' },
+            { id: 'LB', name: 'LB', fullName: 'POUNDS' },
+            { id: 'OZ', name: 'OZ', fullName: 'OUNCES' },
+            { id: 'GA', name: 'GA', fullName: 'GALLONS' },
+            { id: 'CM', name: 'CM', fullName: 'CM' },
+            { id: 'AC', name: 'AC', fullName: 'AC' },
+            { id: '/Y', name: '/Y', fullName: 'PER CUBIC YARD' },
+            { id: 'PER HOUR', name: 'PER HOUR', fullName: 'PER HOUR' }
+        ];
+        renderProductUnits();
+    }
+
+    // Render product categories dropdown
+    function renderProductCategories() {
+        var select = document.getElementById('producttype');
+        if (!select) return;
+
+        select.innerHTML = '';
+        for (var i = 0; i < productCategories.length; i++) {
+            var cat = productCategories[i];
+            var option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.name;
+            select.appendChild(option);
+        }
+
+        // Set selected value if product data is loaded
+        if (productData && productData.category) {
+            select.value = productData.category;
+        }
+    }
+
+    // Render product units dropdown
+    function renderProductUnits() {
+        var select = document.getElementById('productunit');
+        if (!select) return;
+
+        select.innerHTML = '';
+        for (var i = 0; i < productUnits.length; i++) {
+            var unit = productUnits[i];
+            var option = document.createElement('option');
+            option.value = unit.id;
+            option.textContent = unit.fullName || unit.name;
+            select.appendChild(option);
+        }
+
+        // Set selected value if product data is loaded
+        if (productData && productData.uom) {
+            select.value = productData.uom;
+        }
+    }
+
+    // Load product details
+    function loadProductDetails() {
+        var productId = getProductId();
+        var projectId = getProjectId();
+
+        if (!productId) {
+            showError('Error', 'No product ID provided');
+            return;
+        }
+
+        var apiUrl = '/api/projects/products/' + encodeURIComponent(productId);
+        if (projectId) {
+            apiUrl += '?projectId=' + encodeURIComponent(projectId);
+        }
+
+        fetch(apiUrl)
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                console.log('[Product Edit] Product Response:', data);
+
+                if (data.error) {
+                    showError('Error', data.error);
+                    return;
+                }
+
+                productData = data.product || data;
+                renderProductDetails();
+            })
+            .catch(function(error) {
+                console.error('[Product Edit] Fetch error:', error);
+                showError('Error', 'Failed to load product details: ' + error.message);
+            });
+    }
+
+    // Render product details
+    function renderProductDetails() {
+        if (!productData) return;
+
+        // Set mix code (display only)
+        var mixCodeEl = document.getElementById('mixcode-display');
+        if (mixCodeEl) {
+            mixCodeEl.textContent = productData.item_code || productData.code || '-';
+        }
+
+        // Set subtitle
+        setSubtitle(productData.item_code || productData.code || '');
+
+        // Set description
+        var descInput = document.getElementById('mixdesc');
+        if (descInput) {
+            descInput.value = productData.description || productData.short_description || '';
+        }
+
+        // Set category
+        var categorySelect = document.getElementById('producttype');
+        if (categorySelect && productData.category) {
+            categorySelect.value = productData.category;
+        }
+
+        // Set UOM
+        var uomSelect = document.getElementById('productunit');
+        if (uomSelect && productData.uom) {
+            // Try to match by code
+            var uomCode = productData.uom || productData.estimated_quantity_unit_code || '';
+            for (var i = 0; i < uomSelect.options.length; i++) {
+                if (uomSelect.options[i].value === uomCode ||
+                    uomSelect.options[i].textContent.indexOf(uomCode) !== -1) {
+                    uomSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        // Update page title
+        document.title = 'Product Edit - ' + (productData.item_code || productData.code || '');
+    }
+
+    // Validate form
+    function validateForm() {
+        var errors = [];
+        // Add validation if needed
+        return errors;
+    }
+
+    // Submit handler
+    function onSubmit_productedit() {
+        var productId = getProductId();
+        var projectId = getProjectId();
+
+        if (!productId) {
+            showError('Error', 'No product ID');
+            return;
+        }
+
+        // Validate
+        var errors = validateForm();
+        if (errors.length > 0) {
+            showError('Validation Error', errors.join('<br>'));
+            return;
+        }
+
+        hideMessages();
+
+        // Gather form data
+        var formData = {
+            product_id: productId,
+            project_id: projectId,
+            description: document.getElementById('mixdesc').value.trim(),
+            category: document.getElementById('producttype').value,
+            uom: document.getElementById('productunit').value
+        };
+
+        console.log('[Product Edit] Submitting:', formData);
+
+        var apiUrl = '/api/projects/products/' + encodeURIComponent(productId);
+
+        fetch(apiUrl, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            console.log('[Product Edit] Update Response:', data);
+
+            if (data.error) {
+                showError('Error', data.error);
+                return;
+            }
+
+            showSuccess('Success', 'Product updated successfully!');
+
+            // Go back after 1.5 seconds
+            setTimeout(function() {
+                history.back();
+            }, 1500);
+        })
+        .catch(function(error) {
+            console.error('[Product Edit] Update error:', error);
+            showError('Error', 'Failed to update product: ' + error.message);
+        });
+    }
+
+    // Load on page ready
+    document.addEventListener('DOMContentLoaded', function() {
+        loadProductCategories();
+        loadProductUnits();
+        loadProductDetails();
+    });
+</script>
+        </div>
+
+    </div>
+</body>
+</html>

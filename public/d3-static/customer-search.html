@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="format-detection" content="telephone=no">
-    <title>User Search</title>
+    <title>Company Search</title>
 
     <!-- Required javascript and css all rolled up in one -->
     <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
@@ -108,7 +108,7 @@
                 <p id="information-text"></p>
             </div>
 
-            <form id="usersearch" method="POST" onsubmit="return false;">
+            <form id="search" method="POST" onsubmit="return false;">
 
                 <div class="navbar">
                     <div class="navbar-inner">
@@ -117,14 +117,14 @@
                                 <tbody>
                                     <tr>
                                         <td style="width:38px">
-                                            <a onclick="history.back(); return false;" style="cursor:pointer">
+                                            <a onclick="history.back(); hideLoadingIndicator(); return false;" style="cursor:pointer">
                                                 <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png">
                                             </a>
                                         </td>
                                         <td>
                                             <div style="width: 100%; float: left; text-align: center; vertical-align: central">
                                                 <div id="titlebar-caption" style="display: inline-block; margin:5px">
-                                                    <span style="font-size: 16px"><strong>SEARCH USERS</strong></span><br>
+                                                    <span style="font-size: 16px"><strong>COMPANY SEARCH</strong></span><br>
                                                     <span style="font-size: 11px; padding: 0"><strong></strong></span>
                                                 </div>
                                             </div>
@@ -142,11 +142,11 @@
                 </div>
                 <br>
 
-                <input id="searchtext" name="searchtext" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="Search for a User, Email, or Phone">
+                <input id="searchtext" name="searchtext" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="Enter a Customer Name or Number">
 
                 <br>
 
-                <button id="submit-button" class="btn btn-danger" type="button" onclick="onSubmit_usersearch()" style="width: 150px">Search</button>
+                <button id="submit-button" class="btn btn-danger" type="button" onclick="onSubmit_search()" style="width: 150px">Search</button>
 
                 <br>
                 <br>
@@ -206,32 +206,12 @@
     // Asset path for images
     var ASSET = "/d3-static/JobsForFixedNodeID_files";
 
-    // Status configuration matching D3 exactly
-    // Colors from original D3: #c43926 (red), #f7bb00 (yellow), #458b00 (green)
-    var STATUS_CONFIG = {
-        'logged_in': {
-            color: '#458b00',      // Green
-            icon: 'Completed.png', // Checkmark
-            label: 'LOGGED IN ON'
-        },
-        'signed_up': {
-            color: '#f7bb00',      // Yellow
-            icon: 'Paused.png',    // Pause icon
-            label: 'SIGNED UP'
-        },
-        'invited': {
-            color: '#c43926',      // Red
-            icon: 'Scheduled.png', // Calendar icon
-            label: 'INVITED ON'
-        },
-        'deleted': {
-            color: '#c43926',      // Red
-            icon: 'Cancelled.png', // X icon
-            label: 'DELETED BY'
-        }
-    };
+    // Tile colors
+    var TILE_COLOR_NO_USERS = '#f7bb00';   // Yellow - no users assigned
+    var TILE_COLOR_HAS_USERS = '#458b00';  // Green - has users assigned
+    var DEFAULT_TILE_ICON = 'Completed.png';
 
-    function onValidate_usersearch() {
+    function onValidate_search() {
         var message = "";
         return message;
     }
@@ -246,19 +226,15 @@
             .replace(/"/g, '&quot;');
     }
 
-    // Create a tile for a user with status colors - matching D3 exactly
-    function createUserTile(user) {
-        var status = user.status || 'invited';
-        var config = STATUS_CONFIG[status] || STATUS_CONFIG.invited;
-
-        var bgColor = config.color;
-        var iconSrc = ASSET + '/' + config.icon;
-        var name = escapeHtml(user.name || '');
-        var email = escapeHtml(user.email || '');
-        var statusLabel = user.status_label || config.label;
-        var statusDate = user.status_date || '';
-        var topLine = statusLabel + (statusDate ? ' ' + statusDate : '');
-        var href = '/d3-static/user-details.html?id=' + user.id;
+    // Create a tile for a customer - matching Company Search design
+    function createCustomerTile(customer) {
+        var userCount = customer.user_count || 0;
+        var bgColor = userCount > 0 ? TILE_COLOR_HAS_USERS : TILE_COLOR_NO_USERS;
+        var iconSrc = ASSET + '/' + DEFAULT_TILE_ICON;
+        var name = escapeHtml(customer.name || '');
+        var code = escapeHtml(customer.code || '');
+        var userLabel = userCount + ' USERS';
+        var href = '/d3-static/customer-details.html?id=' + customer.id;
 
         var tile = '<div class="tile" style="position: relative; background-color: ' + bgColor + '; cursor: pointer" onclick="tileInvoke(\'' + href + '\');">' +
                 '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
@@ -266,9 +242,9 @@
                     '<div class="tileIcon"><img src="' + iconSrc + '" /></div>' +
                     '<div class="tileInfoSection">' +
                         '<div class="tileCell">' +
-                            '<div class="tileSuperTitle">' + escapeHtml(topLine) + '</div>' +
+                            '<div class="tileSuperTitle">#' + code + '</div>' +
                             '<div class="tileTitle">' + name.toUpperCase() + '</div>' +
-                            '<div class="tileSubTitle">' + email + '</div>' +
+                            '<div class="tileSubTitle">' + userLabel + '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
@@ -279,6 +255,7 @@
 
     // Tile click handler
     function tileInvoke(url) {
+        showLoadingIndicator();
         window.location.href = url;
     }
 
@@ -299,7 +276,7 @@
             '</div>';
     }
 
-    function onSubmit_usersearch() {
+    function onSubmit_search() {
         // Hide all alert boxes first
         $('#error-box').css('display', 'none');
         $('#success-box').css('display', 'none');
@@ -307,7 +284,7 @@
         $('#information-box').css('display', 'none');
 
         // Validate
-        var validationMessage = onValidate_usersearch();
+        var validationMessage = onValidate_search();
         if (validationMessage != null && validationMessage.length > 0) {
             $('#error-box').css('display', 'block');
             $('#error-title').html('One or more fields were not properly filled out');
@@ -327,33 +304,53 @@
 
         // Search via AJAX
         $.ajax({
-            url: '/api/admin/users/search?q=' + encodeURIComponent(searchText),
+            url: '/api/customers?search=' + encodeURIComponent(searchText),
             type: 'GET',
             dataType: 'json',
+            xhrFields: {
+                withCredentials: true
+            },
             success: function(response) {
                 hideLoadingIndicator();
 
-                if (response.success && response.data) {
-                    var tilesHtml = '';
-
-                    if (response.data.length === 0) {
-                        tilesHtml = createNoResultsTile();
-                    } else {
-                        $.each(response.data, function(index, user) {
-                            tilesHtml += createUserTile(user);
-                        });
-                    }
-
-                    $('#results-tiles').html(tilesHtml);
-                } else {
+                // Check for error in response
+                if (response.error) {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error === 'No tenant selected'
+                        ? 'Please select a tenant first. Go to Settings and select a tenant.'
+                        : response.error);
+                    goToByScroll('error-box');
                     $('#results-tiles').html(createNoResultsTile());
+                    return;
                 }
+
+                var tilesHtml = '';
+
+                if (response.customers && response.customers.length > 0) {
+                    $.each(response.customers, function(index, customer) {
+                        tilesHtml += createCustomerTile(customer);
+                    });
+                } else {
+                    tilesHtml = createNoResultsTile();
+                }
+
+                $('#results-tiles').html(tilesHtml);
             },
             error: function(xhr, status, error) {
                 hideLoadingIndicator();
+                var errorMsg = 'Failed to search customers';
+                try {
+                    var resp = JSON.parse(xhr.responseText);
+                    if (resp.error) {
+                        errorMsg = resp.error === 'No tenant selected'
+                            ? 'Please select a tenant first. Go to Settings and select a tenant.'
+                            : resp.error;
+                    }
+                } catch(e) {}
                 $('#error-box').css('display', 'block');
                 $('#error-title').html('Error');
-                $('#error-text').html('Failed to search users: ' + error);
+                $('#error-text').html(errorMsg);
                 goToByScroll('error-box');
                 $('#results-tiles').html(createNoResultsTile());
             }
@@ -364,7 +361,7 @@
     $(document).ready(function() {
         $('#searchtext').keypress(function(e) {
             if (e.which === 13) {
-                onSubmit_usersearch();
+                onSubmit_search();
                 return false;
             }
         });
