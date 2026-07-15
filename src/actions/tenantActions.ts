@@ -186,11 +186,12 @@ export async function getTenantCredentials(tenantName: string): Promise<TenantWi
 }
 
 export async function getTenantSupabaseClient(): Promise<SupabaseClient | null> {
-  const selectedTenant = await getSelectedTenant();
+  let selectedTenant = await getSelectedTenant();
 
+  // Default to "dolese" if no tenant is selected
   if (!selectedTenant) {
-    console.log("[Tenant] No tenant selected, using default");
-    return null;
+    console.log("[Tenant] No tenant selected, defaulting to dolese");
+    selectedTenant = "dolese";
   }
 
   const tenant = await getTenantCredentials(selectedTenant);
