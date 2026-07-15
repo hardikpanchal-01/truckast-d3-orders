@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<!-- saved from url=(0014)about:internet -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no">
+    <title>Add Projects</title>
+
+    <!-- Required javascript and css all rolled up in one -->
+    <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
+    <link href="./JobsForFixedNodeID_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+    <!-- Highcharts -->
+    <script src="./JobsForFixedNodeID_files/highcharts.js"></script>
+    <script src="./JobsForFixedNodeID_files/highcharts-more.js"></script>
+    <script src="./JobsForFixedNodeID_files/data.js"></script>
+
+    <!-- need to rollup into d3_complete upon approval -->
+    <script src="./JobsForFixedNodeID_files/jquery.rateit.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/rateit.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/hopscotch.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/chardinjs.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/chardinjs.css" rel="stylesheet" type="text/css">
+
+    <link href="./JobsForFixedNodeID_files/bootstrap2-toggle.min.css" rel="stylesheet">
+    <script src="./JobsForFixedNodeID_files/bootstrap2-toggle.min.js"></script>
+
+    <style media="print" type="text/css">
+        a:after { content:''; }
+        a[href]:after { content: none !important; }
+    </style>
+</head>
+
+<body>
+    <script>
+        // document load initialization
+        $(document).ready(function () {
+            hideLoadingIndicator();
+            loadLogin();
+        });
+        $(window).unload(function () {
+            hideLoadingIndicator();
+            saveLogin();
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var errormsg = getParameterByName("pageerror");
+            if (errormsg != null && errormsg.length > 0) {
+                displayError('ERROR', trimString(errormsg));
+            }
+            Highcharts.setOptions({
+                colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+            });
+        });
+    </script>
+    <div class="d3-page">
+
+        <div class="navbar navbar-fixed-top navbar-inverse">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+
+                    <a id="header-bar-title" class="brand">ADMIN</a>
+
+                    <div class="nav-collapse collapse">
+                        <ul class="nav">
+                            <li><a href="/d3-static/user-search.html">USERS</a></li>
+                            <li><a href="/d3-static/internal.html">INTERNAL</a></li>
+                            <li><a href="/d3-static/roles.html">ROLES</a></li>
+                            <li><a href="/d3-static/plants.html">PLANTS</a></li>
+                            <li><a href="/d3-static/qc.html">QC</a></li>
+                            <li><a href="/d3-static/customer-search.html">CUSTOMER</a></li>
+                            <li><a href="/">TRUCKAST</a></li>
+                            <li><a href="/settings">SETTINGS</a></li>
+                            <li><a href="/login">LOGOUT</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="error-box" class="alert alert-error" style="display: none">
+                <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                <p id="error-text"></p>
+            </div>
+            <div id="warning-box" class="alert alert-block" style="display: none">
+                <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                <p id="warning-text"></p>
+            </div>
+            <div id="success-box" class="alert alert-success" style="display: none">
+                <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                <p id="success-text"></p>
+            </div>
+            <div id="information-box" class="alert alert-info" style="display: none">
+                <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                <p id="information-text"></p>
+            </div>
+
+            <form id="add-projects-form" method="POST" onsubmit="return false;">
+                <input type="hidden" name="userId" id="userId" value="" />
+
+                <div class="navbar">
+                    <div class="navbar-inner">
+                        <div class="container">
+                            <table style="width:100%">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:38px">
+                                            <a onclick="history.back(); hideLoadingIndicator(); return false;" style="cursor:pointer">
+                                                <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png">
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                                                <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                                    <span style="font-size: 16px"><strong>Projects</strong></span><br>
+                                                    <span id="user-name" style="font-size: 11px; padding: 0"><strong>Loading...</strong></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="width:38px">
+                                            <a href="javascript:location.reload();">
+                                                <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-small-27@2x.png">
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d3-label" style="width: 100%;"><h4>Give User Company Project Access</h4></div>
+
+                <div style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 100%">
+                                    <input id="searchtext" name="searchtext" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="Enter a Customer Name or Number">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 100%">
+                                    <button id="search-button" class="btn btn-danger" type="button" onclick="searchCompanies()" style="width: 150px">SEARCH</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <br>
+                <br>
+
+                <!-- Search Results as Tiles -->
+                <div id="results-container" style="width: 100%; display: block">
+                    <input id="filter-search" type="text" placeholder="Search" style="width: 260px; display: none">
+                    <div style="width: 100%; height: 1px; clear: both"></div>
+
+                    <div id="results-tiles" style="display: inline-block;">
+                        <!-- Results will be loaded here via AJAX -->
+                    </div>
+                </div>
+
+            </form>
+
+<script>
+    // Asset path for images
+    var ASSET = "/d3-static/JobsForFixedNodeID_files";
+
+    // Tile colors
+    var TILE_COLOR_GREEN = '#458b00';
+    var DEFAULT_TILE_ICON = 'Completed.png';
+
+    // Store user ID
+    var currentUserId = null;
+
+    // Escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // Get user ID from URL
+    function getUserIdFromUrl() {
+        var params = new URLSearchParams(window.location.search);
+        return params.get('id') || params.get('userId') || params.get('UserID') || params.get('EditUserID');
+    }
+
+    // Create a tile for a company
+    function createCompanyTile(company) {
+        var bgColor = TILE_COLOR_GREEN;
+        var iconSrc = ASSET + '/' + DEFAULT_TILE_ICON;
+        var name = escapeHtml(company.name || '');
+        var code = escapeHtml(company.code || '');
+        var projectCount = company.project_count || 0;
+        var projectLabel = projectCount + ' PROJECTS';
+        var href = '/d3-static/customer-user-projects.html?userId=' + currentUserId + '&customerId=' + company.id;
+
+        var tile = '<div class="tile" style="position: relative; background-color: ' + bgColor + '; cursor: pointer" onclick="tileInvoke(\'' + href + '\');">' +
+                '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+                '<div class="tileContainer">' +
+                    '<div class="tileIcon"><img src="' + iconSrc + '" /></div>' +
+                    '<div class="tileInfoSection">' +
+                        '<div class="tileCell">' +
+                            '<div class="tileSuperTitle">#' + code + '</div>' +
+                            '<div class="tileTitle">' + name.toUpperCase() + '</div>' +
+                            '<div class="tileSubTitle">' + projectLabel + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        return tile;
+    }
+
+    // Tile click handler
+    function tileInvoke(url) {
+        showLoadingIndicator();
+        window.location.href = url;
+    }
+
+    // Create "No Results" tile
+    function createNoResultsTile() {
+        return '<div class="tile" style="position: relative; background-color: rgb(255, 255, 255); cursor: default; display: block;">' +
+                '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: none;" />' +
+                '<div class="tileContainer">' +
+                    '<div class="tileIcon"><img src="' + ASSET + '/Cancelled.png" /></div>' +
+                    '<div class="tileInfoSection">' +
+                        '<div class="tileCell">' +
+                            '<div class="tileSuperTitle"></div>' +
+                            '<div class="tileTitle">NO RESULTS</div>' +
+                            '<div class="tileSubTitle"></div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    }
+
+    // Load user info
+    function loadUserInfo() {
+        currentUserId = getUserIdFromUrl();
+        if (!currentUserId) {
+            $('#user-name').html('<strong>ERROR</strong>');
+            return;
+        }
+
+        $('#userId').val(currentUserId);
+
+        $.ajax({
+            url: '/api/admin/users/' + currentUserId,
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.data) {
+                    var name = response.data.name || 'Unknown User';
+                    $('#user-name').html('<strong>' + escapeHtml(name) + '</strong>');
+                    document.title = 'Projects - ' + name;
+                }
+            },
+            error: function() {
+                $('#user-name').html('<strong>Unknown User</strong>');
+            }
+        });
+    }
+
+    // Search for companies
+    function searchCompanies() {
+        var searchText = $('#searchtext').val().trim();
+        if (!searchText) {
+            $('#results-tiles').html('');
+            return;
+        }
+
+        // Hide all alert boxes
+        $('#error-box').css('display', 'none');
+        $('#success-box').css('display', 'none');
+
+        showLoadingIndicator();
+
+        $.ajax({
+            url: '/api/admin/users/' + currentUserId + '/add-projects/search?q=' + encodeURIComponent(searchText),
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                hideLoadingIndicator();
+
+                var tilesHtml = '';
+
+                if (response.success && response.companies && response.companies.length > 0) {
+                    $.each(response.companies, function(index, company) {
+                        tilesHtml += createCompanyTile(company);
+                    });
+                } else {
+                    tilesHtml = createNoResultsTile();
+                }
+
+                $('#results-tiles').html(tilesHtml);
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                var errorMsg = 'Failed to search companies';
+                try {
+                    var resp = JSON.parse(xhr.responseText);
+                    if (resp.error) errorMsg = resp.error;
+                } catch(e) {}
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html(errorMsg);
+                $('#results-tiles').html(createNoResultsTile());
+            }
+        });
+    }
+
+    // Allow Enter key to trigger search
+    $(document).ready(function() {
+        loadUserInfo();
+
+        $('#searchtext').keypress(function(e) {
+            if (e.which === 13) {
+                searchCompanies();
+                return false;
+            }
+        });
+    });
+</script>
+        </div>
+
+    </div>
+    <script type="text/javascript">
+    </script>
+
+</body>
+</html>
