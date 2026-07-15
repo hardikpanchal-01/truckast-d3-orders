@@ -261,7 +261,7 @@
         tiles += createTile(COLORS.red, 'Cancelled.png', 'DISABLE', nameUpper, 'REMOVE ACCESS', "tileInvoke('/admin/users/" + userId + "/disable');");
 
         // 6. Edit App Access tile (Yellow)
-        tiles += createTile(COLORS.yellow, 'Cancelled.png', 'EDIT', 'APP ACCESS FOR', nameUpper, "tileInvoke('/admin/users/" + userId + "/apps');");
+        tiles += createTile(COLORS.yellow, 'Cancelled.png', 'EDIT', 'APP ACCESS FOR', nameUpper, "tileInvoke('/d3-static/app-access.html?id=" + userId + "');");
 
         // 7. Edit User Information tile (Red)
         tiles += createTile(COLORS.red, 'Cancelled.png', 'EDIT USER', 'INFORMATION', nameUpper, "tileInvoke('/d3-static/edit-user.html?id=" + userId + "');");
@@ -270,19 +270,19 @@
         tiles += createTile(COLORS.green, 'message-notification-white@2x.png', 'SMS', 'DOWNLOAD LINK TO', nameUpper, "tileInvoke('/admin/users/" + userId + "/sms');");
 
         // 9. User Settings tile (Blue)
-        tiles += createTile(COLORS.blue, 'user.png', '', 'User Settings', '', "tileInvoke('/settings?userId=" + userId + "');");
+        tiles += createTile(COLORS.blue, '', '', 'User Settings', '', "tileInvoke('/d3-static/user-settings.html?id=" + userId + "');");
 
         // 10. Reinvite User tile (Red)
         tiles += createTile(COLORS.red, 'Paused.png', name, 'REINVITE USER', invitedDate ? 'Invited Date: ' + invitedDate : '', "tileInvoke('/admin/users/" + userId + "/reinvite');");
 
         // 11. Assigned Companies tile (Blue)
-        tiles += createTile(COLORS.blue, 'companyuser.png', 'ASSIGNED', 'COMPANIES', '', "tileInvoke('/admin/users/" + userId + "/companies');");
+        tiles += createTile(COLORS.blue, 'companyuser.png', 'ASSIGNED', 'COMPANIES', '', "tileInvoke('/d3-static/customer-access.html?id=" + userId + "');");
 
         // 12. Assigned Projects tile (Blue)
-        tiles += createTile(COLORS.blue, 'projects.png', 'ASSIGNED', 'PROJECTS', '', "tileInvoke('/admin/users/" + userId + "/projects');");
+        tiles += createTile(COLORS.blue, 'projects.png', 'ASSIGNED', 'PROJECTS', '', "tileInvoke('/d3-static/user-projects.html?id=" + userId + "');");
 
         // 13. Add Projects tile (Blue)
-        tiles += createTile(COLORS.blue, 'projects.png', 'ADD', 'PROJECTS', '', "tileInvoke('/admin/users/" + userId + "/add-projects');");
+        tiles += createTile(COLORS.blue, 'projects.png', 'ADD', 'PROJECTS', '', "tileInvoke('/d3-static/add-projects.html?id=" + userId + "');");
 
         // 14. Force Logout tile (Blue)
         var forceLogoutStatus = user.forced_logout ? 'Currently Forced To Log Out.' : 'Currently Not Forced To Log Out.';
