@@ -186,7 +186,10 @@ export async function getTenantCredentials(tenantName: string): Promise<TenantWi
 }
 
 export async function getTenantSupabaseClient(): Promise<SupabaseClient | null> {
+  console.log("========== [TENANT] Getting Supabase Client ==========");
+
   let selectedTenant = await getSelectedTenant();
+  console.log("[Tenant] Selected tenant from cookie:", selectedTenant);
 
   // Default to "dolese" if no tenant is selected
   if (!selectedTenant) {
@@ -194,10 +197,29 @@ export async function getTenantSupabaseClient(): Promise<SupabaseClient | null> 
     selectedTenant = "dolese";
   }
 
+  console.log("[Tenant] Getting credentials for:", selectedTenant);
   const tenant = await getTenantCredentials(selectedTenant);
+  console.log("[Tenant] Tenant credentials result:", tenant ? {
+    id: tenant.id,
+    name: tenant.name,
+    hasUrl: !!tenant.supabase_url,
+    hasKey: !!tenant.supabase_service_key,
+    url: tenant.supabase_url?.substring(0, 30) + "..."
+  } : "NULL");
 
   if (!tenant) {
     console.error("[Tenant] Could not find tenant:", selectedTenant);
+    // Fallback to environment variables
+    const fallbackUrl = process.env.DOLESE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const fallbackKey = process.env.DOLESE_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+    console.log("[Tenant] Checking env fallback - hasUrl:", !!fallbackUrl, "hasKey:", !!fallbackKey);
+    if (fallbackUrl && fallbackKey) {
+      console.log("[Tenant] Using environment variable fallback:", fallbackUrl.substring(0, 30) + "...");
+      return createClient(fallbackUrl, fallbackKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+    }
+    console.error("[Tenant] No fallback available, returning null");
     return null;
   }
 
@@ -206,10 +228,21 @@ export async function getTenantSupabaseClient(): Promise<SupabaseClient | null> 
       hasUrl: !!tenant.supabase_url,
       hasKey: !!tenant.supabase_service_key,
     });
+    // Fallback to environment variables
+    const fallbackUrl = process.env.DOLESE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const fallbackKey = process.env.DOLESE_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+    console.log("[Tenant] Checking env fallback - hasUrl:", !!fallbackUrl, "hasKey:", !!fallbackKey);
+    if (fallbackUrl && fallbackKey) {
+      console.log("[Tenant] Using environment variable fallback:", fallbackUrl.substring(0, 30) + "...");
+      return createClient(fallbackUrl, fallbackKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+    }
+    console.error("[Tenant] No fallback available, returning null");
     return null;
   }
 
-  console.log("[Tenant] Using tenant database:", selectedTenant, tenant.supabase_url);
+  console.log("[Tenant] SUCCESS - Using tenant database:", selectedTenant, tenant.supabase_url.substring(0, 30) + "...");
 
   return createClient(tenant.supabase_url, tenant.supabase_service_key, {
     auth: { autoRefreshToken: false, persistSession: false },
