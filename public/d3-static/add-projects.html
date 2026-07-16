@@ -254,6 +254,8 @@
     // Load user info
     function loadUserInfo() {
         currentUserId = getUserIdFromUrl();
+        console.log('[ADD PROJECTS] User ID from URL:', currentUserId);
+
         if (!currentUserId) {
             $('#user-name').html('<strong>ERROR</strong>');
             return;
@@ -261,18 +263,23 @@
 
         $('#userId').val(currentUserId);
 
+        console.log('[ADD PROJECTS] Fetching user info...');
         $.ajax({
             url: '/api/admin/users/' + currentUserId,
             type: 'GET',
             dataType: 'json',
             success: function(response) {
+                console.log('[ADD PROJECTS] User info response:', response);
                 if (response.success && response.data) {
-                    var name = response.data.name || 'Unknown User';
-                    $('#user-name').html('<strong>' + escapeHtml(name) + '</strong>');
-                    document.title = 'Projects - ' + name;
+                    var firstName = response.data.first_name || '';
+                    var lastName = response.data.last_name || '';
+                    var name = (firstName + ' ' + lastName).trim() || response.data.name || 'Unknown User';
+                    $('#user-name').html('<strong>' + escapeHtml(name.toUpperCase()) + '</strong>');
+                    document.title = 'Add Projects - ' + name;
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('[ADD PROJECTS] Error fetching user info:', error);
                 $('#user-name').html('<strong>Unknown User</strong>');
             }
         });

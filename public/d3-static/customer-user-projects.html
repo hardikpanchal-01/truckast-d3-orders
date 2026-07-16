@@ -247,18 +247,23 @@
         showLoadingIndicator();
 
         // Load user info first, then load projects
+        console.log('[CUSTOMER PROJECTS] Fetching user info...');
         $.ajax({
             url: '/api/admin/users/' + currentUserId,
             type: 'GET',
             dataType: 'json',
             success: function(response) {
+                console.log('[CUSTOMER PROJECTS] User info response:', response);
                 if (response.success && response.data) {
-                    currentUserName = response.data.name || 'Unknown User';
+                    var firstName = response.data.first_name || '';
+                    var lastName = response.data.last_name || '';
+                    currentUserName = (firstName + ' ' + lastName).trim() || response.data.name || 'Unknown User';
                 }
                 // Load customer info and projects after user info
                 loadCustomerProjects();
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('[CUSTOMER PROJECTS] Error fetching user info:', error);
                 currentUserName = 'Unknown User';
                 loadCustomerProjects();
             }
@@ -414,14 +419,20 @@
             return;
         }
 
+        console.log('[CUSTOMER PROJECTS] Submitting changes - Add:', projectsToAdd, 'Remove:', projectsToRemove);
         showLoadingIndicator();
+
+        // Create add items with customer_id
+        var addItems = projectsToAdd.map(function(projectId) {
+            return { project_id: projectId, customer_id: currentCustomerId };
+        });
 
         $.ajax({
             url: '/api/admin/users/' + currentUserId + '/projects',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
-                add: projectsToAdd,
+                add: addItems,
                 remove: projectsToRemove,
                 order: projectsWithOrder,
                 role: $('#companytypeid').val()

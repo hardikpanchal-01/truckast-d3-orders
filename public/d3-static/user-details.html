@@ -279,10 +279,10 @@
         tiles += createTile(COLORS.blue, 'companyuser.png', 'ASSIGNED', 'COMPANIES', '', "tileInvoke('/d3-static/customer-access.html?id=" + userId + "');");
 
         // 12. Assigned Projects tile (Blue)
-        tiles += createTile(COLORS.blue, 'projects.png', 'ASSIGNED', 'PROJECTS', '', "tileInvoke('/d3-static/user-projects.html?id=" + userId + "');");
+        tiles += createTile(COLORS.blue, 'projects.png', 'ASSIGNED', 'PROJECTS', '', "tileInvoke('/d3-static/projects-list.html?userId=" + userId + "');");
 
         // 13. Add Projects tile (Blue)
-        tiles += createTile(COLORS.blue, 'projects.png', 'ADD', 'PROJECTS', '', "tileInvoke('/d3-static/add-projects.html?id=" + userId + "');");
+        tiles += createTile(COLORS.blue, 'projects.png', 'ADD', 'PROJECTS', '', "tileInvoke('/d3-static/add-projects.html?userId=" + userId + "');");
 
         // 14. Force Logout tile (Blue)
         var forceLogoutStatus = user.forced_logout ? 'Currently Forced To Log Out.' : 'Currently Not Forced To Log Out.';
@@ -327,23 +327,36 @@
 
                 if (response.success && response.data) {
                     var user = response.data;
-                    var name = user.name || 'Unknown User';
+                    // Use first_name and last_name directly from database
+                    var firstName = user.first_name || '';
+                    var lastName = user.last_name || '';
+                    var name = (firstName + ' ' + lastName).trim() || user.name || 'User';
+                    user.name = name; // Update user object for buildUserTiles
                     $('#user-title').html('<strong>' + escapeHtml(name.toUpperCase()) + '</strong>');
                     document.title = name + ' - User Details';
+
+                    // Show warning if there was an issue loading full details
+                    if (response.warning) {
+                        $('#warning-box').css('display', 'block');
+                        $('#warning-title').html('Warning');
+                        $('#warning-text').html(response.warning);
+                    }
 
                     var tilesHtml = buildUserTiles(user);
                     $('#tiles').html(tilesHtml);
                 } else {
-                    $('#user-title').html('<strong>ERROR</strong>');
-                    $('#tiles').html('<div class="tile" style="background-color: #fff;"><div class="tileContainer"><div class="tileInfoSection"><div class="tileCell"><div class="tileTitle">User not found</div></div></div></div></div>');
+                    $('#user-title').html('<strong>USER</strong>');
+                    $('#warning-box').css('display', 'block');
+                    $('#warning-title').html('Warning');
+                    $('#warning-text').html('User details could not be loaded.');
                 }
             },
             error: function(xhr, status, error) {
                 hideLoadingIndicator();
-                $('#user-title').html('<strong>ERROR</strong>');
-                $('#error-box').css('display', 'block');
-                $('#error-title').html('Error');
-                $('#error-text').html('Failed to load user details: ' + error);
+                $('#user-title').html('<strong>USER</strong>');
+                $('#warning-box').css('display', 'block');
+                $('#warning-title').html('Warning');
+                $('#warning-text').html('Could not load user details. Some features may not work.');
             }
         });
     }

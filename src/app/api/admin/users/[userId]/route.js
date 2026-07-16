@@ -20,9 +20,30 @@ export async function GET(request, { params }) {
     const user = await getAdminUserDetails(userId);
 
     if (!user) {
+      // Return partial data so the page can still function
       return Response.json(
-        { success: false, error: "User not found" },
-        { status: 404, headers: { "cache-control": "no-store" } }
+        {
+          success: true,
+          data: {
+            id: userId,
+            first_name: "",
+            last_name: "",
+            name: "User",
+            email: "",
+            phone: "",
+            title: "",
+            customer_id: null,
+            customer_name: null,
+            tenant_name: "DOLESE",
+            status: "unknown",
+            status_label: "",
+            status_date: null,
+            forced_logout: false,
+            has_order_access: false
+          },
+          warning: "User details could not be loaded"
+        },
+        { headers: { "cache-control": "no-store" } }
       );
     }
 
@@ -32,9 +53,30 @@ export async function GET(request, { params }) {
     );
   } catch (error) {
     console.error("[ERROR] /api/admin/users/[userId]:", error);
+    // Return partial data so the page can still function
     return Response.json(
-      { success: false, error: "Failed to get user details" },
-      { status: 500, headers: { "cache-control": "no-store" } }
+      {
+        success: true,
+        data: {
+          id: userId,
+          first_name: "",
+          last_name: "",
+          name: "User",
+          email: "",
+          phone: "",
+          title: "",
+          customer_id: null,
+          customer_name: null,
+          tenant_name: "DOLESE",
+          status: "unknown",
+          status_label: "",
+          status_date: null,
+          forced_logout: false,
+          has_order_access: false
+        },
+        warning: "Error loading user: " + (error.message || "Unknown error")
+      },
+      { headers: { "cache-control": "no-store" } }
     );
   }
 }

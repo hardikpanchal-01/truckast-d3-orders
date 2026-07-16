@@ -309,26 +309,28 @@
 
                 if (response.success && response.data) {
                     var user = response.data;
-                    var name = user.name || '';
-                    var nameParts = parseName(name);
+                    // Use first_name and last_name directly from database
+                    var firstName = user.first_name || '';
+                    var lastName = user.last_name || '';
+                    var displayName = (firstName + ' ' + lastName).trim() || user.name || '';
                     var email = user.email || '';
                     var customerName = user.customer_name || '';
 
                     // Set title - format: "COMPANY NAME: Edit User Name" like D3
                     var titleText = '';
                     if (customerName) {
-                        titleText = customerName.toUpperCase() + ': Edit ' + name;
+                        titleText = customerName.toUpperCase() + ': Edit ' + displayName;
                     } else {
                         // If no customer, use tenant name
                         var tenantName = user.tenant_name || 'ADMIN';
-                        titleText = tenantName.toUpperCase() + ': Edit ' + name;
+                        titleText = tenantName.toUpperCase() + ': Edit ' + displayName;
                     }
                     $('#page-title').html('<strong>' + escapeHtml(titleText) + '</strong>');
                     document.title = titleText;
 
-                    // Fill form fields
-                    $('#firstname').val(nameParts.first);
-                    $('#lastname').val(nameParts.last);
+                    // Fill form fields with first_name and last_name from database
+                    $('#firstname').val(firstName);
+                    $('#lastname').val(lastName);
                     $('#email').val(email);
                     $('#labeltitle').val(user.title || '');
                     $('#smartphonenumber').val(formatPhone(user.phone || ''));
@@ -343,7 +345,7 @@
                     $('#invite-from-option').val(tenantName).text(tenantName.toUpperCase());
 
                     // Set edit company access button link
-                    $('#edit-customer-access-button').attr('href', '/admin/users/' + userId + '/companies');
+                    $('#edit-customer-access-button').attr('href', '/d3-static/customer-access.html?id=' + userId);
 
                     // Load companies
                     loadUserCompanies(userId);
@@ -439,7 +441,6 @@
         var userId = $('#userId').val();
         var firstName = $('#firstname').val().trim();
         var lastName = $('#lastname').val().trim();
-        var fullName = firstName + ' ' + lastName;
         var title = $('#labeltitle').val().trim();
         var phone = $('#smartphonenumber').val().trim();
         var measurementSystem = $('#measurementtypeid').val();
@@ -447,13 +448,14 @@
         // Show loading indicator
         showLoadingIndicator();
 
-        // Send update request
+        // Send update request with first_name and last_name
         $.ajax({
             url: '/api/admin/users/' + userId + '/update',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
-                name: fullName,
+                first_name: firstName,
+                last_name: lastName,
                 title: title,
                 phone: phone,
                 measurement_system: measurementSystem
