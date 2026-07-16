@@ -138,24 +138,49 @@ export async function searchAdminUsers(q) {
  * @returns {Promise<object|null>} - User object with all details
  */
 export async function getAdminUserDetails(userId) {
-  if (!userId) return null;
+  console.log("========== [ADMIN USER DETAILS] START ==========");
+  console.log("[ADMIN USER DETAILS] Getting details for userId:", userId);
 
+  if (!userId) {
+    console.log("[ADMIN USER DETAILS] No userId provided");
+    return null;
+  }
+
+  console.log("[ADMIN USER DETAILS] Getting supabase client...");
   const supabase = await getSupabaseClient();
+  console.log("[ADMIN USER DETAILS] Supabase client:", supabase ? "OK" : "NULL");
+
+  if (!supabase) {
+    console.error("[ERROR] getAdminUserDetails: No database connection");
+    return null;
+  }
 
   // Get user details (only select columns that exist)
+  console.log("[ADMIN USER DETAILS] Querying users table...");
   const { data: user, error } = await supabase
     .from("users")
-    .select("id, full_name, email, phone_number, last_login_at, invitation_sent_at, created_at")
+    .select("id, first_name, last_name, full_name, email, title, phone_number, last_login_at, invitation_sent_at, created_at")
     .eq("id", userId)
     .limit(1)
     .maybeSingle();
 
+  console.log("[ADMIN USER DETAILS] Query result:", {
+    hasUser: !!user,
+    userId: user?.id,
+    email: user?.email,
+    error: error?.message || null,
+    errorCode: error?.code || null
+  });
+
   if (error) {
-    console.error("[ERROR] getAdminUserDetails:", error.message);
+    console.error("[ERROR] getAdminUserDetails:", error.message, error);
     return null;
   }
 
-  if (!user) return null;
+  if (!user) {
+    console.log("[ADMIN USER DETAILS] No user found");
+    return null;
+  }
 
   // Get user's primary customer (first assignment)
   const { data: customerLink } = await supabase
@@ -197,10 +222,12 @@ export async function getAdminUserDetails(userId) {
 
   return {
     id: user.id,
-    name: user.full_name,
-    email: user.email,
-    phone: user.phone_number,
-    title: "",
+    first_name: user.first_name || "",
+    last_name: user.last_name || "",
+    name: user.full_name || "",
+    email: user.email || "",
+    phone: user.phone_number || "",
+    title: user.title || "",
     measurement_system: "STANDARD",
     last_login_at: user.last_login_at,
     invitation_sent_at: user.invitation_sent_at,

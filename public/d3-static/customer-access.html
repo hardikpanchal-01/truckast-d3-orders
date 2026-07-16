@@ -241,7 +241,10 @@
             success: function(userResponse) {
                 if (userResponse.success && userResponse.data) {
                     currentUser = userResponse.data;
-                    var name = currentUser.name || 'Unknown User';
+                    // Use first_name and last_name directly from database
+                    var firstName = currentUser.first_name || '';
+                    var lastName = currentUser.last_name || '';
+                    var name = (firstName + ' ' + lastName).trim() || currentUser.name || 'Unknown User';
                     $('#user-name').html('<strong>' + escapeHtml(name.toUpperCase()) + '</strong>');
                     document.title = name + ' - Customer Access';
                 }
@@ -277,7 +280,13 @@
             },
             error: function(xhr, status, error) {
                 hideLoadingIndicator();
-                $('#current-customers-tbody').html('<tr><td colspan="3">Failed to load customers</td></tr>');
+                var errorMsg = 'Failed to load customers';
+                try {
+                    var resp = JSON.parse(xhr.responseText);
+                    if (resp.error) errorMsg = resp.error;
+                } catch(e) {}
+                console.error('[Customer Access] Load error:', errorMsg, status, error);
+                $('#current-customers-tbody').html('<tr><td colspan="3">' + errorMsg + '</td></tr>');
             }
         });
     }
