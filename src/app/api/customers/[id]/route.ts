@@ -88,22 +88,31 @@ export async function GET(
       users.sort((a, b) => (a.full_name || "").localeCompare(b.full_name || ""));
     }
 
-    // Get projects for this customer
-    const { data: projectsData } = await supabase
+    // Get projects for this customer - projects are linked by customer_code, not customer_id
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const customerCode = (customer as any).code;
+    console.log("[Customer Details API] Looking for projects with customer_code:", customerCode);
+
+    const { data: projectsData, error: projectsError } = await supabase
       .from("projects")
-      .select("id, code, name")
-      .eq("customer_id", id)
+      .select("id, code, name, customer_code, customer_name")
+      .eq("customer_code", customerCode)
       .order("name", { ascending: true });
+
+    console.log("[Customer Details API] Projects found:", projectsData?.length || 0, "Error:", projectsError?.message);
 
     // Get user counts per project
     const projectIds = (projectsData || []).map((p) => p.id);
+    console.log("[Customer Details API] Project IDs for user count:", projectIds);
     const projectUserCountMap = new Map<string, number>();
 
     if (projectIds.length > 0) {
-      const { data: projectUserLinks } = await supabase
+      const { data: projectUserLinks, error: upError } = await supabase
         .from("user_projects")
         .select("project_id")
         .in("project_id", projectIds);
+
+      console.log("[Customer Details API] User project links:", projectUserLinks?.length || 0, "Error:", upError?.message);
 
       for (const link of projectUserLinks || []) {
         if (link.project_id != null) {
@@ -113,12 +122,18 @@ export async function GET(
       }
     }
 
-    const projects = (projectsData || []).map((p) => ({
-      id: String(p.id),
-      code: p.code || "",
-      name: p.name || "",
-      user_count: projectUserCountMap.get(String(p.id)) || 0,
-    }));
+    const projects = (projectsData || []).map((p) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const proj = p as any;
+      return {
+        id: String(proj.id),
+        code: proj.code || "",
+        name: proj.name || "",
+        project_number: proj.code || "",
+        products: "Unrestricted",
+        user_count: projectUserCountMap.get(String(proj.id)) || 0,
+      };
+    });
 
     // Get project users (users assigned to projects of this customer)
     let projectUsers: {
