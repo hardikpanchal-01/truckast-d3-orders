@@ -475,6 +475,7 @@
     // Render projects table
     function renderProjectsTable(projects) {
         var tbody = $('#projects-tbody');
+        var customerId = getCustomerId();
         tbody.empty();
 
         if (!projects || projects.length === 0) {
@@ -483,12 +484,18 @@
         }
 
         $.each(projects, function(index, project) {
+            var projectId = project.id || project.project_id;
+            var projectLink = '/d3-static/project-details.html?id=' + encodeURIComponent(projectId);
+            var editLink = '/d3-static/add-project.html?EditProjectID=' + encodeURIComponent(projectId) + '&customerId=' + encodeURIComponent(customerId);
+            var products = project.products || 'Unrestricted';
+            var projectNumber = project.project_number || project.code || '';
+
             var row = '<tr>' +
-                '<td>' + escapeHtml(project.name) + '</td>' +
-                '<td>' + escapeHtml(project.code) + '</td>' +
+                '<td><a href="' + projectLink + '">' + escapeHtml(project.name) + '</a></td>' +
+                '<td>' + escapeHtml(projectNumber) + '</td>' +
                 '<td>' + (project.user_count || 0) + '</td>' +
-                '<td>-</td>' +
-                '<td></td>' +
+                '<td>' + escapeHtml(products) + '</td>' +
+                '<td><a href="' + editLink + '">Edit</a></td>' +
                 '</tr>';
             tbody.append(row);
         });

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="format-detection" content="telephone=no" />
+        <title>User Notifications</title>
+
+        <!-- Required javascript and css all rolled up in one -->
+        <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
+        <link href="./JobsForFixedNodeID_files/d3_complete.css" rel="stylesheet" type="text/css" />
+
+        <!-- Highcharts -->
+        <script src="./JobsForFixedNodeID_files/highcharts.js"></script>
+        <script src="./JobsForFixedNodeID_files/highcharts-more.js"></script>
+        <script src="./JobsForFixedNodeID_files/data.js"></script>
+
+        <!-- need to rollup into d3_complete upon approval -->
+        <script src="./JobsForFixedNodeID_files/jquery.rateit.min.js"></script>
+        <link href="./JobsForFixedNodeID_files/rateit.css" rel="stylesheet" type="text/css" />
+        <script src="./JobsForFixedNodeID_files/hopscotch.min.js"></script>
+        <link href="./JobsForFixedNodeID_files/hopscotch.min.css" rel="stylesheet" type="text/css" />
+        <script src="./JobsForFixedNodeID_files/chardinjs.min.js"></script>
+        <link href="./JobsForFixedNodeID_files/chardinjs.css" rel="stylesheet" type="text/css" />
+
+        <link href="./JobsForFixedNodeID_files/bootstrap2-toggle.min.css" rel="stylesheet">
+        <script src="./JobsForFixedNodeID_files/bootstrap2-toggle.min.js"></script>
+
+        <style media="print" type="text/css">
+            a:after { content:''; }
+            a[href]:after { content: none !important; }
+        </style>
+    </head>
+    <body>
+        <script>
+            // document load initialization
+            $(document).ready(function () {
+                hideLoadingIndicator();
+                loadLogin();
+            });
+            $(window).unload(function () {
+                hideLoadingIndicator();
+                saveLogin();
+            });
+        </script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        var errormsg = getParameterByName("pageerror");
+        if (errormsg != null && errormsg.length > 0) {
+            displayError('ERROR', trimString(errormsg));
+        }
+        Highcharts.setOptions({
+            colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+        });
+    });
+</script>
+<div class="d3-page">
+
+<div class="navbar navbar-fixed-top navbar-inverse">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+
+            <a id="header-bar-title" class="brand">ADMIN</a>
+
+            <div class="nav-collapse collapse">
+                <ul class="nav">
+                    <li><a href="/d3-static/user-search.html">USERS</a></li>
+                    <li><a href="/d3-static/internal.html">INTERNAL</a></li>
+                    <li><a href="/d3-static/roles.html">ROLES</a></li>
+                    <li><a href="/d3-static/plants.html">PLANTS</a></li>
+                    <li><a href="/d3-static/qc.html">QC</a></li>
+                    <li><a href="/d3-static/customer-search.html">CUSTOMER</a></li>
+                    <li><a href="/">TRUCKAST</a></li>
+                    <li><a href="/settings">SETTINGS</a></li>
+                    <li><a href="/login">LOGOUT</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+                <div class="container">
+                    <div id="error-box" class="alert alert-error" style="display: none">
+                        <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                        <p id="error-text"></p>
+                    </div>
+                    <div id="warning-box" class="alert alert-block" style="display: none">
+                        <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                        <p id="warning-text"></p>
+                    </div>
+                    <div id="success-box" class="alert alert-success" style="display: none">
+                        <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                        <p id="success-text"></p>
+                    </div>
+                    <div id="information-box" class="alert alert-info" style="display: none">
+                        <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                        <p id="information-text"></p>
+                    </div>
+
+<form id="user-notifications" method="POST">
+        <br/>
+
+<div class="navbar">
+    <div class="navbar-inner">
+        <div class="container">
+            <table style="width:100%">
+                <tr>
+                    <td style="width:38px">
+                        <a onclick="history.back();hideLoadingIndicator();" style="cursor:pointer">
+                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png" >
+                        </a>
+                    </td>
+                    <td>
+                    <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                        <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                            <span id="page-title" style="font-size: 16px"><strong>NOTIFICATIONS</strong></span><br />
+                            <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                        </div>
+                    </div>
+                    </td>
+                    <td style="width:38px">
+                        <a href="javascript:location.reload();">
+                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-small-27@2x.png" >
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+        <br/>
+
+            <div id="status-label" class="d3-label" style="width: 100%;"><font color="red"></font></div>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#startdate-input").kendoDatePicker({
+            format: "dd-MM-yyyy"
+        });
+        $("#enddate-input").kendoDatePicker({
+            format: "dd-MM-yyyy"
+        });
+    });
+</script>
+<div id="date-filter-section" style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+            <div class="d3-label" style="width: 100%;">START DATE</div>
+            </td>
+            <td style="vertical-align: middle; width: 25%">
+            <div class="d3-label" style="width: 100%;">END DATE</div>
+            </td>
+            <td style="vertical-align: middle; width: 25%">
+            </td>
+            <td style="vertical-align: middle; width: 25%">
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+<div id="startdate" style="width: 125px; padding-right: 10px; float: left;">
+    <input id="startdate-input" name="startdate" value="" style="width: 125px" />
+</div>
+            </td>
+            <td style="vertical-align: middle; width: 25%">
+<div id="enddate" style="width: 125px; padding-right: 10px; float: left;">
+    <input id="enddate-input" name="enddate" value="" style="width: 125px" />
+</div>
+            </td>
+            <td style="vertical-align: middle; width: 25%">
+        <button id="submit-button" class="btn btn-success" type="button" onclick="loadNotifications()" style="width: 150px">SUBMIT</button>
+            </td>
+            <td style="vertical-align: middle; width: 25%">
+            </td>
+        </tr>
+    </tbody>
+</table>
+</div>
+        <br/>
+        <br/>
+
+<div id="totals-section" style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+            <div class="d3-label" style="width: 100%;">SMS TOTAL:</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+            <div id="sms-total" class="d3-label" style="width: 100%;">0</div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 30%">
+            <div class="d3-label" style="width: 100%;">EMAIL TOTAL:</div>
+            </td>
+            <td style="vertical-align: middle; width: 70%">
+            <div id="email-total" class="d3-label" style="width: 100%;">0</div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+</div>
+        <br/>
+        <br/>
+
+        <div style="display: block; width: 100%">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="notifications-table" style="width: 100%; ">
+            <thead><tr>
+            <th>Date Time Sent</th>
+            <th>Date Time Created</th>
+            <th>Notification</th>
+            <th>Type</th>
+            <th>Order</th>
+            <th>Job Access</th>
+            <th>Project Access</th>
+            <th>Project Name</th>
+            <th>Customer Name</th>
+        </tr></thead>
+        <tbody id="notifications-body">
+        </tbody>
+        </table>
+        </div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table { margin-bottom: 8px; }
+    #notifications-table { width: 100% !important; }
+    .dataTables_wrapper { margin: 0; padding: 0; }
+</style>
+
+</form>
+
+<script>
+    var dataTable = null;
+    var userId = null;
+
+    // Get user ID from URL
+    function getUserIdFromUrl() {
+        var params = new URLSearchParams(window.location.search);
+        return params.get('id') || params.get('userId') || params.get('UserID');
+    }
+
+    // Format date for display
+    function formatDateTime(dateStr) {
+        if (!dateStr) return '';
+        var d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '';
+        return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear() + ' ' +
+               d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Format date for display (DD-MM-YYYY)
+    function formatDateForDisplay(date) {
+        var d = new Date(date);
+        var month = '' + (d.getMonth() + 1);
+        var day = '' + d.getDate();
+        var year = d.getFullYear();
+
+        if (month.length < 2) month = '0' + month;
+        if (day.length < 2) day = '0' + day;
+
+        return [day, month, year].join('-');
+    }
+
+    // Format date for API (YYYY-MM-DD)
+    function formatDateForAPI(date) {
+        if (!date) return '';
+        var d = new Date(date);
+        if (isNaN(d.getTime())) return '';
+        var month = '' + (d.getMonth() + 1);
+        var day = '' + d.getDate();
+        var year = d.getFullYear();
+
+        if (month.length < 2) month = '0' + month;
+        if (day.length < 2) day = '0' + day;
+
+        return [year, month, day].join('-');
+    }
+
+    // Set default dates (last 7 days)
+    function setDefaultDates() {
+        var endDate = new Date();
+        var startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+
+        // Set values using Kendo DatePicker
+        var startPicker = $('#startdate-input').data('kendoDatePicker');
+        var endPicker = $('#enddate-input').data('kendoDatePicker');
+
+        if (startPicker) {
+            startPicker.value(startDate);
+        } else {
+            $('#startdate-input').val(formatDateForDisplay(startDate));
+        }
+
+        if (endPicker) {
+            endPicker.value(endDate);
+        } else {
+            $('#enddate-input').val(formatDateForDisplay(endDate));
+        }
+    }
+
+    // Get date value from Kendo DatePicker
+    function getDateValue(inputId) {
+        var picker = $(inputId).data('kendoDatePicker');
+        if (picker) {
+            return picker.value();
+        }
+        return $(inputId).val();
+    }
+
+    // Load user info
+    function loadUserInfo() {
+        $.ajax({
+            url: '/api/admin/users/' + userId,
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.data) {
+                    var user = response.data;
+                    var firstName = user.first_name || '';
+                    var lastName = user.last_name || '';
+                    var name = (firstName + ' ' + lastName).trim() || user.name || 'User';
+                    $('#page-title').html('<strong>' + name.toUpperCase() + ' Notifications</strong>');
+                    document.title = name + ' Notifications';
+                }
+            }
+        });
+    }
+
+    // Load notifications
+    function loadNotifications() {
+        var startDateVal = getDateValue('#startdate-input');
+        var endDateVal = getDateValue('#enddate-input');
+
+        if (!startDateVal || !endDateVal) {
+            $('#error-box').css('display', 'block');
+            $('#error-title').html('Error');
+            $('#error-text').html('Please select both start and end dates.');
+            return;
+        }
+
+        // Format dates for API
+        var startDate = formatDateForAPI(startDateVal);
+        var endDate = formatDateForAPI(endDateVal);
+
+        // Hide error box
+        $('#error-box').css('display', 'none');
+
+        showLoadingIndicator();
+
+        $.ajax({
+            url: '/api/admin/users/' + userId + '/notifications',
+            type: 'GET',
+            dataType: 'json',
+            data: {
+                startDate: startDate,
+                endDate: endDate
+            },
+            success: function(response) {
+                hideLoadingIndicator();
+
+                if (response.success) {
+                    var notifications = response.data || [];
+                    var smsCount = 0;
+                    var emailCount = 0;
+
+                    // Clear existing table
+                    if (dataTable) {
+                        dataTable.fnClearTable();
+                    }
+
+                    // Build table rows
+                    var rows = [];
+                    $.each(notifications, function(index, notif) {
+                        if (notif.type === 'SMS' || notif.type === 'sms') {
+                            smsCount++;
+                        } else if (notif.type === 'EMAIL' || notif.type === 'email') {
+                            emailCount++;
+                        }
+
+                        rows.push([
+                            formatDateTime(notif.sent_at),
+                            formatDateTime(notif.created_at),
+                            notif.notification || notif.message || '',
+                            (notif.type || '').toUpperCase(),
+                            notif.order_number || '',
+                            notif.job_access || '',
+                            notif.project_access || '',
+                            notif.project_name || '',
+                            notif.customer_name || ''
+                        ]);
+                    });
+
+                    // Update totals
+                    $('#sms-total').text(smsCount);
+                    $('#email-total').text(emailCount);
+
+                    // Add rows to table
+                    if (rows.length > 0 && dataTable) {
+                        dataTable.fnAddData(rows);
+                    }
+                } else {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error || 'Failed to load notifications.');
+                }
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to load notifications: ' + error);
+            }
+        });
+    }
+
+    // Initialize page
+    $(document).ready(function() {
+        userId = getUserIdFromUrl();
+
+        if (!userId) {
+            $('#error-box').css('display', 'block');
+            $('#error-title').html('Error');
+            $('#error-text').html('No User ID provided.');
+            return;
+        }
+
+        // Load user info
+        loadUserInfo();
+
+        // Initialize DataTable
+        dataTable = $('#notifications-table').dataTable({
+            "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'><'span6'p>>",
+            "sPaginationType": "bootstrap",
+            "bPaginate": true,
+            "bFilter": true,
+            "bSort": true,
+            "aaSorting": [[0, 'desc']],
+            "oLanguage": {
+                "sLengthMenu": "_MENU_ records per page"
+            }
+        });
+
+        // Set default dates after Kendo DatePicker is initialized (small delay to ensure ready)
+        setTimeout(function() {
+            setDefaultDates();
+            // Auto-load notifications
+            loadNotifications();
+        }, 100);
+    });
+</script>
+
+                </div>
+</div>
+    </body>
+</html>
