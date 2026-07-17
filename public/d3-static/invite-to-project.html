@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="format-detection" content="telephone=no" />
+        <title>Project Details</title>
+
+        <!-- Required javascript and css all rolled up in one -->
+        <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
+        <link href="./JobsForFixedNodeID_files/d3_complete.css" rel="stylesheet" type="text/css" />
+
+        <!-- Highcharts -->
+        <script src="./JobsForFixedNodeID_files/highcharts.js"></script>
+        <script src="./JobsForFixedNodeID_files/highcharts-more.js"></script>
+        <script src="./JobsForFixedNodeID_files/data.js"></script>
+
+        <script src="./JobsForFixedNodeID_files/jquery.rateit.min.js"></script>
+        <link href="./JobsForFixedNodeID_files/rateit.css" rel="stylesheet" type="text/css" />
+        <script src="./JobsForFixedNodeID_files/hopscotch.min.js"></script>
+        <link href="./JobsForFixedNodeID_files/hopscotch.min.css" rel="stylesheet" type="text/css" />
+        <script src="./JobsForFixedNodeID_files/chardinjs.min.js"></script>
+        <link href="./JobsForFixedNodeID_files/chardinjs.css" rel="stylesheet" type="text/css" />
+
+        <link href="./JobsForFixedNodeID_files/bootstrap2-toggle.min.css" rel="stylesheet">
+        <script src="./JobsForFixedNodeID_files/bootstrap2-toggle.min.js"></script>
+
+        <style media="print" type="text/css">
+            a:after { content:''; }
+            a[href]:after { content: none !important; }
+        </style>
+        <style>
+            .dataTables_filter label { float: right }
+            .dataTables_length { display: none !important; }
+            .dataTables_info { display: none !important; }
+            .dataTables_paginate { display: none !important; }
+            .pagination { margin: 0px 0; }
+            .table { margin-bottom: 8px; }
+        </style>
+    </head>
+    <body>
+        <script>
+            $(document).ready(function () {
+                hideLoadingIndicator();
+                loadLogin();
+            });
+            $(window).unload(function () {
+                hideLoadingIndicator();
+                saveLogin();
+            });
+        </script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        var errormsg = getParameterByName("pageerror");
+        if (errormsg != null && errormsg.length > 0) {
+            displayError('ERROR', trimString(errormsg));
+        }
+        Highcharts.setOptions({
+            colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+        });
+    });
+</script>
+<div class="d3-page">
+
+<div class="navbar navbar-fixed-top navbar-inverse">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+
+            <a id="header-bar-title" class="brand">PROJECTS</a>
+
+            <div class="nav-collapse collapse">
+                <ul class="nav">
+                    <li><a href="/publish">PUBLISH</a></li>
+                    <li><a href="/admin">ADMIN</a></li>
+                    <li><a href="/">TRUCKAST</a></li>
+                    <li><a href="/rollout/search">ROLLOUT</a></li>
+                    <li><a href="/help">HELP</a></li>
+                    <li><a href="/settings">SETTINGS</a></li>
+                    <li><a href="/login">LOGOUT</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+                <div class="container">
+                    <div id="error-box" class="alert alert-error" style="display: none">
+                        <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                        <p id="error-text"></p>
+                    </div>
+                    <div id="warning-box" class="alert alert-block" style="display: none">
+                        <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                        <p id="warning-text"></p>
+                    </div>
+                    <div id="success-box" class="alert alert-success" style="display: none">
+                        <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                        <p id="success-text"></p>
+                    </div>
+                    <div id="information-box" class="alert alert-info" style="display: none">
+                        <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                        <p id="information-text"></p>
+                    </div>
+
+<form id="project-details" method="POST" onsubmit="return false;">
+
+<div class="navbar">
+    <div class="navbar-inner">
+        <div class="container">
+            <table style="width:100%">
+                <tr>
+                    <td style="width:38px">
+                        <a onclick="history.back();hideLoadingIndicator();" style="cursor:pointer">
+                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png">
+                        </a>
+                    </td>
+                    <td>
+                    <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                        <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                            <span id="project-title" style="font-size: 16px"><strong>LOADING...</strong></span><br />
+                            <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                        </div>
+                    </div>
+                    </td>
+                    <td style="width:38px">
+                        <a href="javascript:location.reload();">
+                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-small-27@2x.png">
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+        <br/>
+
+            <a id="add-company-btn" href="#" class="btn btn-success" style="width: 90px; display: inline-block" onclick="goToAddCompany(); return false;">+ COMPANY</a>
+
+        <br/>
+
+                <div id="company-label" class="d3-label" style="width: 100%;"><h4>COMPANIES</h4></div>
+
+<div id="companies-section" style="width: 100%; display: block">
+    <input id="companies-search" type="text" placeholder="Search" style="width: 260px; display: none" />
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="companies-tiles" style="display: inline-block;">
+        <!-- Companies will be loaded here -->
+    </div>
+</div>
+
+        <button id="submit-button" class="btn btn-danger" type="button" onclick="onSubmit_project_details()" style="width: 150px">SUBMIT</button>
+
+                <div id="invite-label" class="d3-label" style="width: 100%;"><h4>INVITE NEW USER</h4></div>
+
+<div id="invite-section" style="width: 100%; display: block">
+    <input id="invite-search" type="text" placeholder="Search" style="width: 260px; display: none" />
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="invite-tiles" style="display: inline-block;">
+        <!-- Invite tiles will be loaded here -->
+    </div>
+</div>
+
+                <div id="current-users-label" class="d3-label" style="width: 100%;"><h4>CURRENT USERS FOR <span id="users-project-name"></span></h4></div>
+
+        <div style="display: block; width: 100%">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="users-table" style="width: 100%;">
+            <thead><tr>
+            <th>Remove from Project</th>
+            <th>Name</th>
+            <th>Company</th>
+        </tr></thead>
+        <tbody>
+            <!-- Users will be loaded here -->
+        </tbody>
+        </table>
+        </div>
+
+                <div id="products-label" class="d3-label" style="width: 100%;"><h4>PRODUCTS</h4></div>
+
+<div id="products-section" style="width: 100%; display: block">
+    <input id="products-search" type="text" placeholder="Search" style="width: 260px; display: block" />
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="products-tiles" style="display: inline-block;">
+        <!-- Products will be loaded here -->
+    </div>
+</div>
+
+</form>
+
+<script>
+    var ASSET = "/d3-static/JobsForFixedNodeID_files";
+    var TILE_COLOR_GREEN = '#458b00';
+    var TILE_COLOR_BLUE = '#2f7ed8';
+
+    var projectId = null;
+    var projectName = '';
+    var projectCode = '';
+    var usersToRemove = [];
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function getParameterByName(name) {
+        var url = window.location.href;
+        name = name.replace(/[\[\]]/g, "\\$&");
+        var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)");
+        var results = regex.exec(url);
+        if (!results) return null;
+        if (!results[2]) return '';
+        return decodeURIComponent(results[2].replace(/\+/g, " "));
+    }
+
+    function tileInvoke(url) {
+        showLoadingIndicator();
+        window.location.href = url;
+    }
+
+    function goToAddCompany() {
+        if (projectId) {
+            showLoadingIndicator();
+            window.location.href = '/d3-static/invite-to-company.html?projectId=' + encodeURIComponent(projectId) + '&projectName=' + encodeURIComponent(projectName);
+        }
+    }
+
+    function createCompanyTile(company) {
+        var role = escapeHtml(company.role || 'COMPANY');
+        var name = escapeHtml(company.name || '');
+        var addedDate = company.added_date || '';
+        var customerId = company.customer_id || company.id || '';
+
+        var tile = '<div class="tile" style="position: relative; background-color: ' + TILE_COLOR_BLUE + '; cursor: pointer" onclick="tileInvoke(\'/d3-static/invite-to-company.html?customerId=' + customerId + '&projectId=' + projectId + '\');">' +
+                '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+                '<div class="tileContainer">' +
+                    '<div class="tileIcon"><img src="' + ASSET + '/pencil-mini-white@2x.png" /></div>' +
+                    '<div class="tileInfoSection">' +
+                        '<div class="tileCell">' +
+                            '<div class="tileSuperTitle">' + role.toUpperCase() + '</div>' +
+                            '<div class="tileTitle">' + name.toUpperCase() + '</div>' +
+                            '<div class="tileSubTitle">ADDED: ' + addedDate + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        return tile;
+    }
+
+    function createInviteTile(company) {
+        var role = escapeHtml(company.role || 'COMPANY');
+        var name = escapeHtml(company.name || '');
+        var customerId = company.customer_id || company.id || '';
+
+        var tile = '<div class="tile" style="position: relative; background-color: ' + TILE_COLOR_GREEN + '; cursor: pointer" onclick="tileInvoke(\'/d3-static/invite-to-company.html?customerId=' + customerId + '&projectId=' + projectId + '&action=invite\');">' +
+                '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+                '<div class="tileContainer">' +
+                    '<div class="tileIcon"><img src="' + ASSET + '/plus-sign-mini-white@2x.png" /></div>' +
+                    '<div class="tileInfoSection">' +
+                        '<div class="tileCell">' +
+                            '<div class="tileSuperTitle">' + role.toUpperCase() + '</div>' +
+                            '<div class="tileTitle">' + name.toUpperCase() + '</div>' +
+                            '<div class="tileSubTitle">INVITE NEW USER</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        return tile;
+    }
+
+    function createProductTile(product) {
+        var code = escapeHtml(product.code || '');
+        var description = escapeHtml(product.description || product.name || '');
+        var quantity = product.quantity || '0.00';
+        var unit = escapeHtml(product.unit || 'CY');
+        var isConcrete = product.is_concrete || false;
+        var bgColor = isConcrete ? TILE_COLOR_GREEN : TILE_COLOR_BLUE;
+
+        var tile = '<div class="tile" style="position: relative; background-color: ' + bgColor + '; cursor: default">' +
+                '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: none;" />' +
+                '<div class="tileContainer">' +
+                    '<div class="tileIcon"><img src="' + ASSET + '/Completed.png" /></div>' +
+                    '<div class="tileInfoSection">' +
+                        '<div class="tileCell">' +
+                            '<div class="tileSuperTitle">' + code.toUpperCase() + ' (' + description.toUpperCase() + ')</div>' +
+                            '<div class="tileTitle">' + quantity + ' ' + unit.toUpperCase() + '</div>' +
+                            '<div class="tileSubTitle"></div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        return tile;
+    }
+
+    function createNoRestrictionsTile() {
+        return '<div class="tile" style="position: relative; background-color: ' + TILE_COLOR_BLUE + '; cursor: default; display: block;">' +
+                '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: none;" />' +
+                '<div class="tileContainer">' +
+                    '<div class="tileIcon"><img src="' + ASSET + '/Cancelled.png" /></div>' +
+                    '<div class="tileInfoSection">' +
+                        '<div class="tileCell">' +
+                            '<div class="tileSuperTitle"></div>' +
+                            '<div class="tileTitle">NO RESTRICTIONS</div>' +
+                            '<div class="tileSubTitle">ON THIS PROJECT</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    }
+
+    function createNoResultsTile() {
+        return '<div class="tile" style="position: relative; background-color: rgb(255, 255, 255); cursor: default; display: block;">' +
+                '<div class="tileContainer">' +
+                    '<div class="tileIcon"><img src="' + ASSET + '/Cancelled.png" /></div>' +
+                    '<div class="tileInfoSection">' +
+                        '<div class="tileCell">' +
+                            '<div class="tileTitle">NO RESULTS</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    }
+
+    function toggleRemoveUser(userId, checked) {
+        if (checked) {
+            if (usersToRemove.indexOf(userId) === -1) {
+                usersToRemove.push(userId);
+            }
+        } else {
+            var idx = usersToRemove.indexOf(userId);
+            if (idx > -1) {
+                usersToRemove.splice(idx, 1);
+            }
+        }
+    }
+
+    function loadProjectDetails() {
+        projectId = getParameterByName('id');
+        projectName = getParameterByName('name') || '';
+        projectCode = getParameterByName('code') || '';
+
+        if (!projectId) {
+            $('#project-title').html('<strong>ERROR - No Project ID</strong>');
+            return;
+        }
+
+        // Set page title
+        var displayName = projectName || projectCode || 'Project';
+        $('#project-title').html('<strong>' + escapeHtml(displayName.toUpperCase()) + '</strong>');
+        $('#users-project-name').text(displayName.toUpperCase());
+        document.title = displayName + ' - Project Details';
+
+        showLoadingIndicator();
+
+        // Fetch project details from API
+        $.ajax({
+            url: '/api/projects/' + projectId + '/details',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                hideLoadingIndicator();
+
+                if (response.error) {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error);
+                    return;
+                }
+
+                var data = response.data || response;
+
+                // Update project name if available from response
+                if (data.project_name) {
+                    $('#project-title').html('<strong>' + escapeHtml(data.project_name.toUpperCase()) + '</strong>');
+                    $('#users-project-name').text(data.project_name.toUpperCase());
+                }
+
+                // Render companies
+                var companiesHtml = '';
+                var companies = data.companies || [];
+                if (companies.length > 0) {
+                    $.each(companies, function(index, company) {
+                        companiesHtml += createCompanyTile(company);
+                    });
+                } else {
+                    companiesHtml = createNoResultsTile();
+                }
+                $('#companies-tiles').html(companiesHtml);
+
+                // Render invite tiles (same companies but for inviting new users)
+                var inviteHtml = '';
+                if (companies.length > 0) {
+                    $.each(companies, function(index, company) {
+                        inviteHtml += createInviteTile(company);
+                    });
+                } else {
+                    inviteHtml = createNoResultsTile();
+                }
+                $('#invite-tiles').html(inviteHtml);
+
+                // Render users table
+                var users = data.users || [];
+                var usersTable = $('#users-table').DataTable ? $('#users-table').DataTable() : null;
+
+                // Initialize DataTable if not already done
+                if (!$.fn.DataTable.isDataTable('#users-table')) {
+                    $('#users-table').dataTable({
+                        "sDom": "<'row'<'span6'f>r>t",
+                        "sPaginationType": "bootstrap",
+                        "bPaginate": false,
+                        "bLengthChange": false,
+                        "bInfo": false,
+                        "bFilter": true,
+                        "bSort": true
+                    });
+                }
+
+                var table = $('#users-table').dataTable();
+                table.fnClearTable();
+
+                if (users.length > 0) {
+                    var rows = [];
+                    $.each(users, function(index, user) {
+                        var userId = user.id || '';
+                        var userName = escapeHtml((user.first_name || '') + ' ' + (user.last_name || ''));
+                        var companyName = escapeHtml(user.company_name || '');
+
+                        rows.push([
+                            '<input type="checkbox" name="remove_' + userId + '" value="' + userId + '" onchange="toggleRemoveUser(\'' + userId + '\', this.checked)">',
+                            '<a href="/d3-static/invite-to-company.html?editUserId=' + userId + '&projectId=' + projectId + '">' + userName + '</a>',
+                            companyName
+                        ]);
+                    });
+                    if (rows.length > 0) {
+                        table.fnAddData(rows);
+                    }
+                }
+
+                // Render products
+                var productsHtml = '';
+                var products = data.products || [];
+                var restrictProducts = data.restrict_products || false;
+
+                if (!restrictProducts && products.length === 0) {
+                    // No restrictions on this project
+                    productsHtml = createNoRestrictionsTile();
+                } else if (products.length > 0) {
+                    $.each(products, function(index, product) {
+                        productsHtml += createProductTile(product);
+                    });
+                } else {
+                    productsHtml = createNoResultsTile();
+                }
+                $('#products-tiles').html(productsHtml);
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                console.error('Error loading project details:', error);
+
+                // Show error but still display project name from URL params
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to load project details: ' + error);
+            }
+        });
+    }
+
+    function onSubmit_project_details() {
+        // Hide previous messages
+        $('#error-box').css('display', 'none');
+        $('#success-box').css('display', 'none');
+        $('#warning-box').css('display', 'none');
+
+        if (usersToRemove.length === 0) {
+            $('#warning-box').css('display', 'block');
+            $('#warning-title').html('No Changes');
+            $('#warning-text').html('No users selected to remove');
+            return;
+        }
+
+        showLoadingIndicator();
+
+        $.ajax({
+            url: '/api/projects/' + projectId + '/users',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ remove: usersToRemove }),
+            success: function(response) {
+                hideLoadingIndicator();
+
+                if (response.error) {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error);
+                    return;
+                }
+
+                $('#success-box').css('display', 'block');
+                $('#success-title').html('Success');
+                $('#success-text').html('Removed ' + usersToRemove.length + ' user(s) from project');
+                goToByScroll('success-box');
+
+                // Reset and reload
+                usersToRemove = [];
+                loadProjectDetails();
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to remove users: ' + error);
+            }
+        });
+    }
+
+    function goToByScroll(id) {
+        $('html,body').animate({scrollTop: $("#" + id).offset().top}, 'slow');
+    }
+
+    // Search functionality for products
+    $('#products-search').on('keyup', function() {
+        var filter = $(this).val().toLowerCase();
+        $('#products-tiles .tile').each(function() {
+            var text = $(this).text().toLowerCase();
+            $(this).toggle(text.indexOf(filter) > -1);
+        });
+    });
+
+    // Initialize on page load
+    $(document).ready(function() {
+        loadProjectDetails();
+    });
+</script>
+
+                </div>
+
+</div>
+    </body>
+</html>
