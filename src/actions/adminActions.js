@@ -243,3 +243,120 @@ export async function getAdminUserDetails(userId) {
     has_order_access: false
   };
 }
+
+/**
+ * Get user notification preferences within a date range.
+ * Used by the Admin User Notifications page.
+ * Queries from user_notification_preferences table with joins to get channel and event type details.
+ * @param {string} userId - User ID
+ * @param {string} startDate - Start date (YYYY-MM-DD)
+ * @param {string} endDate - End date (YYYY-MM-DD)
+ * @returns {Promise<Array>} - Array of notification preference objects
+ */
+export async function getUserNotifications(userId, startDate, endDate) {
+  console.log("[USER NOTIFICATIONS] Getting notifications for userId:", userId);
+  console.log("[USER NOTIFICATIONS] Date range:", startDate, "to", endDate);
+
+  if (!userId) {
+    console.log("[USER NOTIFICATIONS] No userId provided");
+    return [];
+  }
+
+  const supabase = await getSupabaseClient();
+
+  if (!supabase) {
+    console.error("[ERROR] getUserNotifications: No database connection");
+    return [];
+  }
+
+  // First, get the channel and event type lookup tables
+  const [channelsResult, eventTypesResult] = await Promise.all([
+    supabase.from("notification_channels").select("*"),
+    supabase.from("notification_event_types").select("*")
+  ]);
+
+  // Build lookup maps
+  const channelMap = {};
+  (channelsResult.data || []).forEach(c => {
+    channelMap[c.id] = c;
+  });
+
+  const eventTypeMap = {};
+  (eventTypesResult.data || []).forEach(e => {
+    eventTypeMap[e.id] = e;
+  });
+
+  console.log("[USER NOTIFICATIONS] Loaded", Object.keys(channelMap).length, "channels and", Object.keys(eventTypeMap).length, "event types");
+
+  // Query user_notification_preferences
+  // Note: We don't filter by date since these are preference settings, not sent notifications
+  let query = supabase
+    .from("user_notification_preferences")
+    .select(`
+      id,
+      user_id,
+      event_type_id,
+      channel_id,
+      is_enabled,
+      scope_type,
+      scope_id,
+      created_at,
+      updated_at
+    `)
+    .eq("user_id", userId);
+
+  // Order by most recent first
+  query = query.order("created_at", { ascending: false });
+
+  const { data: notifications, error } = await query;
+
+  if (error) {
+    console.error("[ERROR] getUserNotifications:", error.message);
+    // If table doesn't exist, return empty array
+    if (error.code === "42P01" || error.message.includes("does not exist")) {
+      console.log("[USER NOTIFICATIONS] user_notification_preferences table does not exist, returning empty array");
+      return [];
+    }
+    return [];
+  }
+
+  console.log("[USER NOTIFICATIONS] Found", notifications?.length || 0, "notification preferences");
+
+  return (notifications || []).map((n) => {
+    // Get channel info from lookup
+    const channel = channelMap[n.channel_id] || {};
+    const channelName = channel.name || channel.code || channel.channel_name || `Channel ${n.channel_id}`;
+    const channelType = channelName.toUpperCase();
+
+    // Get event type info from lookup
+    const eventType = eventTypeMap[n.event_type_id] || {};
+    const eventTypeName = eventType.name || eventType.event_name || eventType.description || `Event ${n.event_type_id}`;
+
+    return {
+      id: n.id,
+      user_id: n.user_id,
+      type: channelType,
+      notification: eventTypeName,
+      message: eventTypeName,
+      is_enabled: n.is_enabled,
+      scope_type: n.scope_type || "global",
+      scope_id: n.scope_id || "",
+      sent_at: n.updated_at,
+      created_at: n.created_at,
+      // Additional fields for display
+      order_number: "",
+      order_id: null,
+      job_access: n.is_enabled ? "Yes" : "No",
+      project_access: n.scope_type === "project" ? "Yes" : "No",
+      project_name: n.scope_type === "project" ? n.scope_id : "",
+      project_id: n.scope_type === "project" ? n.scope_id : null,
+      customer_name: n.scope_type === "customer" ? n.scope_id : "",
+      customer_id: n.scope_type === "customer" ? n.scope_id : null,
+      // Channel and event type details
+      channel_id: n.channel_id,
+      channel_name: channelName,
+      event_type_id: n.event_type_id,
+      event_type_name: eventTypeName
+    };
+  });
+}

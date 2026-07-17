@@ -158,7 +158,7 @@ export async function getTenantCredentials(tenantName: string): Promise<TenantWi
     .schema("auth_tenant")
     .from("tenants")
     .select("id, uuid, name, supabase_url, supabase_service_key, supabase_anon_key, d3_tenant_name")
-    .eq("name", tenantName)
+    .ilike("name", tenantName)
     .eq("status", "active")
     .is("deleted_at", null)
     .single();
