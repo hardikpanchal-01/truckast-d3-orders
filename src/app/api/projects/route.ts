@@ -3,6 +3,95 @@ import { getTenantSupabaseClient } from "@/actions/tenantActions";
 export const dynamic = "force-dynamic";
 
 /**
+ * GET /api/projects
+ * Search projects with optional user counts
+ */
+export async function GET(request: Request): Promise<Response> {
+  try {
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get("search");
+    const customerId = searchParams.get("customer_id");
+    const limit = parseInt(searchParams.get("limit") || "50", 10);
+
+    const supabase = await getTenantSupabaseClient();
+
+    if (!supabase) {
+      console.error("[Projects API] No tenant database connection");
+      return Response.json(
+        { error: "No database connection" },
+        { status: 400, headers: { "cache-control": "no-store" } }
+      );
+    }
+
+    // Build the query
+    let query = supabase
+      .from("projects")
+      .select("id, code, name, customer_id, customer_code, customer_name")
+      .order("name", { ascending: true })
+      .limit(limit);
+
+    // Apply search filter
+    if (search && search.trim().length > 0) {
+      const searchTerm = search.trim();
+      query = query.or(
+        `name.ilike.%${searchTerm}%,code.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`
+      );
+    }
+
+    // Apply customer filter
+    if (customerId) {
+      query = query.eq("customer_id", customerId);
+    }
+
+    const { data: projects, error } = await query;
+
+    if (error) {
+      console.error("[Projects API] Query error:", error);
+      return Response.json(
+        { error: "Failed to search projects: " + error.message },
+        { status: 500, headers: { "cache-control": "no-store" } }
+      );
+    }
+
+    // Get user counts for each project from user_projects table
+    const projectIds = projects?.map((p) => p.id) || [];
+    let userCountsMap: Record<string, number> = {};
+
+    if (projectIds.length > 0) {
+      const { data: userCounts, error: countError } = await supabase
+        .from("user_projects")
+        .select("project_id")
+        .in("project_id", projectIds);
+
+      if (!countError && userCounts) {
+        // Count users per project
+        userCounts.forEach((uc) => {
+          const pid = String(uc.project_id);
+          userCountsMap[pid] = (userCountsMap[pid] || 0) + 1;
+        });
+      }
+    }
+
+    // Add user counts to projects
+    const projectsWithCounts = (projects || []).map((project) => ({
+      ...project,
+      user_count: userCountsMap[String(project.id)] || 0,
+    }));
+
+    return Response.json(
+      { projects: projectsWithCounts, data: projectsWithCounts },
+      { headers: { "cache-control": "no-store" } }
+    );
+  } catch (error) {
+    console.error("[Projects API] Error:", error);
+    return Response.json(
+      { error: "Failed to search projects" },
+      { status: 500, headers: { "cache-control": "no-store" } }
+    );
+  }
+}
+
+/**
  * POST /api/projects
  * Create a new project for a customer
  */
