@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="format-detection" content="telephone=no">
-    <title>Rollout Search</title>
+    <title>Customer Details</title>
 
     <!-- Required javascript and css all rolled up in one -->
     <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
@@ -108,7 +108,7 @@
                 <p id="information-text"></p>
             </div>
 
-            <form id="search" method="POST" onsubmit="return false;">
+            <form id="customer-details" method="POST" onsubmit="return false;">
 
                 <div class="navbar">
                     <div class="navbar-inner">
@@ -117,14 +117,14 @@
                                 <tbody>
                                     <tr>
                                         <td style="width:38px">
-                                            <a onclick="window.top.location.href='/'; return false;" style="cursor:pointer">
+                                            <a onclick="window.top.location.href='/rollout-search'; return false;" style="cursor:pointer">
                                                 <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png">
                                             </a>
                                         </td>
                                         <td>
                                             <div style="width: 100%; float: left; text-align: center; vertical-align: central">
                                                 <div id="titlebar-caption" style="display: inline-block; margin:5px">
-                                                    <span style="font-size: 16px"><strong>SEARCH</strong></span><br>
+                                                    <span id="page-title" style="font-size: 16px"><strong>CUSTOMER DETAILS</strong></span><br>
                                                     <span style="font-size: 11px; padding: 0"><strong></strong></span>
                                                 </div>
                                             </div>
@@ -140,51 +140,101 @@
                         </div>
                     </div>
                 </div>
-                <br>
 
-                <input id="searchtext" name="searchtext" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="Enter Invitee's Company Name">
-
-                <br>
-
-                <button id="submit-button" class="btn btn-danger" type="button" onclick="onSubmit_search()" style="width: 150px">Search</button>
+                <a id="invite-button" href="#" class="btn btn-danger" style="width: 60px; display: inline-block">Invite</a>
 
                 <br>
                 <br>
 
-<div id="results-container" style="width: 100%; display: block">
-    <div id="results-tiles" style="display: inline-block;">
-        <!-- Results will be loaded here via AJAX -->
-    </div>
-</div>
+                <div id="users-container" style="width: 100%; display: block">
+                    <input id="users-search" type="text" placeholder="Search" style="width: 260px; display: block" />
+                    <div style="width: 100%; height: 1px; clear: both"></div>
+
+                    <div id="users-tiles" style="display: inline-block;">
+                        <!-- User tiles will be loaded here via AJAX -->
+                    </div>
+                </div>
 
             </form>
 
 <script>
-    function onValidate_search() {
-        var message = "";
-        return message;
+    // ---------- Searching Functionality ---------- //
+    (function($) {
+        jQuery.expr[':'].Contains = function(a, i, m) {
+            return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        function listFilter() {
+            $('#users-search').change(function () {
+                var filter = $(this).val();
+                if (filter) {
+                    $('#users-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+                    $('#users-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+                }
+                else {
+                    $('#users-tiles .tile').css('display', 'block');
+                }
+                return false;
+            }).keyup(function () { $(this).change(); });
+        }
+
+        $(function() {
+            listFilter();
+        });
+    }(jQuery));
+
+    // Get customer ID from URL
+    function getCustomerId() {
+        var urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('id');
     }
 
-    // Create a tile for a customer
-    function createCustomerTile(customer) {
-        var userCount = customer.user_count || 0;
-        var bgColor = '#458b00'; // D3 green - same as production
-        var code = customer.code || '';
-        var name = customer.name || '';
-        var href = '/rollout-customer-details?id=' + customer.id;
+    // Escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // Format date for display (e.g., "4/28" or "10/23")
+    function formatShortDate(dateStr) {
+        if (!dateStr) return '';
+        try {
+            var date = new Date(dateStr);
+            return (date.getMonth() + 1) + '/' + date.getDate();
+        } catch (e) {
+            return '';
+        }
+    }
+
+    // Create a user tile
+    function createUserTile(user) {
+        var hasLoggedIn = user.last_login != null;
+        var bgColor = hasLoggedIn ? '#458b00' : '#c43926'; // Green if logged in, Red if only invited
+        var icon = hasLoggedIn ? 'Completed.png' : 'Scheduled.png';
+        var statusText = hasLoggedIn
+            ? 'LOGGED IN ON ' + formatShortDate(user.last_login)
+            : 'INVITED ON ' + formatShortDate(user.invited_on || user.created_at);
+        var fullName = (user.full_name || '').toUpperCase();
+        var email = user.email || '';
+        var userId = user.id;
+        var href = '/rollout-user-details?id=' + encodeURIComponent(userId);
 
         var tile = '<a href="' + href + '" style="text-decoration: none;">' +
             '<div class="tile" style="position: relative; background-color: ' + bgColor + '; cursor: pointer; display: block;">' +
                 '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;">' +
                 '<div class="tileContainer">' +
                     '<div class="tileIcon">' +
-                        '<img src="/d3-static/JobsForFixedNodeID_files/Completed.png" style="max-width: 72px; max-height: 80px;">' +
+                        '<img src="/d3-static/JobsForFixedNodeID_files/' + icon + '" style="max-width: 72px; max-height: 80px;">' +
                     '</div>' +
                     '<div class="tileInfoSection">' +
                         '<div class="tileCell">' +
-                            '<div class="tileSuperTitle">#' + code + '</div>' +
-                            '<div class="tileTitle">' + name + '</div>' +
-                            '<div class="tileSubTitle">' + userCount + ' USERS</div>' +
+                            '<div class="tileSuperTitle">' + escapeHtml(statusText) + '</div>' +
+                            '<div class="tileTitle">' + escapeHtml(fullName) + '</div>' +
+                            '<div class="tileSubTitle">' + escapeHtml(email) + '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +
@@ -194,8 +244,8 @@
         return tile;
     }
 
-    // Create "No Results" tile
-    function createNoResultsTile() {
+    // Create "No Users" tile
+    function createNoUsersTile() {
         return '<div class="tile" style="position: relative; background-color: rgb(255, 255, 255); cursor: default; display: block;">' +
                 '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: none;">' +
                 '<div class="tileContainer">' +
@@ -203,7 +253,7 @@
                     '<div class="tileInfoSection">' +
                         '<div class="tileCell">' +
                             '<div class="tileSuperTitle"></div>' +
-                            '<div class="tileTitle">NO RESULTS</div>' +
+                            '<div class="tileTitle">NO USERS</div>' +
                             '<div class="tileSubTitle"></div>' +
                         '</div>' +
                     '</div>' +
@@ -211,75 +261,73 @@
             '</div>';
     }
 
-    function onSubmit_search() {
-        // Hide all alert boxes first
-        $('#error-box').css('display', 'none');
-        $('#success-box').css('display', 'none');
-        $('#warning-box').css('display', 'none');
-        $('#information-box').css('display', 'none');
-
-        // Validate
-        var validationMessage = onValidate_search();
-        if (validationMessage != null && validationMessage.length > 0) {
+    // Load customer details
+    function loadCustomerDetails() {
+        var customerId = getCustomerId();
+        if (!customerId) {
             $('#error-box').css('display', 'block');
-            $('#error-title').html('One or more fields were not properly filled out');
-            $('#error-text').html(validationMessage);
-            goToByScroll('error-box');
+            $('#error-title').html('Error');
+            $('#error-text').html('No customer ID provided');
             return;
         }
 
-        var searchText = $('#searchtext').val();
-        if (!searchText || searchText.trim().length === 0) {
-            $('#results-tiles').html('');
-            return;
-        }
-
-        // Show loading indicator
         showLoadingIndicator();
 
-        // Search via AJAX
         $.ajax({
-            url: '/api/rollout/customers?q=' + encodeURIComponent(searchText),
+            url: '/api/rollout/customers/' + encodeURIComponent(customerId),
             type: 'GET',
             dataType: 'json',
             success: function(response) {
                 hideLoadingIndicator();
 
-                if (response.success && response.data) {
-                    var tilesHtml = '';
-
-                    if (response.data.length === 0) {
-                        tilesHtml = createNoResultsTile();
-                    } else {
-                        $.each(response.data, function(index, customer) {
-                            tilesHtml += createCustomerTile(customer);
-                        });
-                    }
-
-                    $('#results-tiles').html(tilesHtml);
-                } else {
-                    $('#results-tiles').html(createNoResultsTile());
+                if (response.error) {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error);
+                    return;
                 }
+
+                renderCustomerDetails(response);
             },
             error: function(xhr, status, error) {
                 hideLoadingIndicator();
                 $('#error-box').css('display', 'block');
                 $('#error-title').html('Error');
-                $('#error-text').html('Failed to search: ' + error);
-                goToByScroll('error-box');
-                $('#results-tiles').html(createNoResultsTile());
+                $('#error-text').html('Failed to load customer details: ' + error);
             }
         });
     }
 
-    // Allow Enter key to trigger search
+    // Render customer details
+    function renderCustomerDetails(data) {
+        var customerName = data.name || data.customer_name || 'CUSTOMER';
+
+        // Update page title
+        $('#page-title').html('<strong>' + escapeHtml(customerName) + '</strong>');
+        document.title = customerName + ' - Customer Details';
+
+        // Update invite button link
+        var customerId = getCustomerId();
+        $('#invite-button').attr('href', '/rollout-invite?id=' + encodeURIComponent(customerId));
+
+        // Render user tiles
+        var users = data.users || [];
+        var tilesHtml = '';
+
+        if (users.length === 0) {
+            tilesHtml = createNoUsersTile();
+        } else {
+            $.each(users, function(index, user) {
+                tilesHtml += createUserTile(user);
+            });
+        }
+
+        $('#users-tiles').html(tilesHtml);
+    }
+
+    // Load on page ready
     $(document).ready(function() {
-        $('#searchtext').keypress(function(e) {
-            if (e.which === 13) {
-                onSubmit_search();
-                return false;
-            }
-        });
+        loadCustomerDetails();
     });
 </script>
         </div>

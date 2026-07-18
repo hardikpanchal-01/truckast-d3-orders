@@ -3,12 +3,11 @@ import { join } from "path";
 
 export const dynamic = "force-dynamic";
 
-const TEMPLATE_PATH = join(process.cwd(), "public", "d3-static", "rollout-search.html");
+const TEMPLATE_PATH = join(process.cwd(), "public", "d3-static", "rollout-customer-details.html");
 const ASSET_PATH = "/d3-static/JobsForFixedNodeID_files";
 
 /**
- * Rollout Search page — returns the D3 "Search" HTML document
- * which uses jQuery AJAX to call /api/rollout/customers for search.
+ * Rollout Customer Details page — shows customer info and user tiles.
  */
 export async function GET() {
   try {
@@ -24,7 +23,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Error reading rollout-search.html:", error);
+    console.error("Error reading rollout-customer-details.html:", error);
     return new Response("Error: " + error.message, { status: 500 });
   }
 }
