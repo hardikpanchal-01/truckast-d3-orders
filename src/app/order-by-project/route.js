@@ -3,19 +3,18 @@ import { join } from "path";
 
 export const dynamic = "force-dynamic";
 
-const TEMPLATE_PATH = join(process.cwd(), "public", "d3-static", "rollout-search.html");
-const ASSET_PATH = "/d3-static/JobsForFixedNodeID_files";
+const TEMPLATE_PATH = join(process.cwd(), "public", "d3-static", "order-by-project.html");
+const ASSET_PATH = "/d3-static/OrderByProject_files";
 
 /**
- * Rollout Search page — returns the D3 "Search" HTML document
- * which uses jQuery AJAX to call /api/rollout/customers for search.
+ * Order By Project page — search for customers/projects to place orders.
  */
 export async function GET() {
   try {
     let html = await readFile(TEMPLATE_PATH, "utf8");
 
     // Fix relative asset paths to absolute paths
-    html = html.split("./JobsForFixedNodeID_files/").join(ASSET_PATH + "/");
+    html = html.split("./OrderByProject_files/").join(ASSET_PATH + "/");
 
     return new Response(html, {
       headers: {
@@ -24,7 +23,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Error reading rollout-search.html:", error);
+    console.error("Error reading order-by-project.html:", error);
     return new Response("Error: " + error.message, { status: 500 });
   }
 }
