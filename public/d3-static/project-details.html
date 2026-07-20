@@ -79,8 +79,11 @@
 
                     <div class="nav-collapse collapse">
                         <ul class="nav">
+                            <li><a href="/publish">PUBLISH</a></li>
                             <li><a href="/d3-static/user-search.html">ADMIN</a></li>
                             <li><a href="/">TRUCKAST</a></li>
+                            <li><a href="/d3-static/rollout-search.html">ROLLOUT</a></li>
+                            <li><a href="/d3-static/project-help.html">HELP</a></li>
                             <li><a href="/settings">SETTINGS</a></li>
                             <li><a href="/login">LOGOUT</a></li>
                         </ul>
@@ -247,7 +250,7 @@
         var companyName = escapeHtml(company.name || '');
         // Always show added date
         var addedDate = 'ADDED: ' + (company.added_date ? formatDate(company.added_date) : formatDate(new Date().toISOString()));
-        var href = '/d3-static/add-to-project.html?projectId=' + currentProjectId + '&companyId=' + company.id;
+        var href = '/d3-static/add-to-project.html?projectId=' + currentProjectId + '&companyId=' + company.id + '&customerId=' + (company.customer_id || '');
 
         return '<div class="tile" style="position: relative; background-color: ' + bgColor + '; cursor: pointer" onclick="tileInvoke(\'' + href + '\');">' +
                 '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
@@ -270,7 +273,7 @@
         var iconSrc = 'https://d3.truckast.com/Images/Icons/toolbar/white/plus-sign-mini-white@2x.png';
         var roleType = escapeHtml(company.role_type || 'GENERAL CONTRACTOR');
         var companyName = escapeHtml(company.name || '');
-        var href = '/d3-static/invite-to-company.html?customerId=' + company.id + '&projectId=' + currentProjectId;
+        var href = '/d3-static/invite-user-to-company.html?customerId=' + (company.customer_id || company.id) + '&projectId=' + currentProjectId + '&companyName=' + encodeURIComponent(company.name || '');
 
         return '<div class="tile" style="position: relative; background-color: ' + bgColor + '; cursor: pointer" onclick="tileInvoke(\'' + href + '\');">' +
                 '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +

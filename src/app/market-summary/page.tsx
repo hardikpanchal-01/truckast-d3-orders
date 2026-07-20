@@ -143,7 +143,7 @@ export default function MarketSummaryPage() {
 
           <div id="invitetilevis-tiles" style={{ display: "inline-block" }}>
             {/* Easy Customer Invite Tile */}
-            <Link href="/rollout/search" style={{ textDecoration: "none" }}>
+            <Link href="/rollout-search" style={{ textDecoration: "none" }}>
               <div
                 className="tile"
                 style={{ position: "relative", backgroundColor: "rgb(47, 126, 216)", cursor: "pointer", display: "block" }}

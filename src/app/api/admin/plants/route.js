@@ -33,6 +33,24 @@ export async function GET() {
       .select("*")
       .order("description", { ascending: true });
 
+    // Get July temperature configs for all plants (month_number = 7)
+    const { data: julyConfigs, error: julyError } = await supabase
+      .from("plant_monthly_configurations")
+      .select("plant_id, temperature_value")
+      .eq("month_number", 7);
+
+    if (julyError) {
+      console.error("[PLANTS] July configs error:", julyError.message);
+    }
+
+    // Build a map of plant_id -> july temperature
+    const julyTempMap = {};
+    if (julyConfigs && julyConfigs.length > 0) {
+      julyConfigs.forEach(c => {
+        julyTempMap[c.plant_id] = c.temperature_value;
+      });
+    }
+
     // Get regions for mapping (regions are in tenant database)
     let regionsMap = {};
     const { data: regionsData, error: regionsError } = await supabase
@@ -104,7 +122,7 @@ export async function GET() {
         region_id: plant.region_id,
         longitude: plant.longitude || "",
         latitude: plant.latitude || "",
-        evaporation_july: plant.evaporation_july ?? null,
+        evaporation_july: julyTempMap[plant.id] ?? null,
         first_truck_late: plant.first_truck_late || null,
       };
     });

@@ -53,7 +53,8 @@ export async function GET(request, { params }) {
 
       if (mainCustomer) {
         companies.push({
-          id: String(mainCustomer.id),
+          id: "main_" + String(mainCustomer.id),
+          customer_id: String(mainCustomer.id),
           code: mainCustomer.code || "",
           name: mainCustomer.name || "",
           role_type: "GENERAL CONTRACTOR",
@@ -65,7 +66,10 @@ export async function GET(request, { params }) {
       const { data: projectCompanies } = await supabase
         .from("project_companies")
         .select(`
+          id,
           customer_id,
+          company_name,
+          role,
           role_type,
           created_at,
           customers (
@@ -78,12 +82,20 @@ export async function GET(request, { params }) {
 
       if (projectCompanies) {
         for (const pc of projectCompanies) {
-          if (pc.customers && !companies.find(c => c.id === String(pc.customers.id))) {
+          const customerId = pc.customer_id || (pc.customers ? pc.customers.id : null);
+          const existingIndex = companies.findIndex(c => c.customer_id === String(customerId));
+
+          // If this is the main customer, update the existing entry with project_company id
+          if (existingIndex >= 0) {
+            companies[existingIndex].id = String(pc.id);
+            companies[existingIndex].role_type = pc.role_type || pc.role || companies[existingIndex].role_type;
+          } else {
             companies.push({
-              id: String(pc.customers.id),
-              code: pc.customers.code || "",
-              name: pc.customers.name || "",
-              role_type: pc.role_type || "GENERAL CONTRACTOR",
+              id: String(pc.id),
+              customer_id: String(customerId),
+              code: pc.customers?.code || "",
+              name: pc.company_name || pc.customers?.name || "",
+              role_type: pc.role_type || pc.role || "GENERAL CONTRACTOR",
               added_date: pc.created_at
             });
           }

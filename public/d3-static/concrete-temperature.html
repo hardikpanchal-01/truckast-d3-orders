@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no">
+    <title>Concrete Temperature</title>
+
+    <!-- Required javascript and css all rolled up in one -->
+    <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
+    <link href="./JobsForFixedNodeID_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+    <!-- Highcharts -->
+    <script src="./JobsForFixedNodeID_files/highcharts.js"></script>
+    <script src="./JobsForFixedNodeID_files/highcharts-more.js"></script>
+    <script src="./JobsForFixedNodeID_files/data.js"></script>
+
+    <!-- need to rollup into d3_complete upon approval -->
+    <script src="./JobsForFixedNodeID_files/jquery.rateit.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/rateit.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/hopscotch.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/chardinjs.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/chardinjs.css" rel="stylesheet" type="text/css">
+
+    <link href="./JobsForFixedNodeID_files/bootstrap2-toggle.min.css" rel="stylesheet">
+    <script src="./JobsForFixedNodeID_files/bootstrap2-toggle.min.js"></script>
+
+    <style media="print" type="text/css">
+        a:after { content:''; }
+        a[href]:after { content: none !important; }
+    </style>
+
+    <style>
+        .dataTables_filter label { float: right }
+        .dataTables_paginate ul { float: right }
+        .pagination { margin: 0px 0; }
+        .table { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <script>
+        // document load initialization
+        $(document).ready(function () {
+            hideLoadingIndicator();
+            loadLogin();
+        });
+        $(window).unload(function () {
+            hideLoadingIndicator();
+            saveLogin();
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var errormsg = getParameterByName("pageerror");
+            if (errormsg != null && errormsg.length > 0) {
+                displayError('ERROR', trimString(errormsg));
+            }
+            Highcharts.setOptions({
+                colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+            });
+        });
+    </script>
+    <div class="d3-page">
+
+        <div class="navbar navbar-fixed-top navbar-inverse">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+
+                    <a id="header-bar-title" class="brand">ADMIN</a>
+
+                    <div class="nav-collapse collapse">
+                        <ul class="nav">
+                            <li><a href="/d3-static/user-search.html">USERS</a></li>
+                            <li><a href="/d3-static/internal.html">INTERNAL</a></li>
+                            <li><a href="/d3-static/roles.html">ROLES</a></li>
+                            <li><a href="/d3-static/plants.html">PLANTS</a></li>
+                            <li><a href="/d3-static/qc.html">QC</a></li>
+                            <li><a href="/d3-static/company-search.html">CUSTOMER</a></li>
+                            <li><a href="/">TRUCKAST</a></li>
+                            <li><a href="/settings">SETTINGS</a></li>
+                            <li><a href="/login">LOGOUT</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="error-box" class="alert alert-error" style="display: none">
+                <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                <p id="error-text"></p>
+            </div>
+            <div id="warning-box" class="alert alert-block" style="display: none">
+                <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                <p id="warning-text"></p>
+            </div>
+            <div id="success-box" class="alert alert-success" style="display: none">
+                <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                <p id="success-text"></p>
+            </div>
+            <div id="information-box" class="alert alert-info" style="display: none">
+                <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                <p id="information-text"></p>
+            </div>
+
+            <form id="concretetemperature" method="POST" onsubmit="return false;">
+                <br/>
+                <br/>
+                <br/>
+                <br/>
+
+<!-- Title Bar Section -->
+<div style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 100%">
+                <div class="navbar">
+                    <div class="navbar-inner">
+                        <div class="container">
+                            <table style="width:100%">
+                                <tr>
+                                    <td style="width:38px">
+                                        <a onclick="history.back();hideLoadingIndicator();" style="cursor:pointer">
+                                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png">
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                                            <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                                <span id="plant-title" style="font-size: 16px"><strong>LOADING...</strong></span><br />
+                                                <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="width:38px">
+                                        <a href="javascript:location.reload();">
+                                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-small-27@2x.png">
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+</div>
+                <br/>
+
+<!-- Plant Name Section -->
+<div style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div style="display: block; width: 80%">
+                    <table cellpadding="0" cellspacing="0" border="0" class="table" id="topicname" style="width: 80%;">
+                        <thead style="display: none"><tr style="display: none">
+                            <th>PlantName</th>
+                            <th>status</th>
+                        </tr></thead>
+                        <tbody>
+                            <tr class="even gradeA">
+                                <td id="plant-name-cell" style="border-top:0">Plant Name : </td>
+                                <td style="border-top:0"><input type="checkbox" id="pltstatus" name="pltstatus" checked></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </td>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+</div>
+
+<!-- Monthly Temperature Inputs -->
+<div style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;">January :</div>
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <input id="jan" name="jan" value="" style="margin-bottom: 0; width: 35%; display: block;" type="text" placeholder="">
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <select id="JanTemp" name="JanTemp" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">Temperature</option>
+                    <option value="High Risk">High Risk</option>
+                    <option value="Moderate Risk">Moderate Risk</option>
+                    <option value="Low Risk">Low Risk</option>
+                </select>
+            </td>
+            <td style="vertical-align: middle; width: 35%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;">February :</div>
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <input id="feb" name="feb" value="" style="margin-bottom: 0; width: 35%; display: block;" type="text" placeholder="">
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <select id="FebTemp" name="FebTemp" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">Temperature</option>
+                    <option value="High Risk">High Risk</option>
+                    <option value="Moderate Risk">Moderate Risk</option>
+                    <option value="Low Risk">Low Risk</option>
+                </select>
+            </td>
+            <td style="vertical-align: middle; width: 35%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;">March :</div>
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <input id="march" name="march" value="" style="margin-bottom: 0; width: 35%; display: block;" type="text" placeholder="">
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <select id="MarchTemp" name="MarchTemp" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">Temperature</option>
+                    <option value="High Risk">High Risk</option>
+                    <option value="Moderate Risk">Moderate Risk</option>
+                    <option value="Low Risk">Low Risk</option>
+                </select>
+            </td>
+            <td style="vertical-align: middle; width: 35%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;">April :</div>
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <input id="april" name="april" value="" style="margin-bottom: 0; width: 35%; display: block;" type="text" placeholder="">
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <select id="AprilTemp" name="AprilTemp" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">Temperature</option>
+                    <option value="High Risk">High Risk</option>
+                    <option value="Moderate Risk">Moderate Risk</option>
+                    <option value="Low Risk">Low Risk</option>
+                </select>
+            </td>
+            <td style="vertical-align: middle; width: 35%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;">May :</div>
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <input id="may" name="may" value="" style="margin-bottom: 0; width: 35%; display: block;" type="text" placeholder="">
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <select id="MayTemp" name="MayTemp" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">Temperature</option>
+                    <option value="High Risk">High Risk</option>
+                    <option value="Moderate Risk">Moderate Risk</option>
+                    <option value="Low Risk">Low Risk</option>
+                </select>
+            </td>
+            <td style="vertical-align: middle; width: 35%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;">June :</div>
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <input id="june" name="june" value="" style="margin-bottom: 0; width: 35%; display: block;" type="text" placeholder="">
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <select id="JuneTemp" name="JuneTemp" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">Temperature</option>
+                    <option value="High Risk">High Risk</option>
+                    <option value="Moderate Risk">Moderate Risk</option>
+                    <option value="Low Risk">Low Risk</option>
+                </select>
+            </td>
+            <td style="vertical-align: middle; width: 35%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;">July :</div>
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <input id="july" name="july" value="" style="margin-bottom: 0; width: 35%; display: block;" type="text" placeholder="">
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <select id="JulyTemp" name="JulyTemp" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">Temperature</option>
+                    <option value="High Risk">High Risk</option>
+                    <option value="Moderate Risk">Moderate Risk</option>
+                    <option value="Low Risk">Low Risk</option>
+                </select>
+            </td>
+            <td style="vertical-align: middle; width: 35%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;">August :</div>
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <input id="august" name="august" value="" style="margin-bottom: 0; width: 35%; display: block;" type="text" placeholder="">
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <select id="AugustTemp" name="AugustTemp" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">Temperature</option>
+                    <option value="High Risk">High Risk</option>
+                    <option value="Moderate Risk">Moderate Risk</option>
+                    <option value="Low Risk">Low Risk</option>
+                </select>
+            </td>
+            <td style="vertical-align: middle; width: 35%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;">September :</div>
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <input id="september" name="september" value="" style="margin-bottom: 0; width: 35%; display: block;" type="text" placeholder="">
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <select id="SeptemberTemp" name="SeptemberTemp" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">Temperature</option>
+                    <option value="High Risk">High Risk</option>
+                    <option value="Moderate Risk">Moderate Risk</option>
+                    <option value="Low Risk">Low Risk</option>
+                </select>
+            </td>
+            <td style="vertical-align: middle; width: 35%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;">October :</div>
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <input id="october" name="october" value="" style="margin-bottom: 0; width: 35%; display: block;" type="text" placeholder="">
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <select id="OctoberTemp" name="OctoberTemp" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">Temperature</option>
+                    <option value="High Risk">High Risk</option>
+                    <option value="Moderate Risk">Moderate Risk</option>
+                    <option value="Low Risk">Low Risk</option>
+                </select>
+            </td>
+            <td style="vertical-align: middle; width: 35%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;">November :</div>
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <input id="november" name="november" value="" style="margin-bottom: 0; width: 35%; display: block;" type="text" placeholder="">
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <select id="NovemberTemp" name="NovemberTemp" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">Temperature</option>
+                    <option value="High Risk">High Risk</option>
+                    <option value="Moderate Risk">Moderate Risk</option>
+                    <option value="Low Risk">Low Risk</option>
+                </select>
+            </td>
+            <td style="vertical-align: middle; width: 35%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;">December :</div>
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <input id="december" name="december" value="" style="margin-bottom: 0; width: 35%; display: block;" type="text" placeholder="">
+            </td>
+            <td style="vertical-align: middle; width: 20%">
+                <select id="DecemberTemp" name="DecemberTemp" style="width: 100%; margin-bottom: 0; display: block;">
+                    <option value="">Temperature</option>
+                    <option value="High Risk">High Risk</option>
+                    <option value="Moderate Risk">Moderate Risk</option>
+                    <option value="Low Risk">Low Risk</option>
+                </select>
+            </td>
+            <td style="vertical-align: middle; width: 35%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+</div>
+
+<!-- Submit Button Section -->
+<div style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+            <td style="vertical-align: middle; width: 25%">
+                <button id="submit-button" class="btn btn-danger" type="button" onclick="onSubmit_concretetemperature()" style="width: 150px">SUBMIT</button>
+            </td>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+            <td style="vertical-align: middle; width: 25%">
+                <div class="d3-label" style="width: 100%;"></div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+</div>
+            </form>
+
+<script>
+    var plantId = null;
+
+    // Get plant ID from URL
+    function getPlantId() {
+        var urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('id');
+    }
+
+    // Format number for display
+    function formatTemp(val) {
+        if (val === null || val === undefined || val === '') return '75.00';
+        var num = parseFloat(val);
+        return isNaN(num) ? '75.00' : num.toFixed(2);
+    }
+
+    // Load plant temperature data
+    function loadPlantTemperature() {
+        plantId = getPlantId();
+        if (!plantId) {
+            $('#error-box').css('display', 'block');
+            $('#error-title').html('Error');
+            $('#error-text').html('No plant ID provided');
+            return;
+        }
+
+        showLoadingIndicator();
+
+        $.ajax({
+            url: '/api/admin/plants/' + encodeURIComponent(plantId) + '/temperature',
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                hideLoadingIndicator();
+
+                if (response.error) {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error);
+                    return;
+                }
+
+                // Update title - format: "PLANT NAME : 75 (F)"
+                var plantName = response.name || response.code || 'PLANT';
+                var julyTemp = response.july ? formatTemp(response.july) : '75.00';
+                $('#plant-title').html('<strong>' + plantName.toUpperCase() + ' : ' + julyTemp + ' (F)</strong>');
+                document.title = plantName + ' - Concrete Temperature';
+
+                // Update plant name label - format: "Plant Name : Ada Batch Plant - 201"
+                var plantCode = response.code || '';
+                $('#plant-name-cell').text('Plant Name : ' + plantName + ' - ' + plantCode);
+
+                // Fill in temperature values
+                $('#jan').val(formatTemp(response.jan));
+                $('#feb').val(formatTemp(response.feb));
+                $('#march').val(formatTemp(response.march));
+                $('#april').val(formatTemp(response.april));
+                $('#may').val(formatTemp(response.may));
+                $('#june').val(formatTemp(response.june));
+                $('#july').val(formatTemp(response.july));
+                $('#august').val(formatTemp(response.august));
+                $('#september').val(formatTemp(response.september));
+                $('#october').val(formatTemp(response.october));
+                $('#november').val(formatTemp(response.november));
+                $('#december').val(formatTemp(response.december));
+
+                // Fill in risk levels
+                $('#JanTemp').val(response.jan_risk || '');
+                $('#FebTemp').val(response.feb_risk || '');
+                $('#MarchTemp').val(response.march_risk || '');
+                $('#AprilTemp').val(response.april_risk || '');
+                $('#MayTemp').val(response.may_risk || '');
+                $('#JuneTemp').val(response.june_risk || '');
+                $('#JulyTemp').val(response.july_risk || '');
+                $('#AugustTemp').val(response.august_risk || '');
+                $('#SeptemberTemp').val(response.september_risk || '');
+                $('#OctoberTemp').val(response.october_risk || '');
+                $('#NovemberTemp').val(response.november_risk || '');
+                $('#DecemberTemp').val(response.december_risk || '');
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to load plant temperature: ' + error);
+            }
+        });
+    }
+
+    // Validate form
+    function onValidate_concretetemperature() {
+        var message = "";
+        return message;
+    }
+
+    // Submit form
+    function onSubmit_concretetemperature() {
+        // Validate
+        var validationMessage = onValidate_concretetemperature();
+        if (validationMessage != null && validationMessage.length > 0) {
+            $('#error-box').css('display', 'block');
+            $('#error-title').html('One or more fields were not properly filled out');
+            $('#error-text').html(validationMessage);
+            goToByScroll('error-box');
+            return;
+        }
+
+        // Hide alerts
+        $('#error-box').css('display', 'none');
+        $('#success-box').css('display', 'none');
+
+        // Collect data
+        var data = {
+            jan: $('#jan').val(),
+            feb: $('#feb').val(),
+            march: $('#march').val(),
+            april: $('#april').val(),
+            may: $('#may').val(),
+            june: $('#june').val(),
+            july: $('#july').val(),
+            august: $('#august').val(),
+            september: $('#september').val(),
+            october: $('#october').val(),
+            november: $('#november').val(),
+            december: $('#december').val(),
+            jan_risk: $('#JanTemp').val(),
+            feb_risk: $('#FebTemp').val(),
+            march_risk: $('#MarchTemp').val(),
+            april_risk: $('#AprilTemp').val(),
+            may_risk: $('#MayTemp').val(),
+            june_risk: $('#JuneTemp').val(),
+            july_risk: $('#JulyTemp').val(),
+            august_risk: $('#AugustTemp').val(),
+            september_risk: $('#SeptemberTemp').val(),
+            october_risk: $('#OctoberTemp').val(),
+            november_risk: $('#NovemberTemp').val(),
+            december_risk: $('#DecemberTemp').val()
+        };
+
+        showLoadingIndicator();
+
+        $.ajax({
+            url: '/api/admin/plants/' + encodeURIComponent(plantId) + '/temperature',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            dataType: 'json',
+            success: function(response) {
+                hideLoadingIndicator();
+                if (response.success) {
+                    $('#success-box').css('display', 'block');
+                    $('#success-title').html('Success');
+                    $('#success-text').html('Temperature settings saved successfully!');
+                    setTimeout(function() {
+                        window.location.href = '/d3-static/plants.html';
+                    }, 1500);
+                } else {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error || 'Failed to save temperature settings');
+                }
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to save: ' + error);
+            }
+        });
+    }
+
+    // Initialize DataTable for plant name
+    $(document).ready(function () {
+        $('#topicname').dataTable({
+            "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'><'span6'p>>",
+            "sPaginationType": "bootstrap",
+            "bPaginate": false,
+            "bFilter": false,
+            "bSort": false,
+            "oLanguage": {
+                "sLengthMenu": "_MENU_ records per page"
+            }
+        });
+
+        // Load plant data
+        loadPlantTemperature();
+    });
+</script>
+        </div>
+
+    </div>
+    <script type="text/javascript">
+    </script>
+</body>
+</html>
