@@ -1,12 +1,10 @@
 <!DOCTYPE html>
-<!-- saved from url=(0014)about:internet -->
 <html xmlns="http://www.w3.org/1999/xhtml">
-
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="format-detection" content="telephone=no">
-    <title>Plants</title>
+    <title>Company Search</title>
 
     <!-- Required javascript and css all rolled up in one -->
     <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
@@ -40,7 +38,6 @@
         .table { margin-bottom: 8px; }
     </style>
 </head>
-
 <body>
     <script>
         // document load initialization
@@ -113,39 +110,74 @@
                 <p id="information-text"></p>
             </div>
 
-            <form id="plants-form" method="POST" onsubmit="return false;">
-                <div id="companyname" class="d3-label" style="width: 100%;"><h4>DOLESE Plants</h4></div>
-                <br>
-                <br>
+            <form id="companysearch" method="POST" onsubmit="return false;">
+
+<!-- Title Bar Section -->
+<div class="navbar">
+    <div class="navbar-inner">
+        <div class="container">
+            <table style="width:100%">
+                <tr>
+                    <td style="width:38px">
+                        <a onclick="window.top.location.href='/d3-static/plants.html'; return false;" style="cursor:pointer">
+                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png">
+                        </a>
+                    </td>
+                    <td>
+                        <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                            <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                <span style="font-size: 16px"><strong>COMPANY SEARCH</strong></span><br />
+                                <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="width:38px">
+                        <a href="javascript:location.reload();">
+                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-small-27@2x.png">
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
                 <br>
 
-                <div style="display: block; width: 100%">
-                    <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered dataTable" id="plants-table" style="width: 100%;">
-                        <thead>
-                            <tr role="row">
-                                <th></th>
-                                <th>Plant Number</th>
-                                <th>Plant Name (Edit)</th>
-                                <th>Address</th>
-                                <th>City</th>
-                                <th>State</th>
-                                <th>Country</th>
-                                <th>Zipcode</th>
-                                <th>Region</th>
-                                <th>Longitude</th>
-                                <th>Latitude</th>
-                                <th>Month-July Evaporation</th>
-                                <th>First Truck Late</th>
-                            </tr>
-                        </thead>
-                        <tbody id="plants-tbody">
-                            <!-- Plants will be loaded here via AJAX -->
-                        </tbody>
-                    </table>
-                </div>
+                <input id="searchtext" name="searchtext" value="" style="margin-bottom: 0; width: 95%; display: block;" type="text" placeholder="Enter a Customer Name or Number">
+
+                <br>
+
+                <button id="submit-button" class="btn btn-danger" type="button" onclick="onSubmit_companysearch()" style="width: 150px">Search</button>
+
+                <br>
+
+                <input id="resultsfilter" name="resultsfilter" value="" style="margin-bottom: 0; width: 200px; display: block;" type="text" placeholder="Search">
+
+                <br>
+
+<!-- Results Table -->
+<div style="display: block; width: 100%">
+    <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="results-table" style="width: 100%;">
+        <thead>
+            <tr>
+                <th>Customer Number</th>
+                <th>Customer Name</th>
+                <th>Address</th>
+                <th>City</th>
+                <th>State</th>
+            </tr>
+        </thead>
+        <tbody id="results-tbody">
+            <!-- Results will be loaded here via AJAX -->
+        </tbody>
+    </table>
+</div>
+
             </form>
 
 <script>
+    var dataTable = null;
+
     // Escape HTML
     function escapeHtml(text) {
         if (!text) return '';
@@ -156,59 +188,51 @@
             .replace(/"/g, '&quot;');
     }
 
-    // Format number with decimals
-    function formatNumber(num) {
-        if (num === null || num === undefined || num === '') return 'N/A';
-        var parsed = parseFloat(num);
-        if (isNaN(parsed)) return 'N/A';
-        return parsed.toFixed(2);
-    }
+    // Create a table row for a customer
+    function createCustomerRow(customer) {
+        var code = escapeHtml(customer.code || '');
+        var name = escapeHtml(customer.name || '');
+        var address = escapeHtml(customer.address || '');
+        var city = escapeHtml(customer.city || '');
+        var state = escapeHtml(customer.state || '');
+        var customerId = customer.id;
 
-    // Create a table row for a plant
-    function createPlantRow(plant, index) {
-        var plantId = plant.id || '';
-        var code = escapeHtml(plant.code);
-        var name = escapeHtml(plant.name);
-        var address = escapeHtml(plant.address);
-        var city = escapeHtml(plant.city);
-        var state = escapeHtml(plant.state);
-        var country = escapeHtml(plant.country);
-        var zipcode = escapeHtml(plant.zipcode);
-        var region = escapeHtml(plant.region);
-        var longitude = escapeHtml(plant.longitude);
-        var latitude = escapeHtml(plant.latitude);
-        var evaporation = formatNumber(plant.evaporation_july);
-        var firstTruckLate = plant.first_truck_late || 'N/A';
+        var detailUrl = '/d3-static/company-details.html?id=' + customerId;
 
-        var editPlantUrl = '/d3-static/edit-plant.html?id=' + plantId;
-        var tempUrl = '/d3-static/concrete-temperature.html?id=' + plantId;
-        var firstTruckUrl = '/d3-static/first-truck-late.html?id=' + plantId;
-
-        var row = '<tr class="gradeA">' +
-            '<td>' + index + '</td>' +
+        var row = '<tr class="gradeA" style="cursor: pointer" onclick="window.location.href=\'' + detailUrl + '\'">' +
             '<td>' + code + '</td>' +
-            '<td><a href="' + editPlantUrl + '">' + (name || code) + '</a></td>' +
+            '<td><a href="' + detailUrl + '">' + name + '</a></td>' +
             '<td>' + address + '</td>' +
             '<td>' + city + '</td>' +
             '<td>' + state + '</td>' +
-            '<td>' + country + '</td>' +
-            '<td>' + zipcode + '</td>' +
-            '<td>' + region + '</td>' +
-            '<td>' + longitude + '</td>' +
-            '<td>' + latitude + '</td>' +
-            '<td><a href="' + tempUrl + '">' + evaporation + '</a></td>' +
-            '<td><a href="' + firstTruckUrl + '">' + escapeHtml(firstTruckLate) + '</a></td>' +
             '</tr>';
 
         return row;
     }
 
-    // Load plants data
-    function loadPlants() {
+    // Search customers
+    function onSubmit_companysearch() {
+        // Hide all alert boxes first
+        $('#error-box').css('display', 'none');
+        $('#success-box').css('display', 'none');
+        $('#warning-box').css('display', 'none');
+        $('#information-box').css('display', 'none');
+
+        var searchText = $('#searchtext').val();
+        if (!searchText || searchText.trim().length === 0) {
+            $('#results-tbody').html('');
+            if (dataTable) {
+                dataTable.fnClearTable();
+            }
+            return;
+        }
+
+        // Show loading indicator
         showLoadingIndicator();
 
+        // Search via AJAX
         $.ajax({
-            url: '/api/admin/plants',
+            url: '/api/admin/customers?q=' + encodeURIComponent(searchText),
             type: 'GET',
             dataType: 'json',
             success: function(response) {
@@ -218,44 +242,72 @@
                     var rowsHtml = '';
 
                     if (response.data.length === 0) {
-                        rowsHtml = '<tr><td colspan="13" style="text-align: center;">No plants found</td></tr>';
+                        rowsHtml = '<tr><td colspan="5" style="text-align: center">No results found</td></tr>';
                     } else {
-                        $.each(response.data, function(index, plant) {
-                            rowsHtml += createPlantRow(plant, index + 1);
+                        $.each(response.data, function(index, customer) {
+                            rowsHtml += createCustomerRow(customer);
                         });
                     }
 
-                    $('#plants-tbody').html(rowsHtml);
+                    // Clear and repopulate table
+                    if (dataTable) {
+                        dataTable.fnDestroy();
+                    }
+                    $('#results-tbody').html(rowsHtml);
 
-                    // Initialize DataTables after loading data
-                    $('#plants-table').dataTable({
+                    // Reinitialize DataTable
+                    dataTable = $('#results-table').dataTable({
                         "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
                         "sPaginationType": "bootstrap",
                         "bPaginate": true,
                         "bFilter": true,
-                        "bSort": false,
+                        "bSort": true,
+                        "iDisplayLength": 10,
                         "oLanguage": {
                             "sLengthMenu": "_MENU_ records per page"
                         }
                     });
                 } else {
-                    $('#error-box').css('display', 'block');
-                    $('#error-title').html('Error');
-                    $('#error-text').html(response.error || 'Failed to load plants.');
+                    $('#results-tbody').html('<tr><td colspan="5" style="text-align: center">No results found</td></tr>');
                 }
             },
             error: function(xhr, status, error) {
                 hideLoadingIndicator();
                 $('#error-box').css('display', 'block');
                 $('#error-title').html('Error');
-                $('#error-text').html('Failed to load plants: ' + error);
+                $('#error-text').html('Failed to search: ' + error);
             }
         });
     }
 
-    // Initialize on page load
+    // Allow Enter key to trigger search
     $(document).ready(function() {
-        loadPlants();
+        // Initialize DataTable
+        dataTable = $('#results-table').dataTable({
+            "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+            "sPaginationType": "bootstrap",
+            "bPaginate": true,
+            "bFilter": true,
+            "bSort": true,
+            "iDisplayLength": 10,
+            "oLanguage": {
+                "sLengthMenu": "_MENU_ records per page"
+            }
+        });
+
+        $('#searchtext').keypress(function(e) {
+            if (e.which === 13) {
+                onSubmit_companysearch();
+                return false;
+            }
+        });
+
+        // Filter results
+        $('#resultsfilter').keyup(function() {
+            if (dataTable) {
+                dataTable.fnFilter($(this).val());
+            }
+        });
     });
 </script>
         </div>
@@ -263,6 +315,5 @@
     </div>
     <script type="text/javascript">
     </script>
-
 </body>
 </html>
