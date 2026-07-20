@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no">
+    <title>User Details</title>
+
+    <!-- Required javascript and css all rolled up in one -->
+    <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
+    <link href="./JobsForFixedNodeID_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+    <!-- Highcharts -->
+    <script src="./JobsForFixedNodeID_files/highcharts.js"></script>
+    <script src="./JobsForFixedNodeID_files/highcharts-more.js"></script>
+    <script src="./JobsForFixedNodeID_files/data.js"></script>
+
+    <!-- need to rollup into d3_complete upon approval -->
+    <script src="./JobsForFixedNodeID_files/jquery.rateit.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/rateit.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/hopscotch.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+    <script src="./JobsForFixedNodeID_files/chardinjs.min.js"></script>
+    <link href="./JobsForFixedNodeID_files/chardinjs.css" rel="stylesheet" type="text/css">
+
+    <link href="./JobsForFixedNodeID_files/bootstrap2-toggle.min.css" rel="stylesheet">
+    <script src="./JobsForFixedNodeID_files/bootstrap2-toggle.min.js"></script>
+
+    <style media="print" type="text/css">
+        a:after { content:''; }
+        a[href]:after { content: none !important; }
+    </style>
+</head>
+
+<body>
+    <script>
+        // document load initialization
+        $(document).ready(function () {
+            hideLoadingIndicator();
+            loadLogin();
+        });
+        $(window).unload(function () {
+            hideLoadingIndicator();
+            saveLogin();
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var errormsg = getParameterByName("pageerror");
+            if (errormsg != null && errormsg.length > 0) {
+                displayError('ERROR', trimString(errormsg));
+            }
+            Highcharts.setOptions({
+                colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+            });
+        });
+    </script>
+    <div class="d3-page">
+
+        <div class="navbar navbar-fixed-top navbar-inverse">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+
+                    <a id="header-bar-title" class="brand">ROLLOUT</a>
+
+                    <div class="nav-collapse collapse">
+                        <ul class="nav">
+                            <li><a href="#">DASHBOARD</a></li>
+                            <li><a href="/rollout-search">INVITE</a></li>
+                            <li><a href="/publish">PUBLISH</a></li>
+                            <li><a href="/admin">ADMIN</a></li>
+                            <li><a href="/">TRUCKAST</a></li>
+                            <li><a href="/order-request">ORDER</a></li>
+                            <li><a href="/projects">PROJECTS</a></li>
+                            <li><a href="/rollout-help">HELP</a></li>
+                            <li><a href="/login">LOGOUT</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="error-box" class="alert alert-error" style="display: none">
+                <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                <p id="error-text"></p>
+            </div>
+            <div id="warning-box" class="alert alert-block" style="display: none">
+                <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                <p id="warning-text"></p>
+            </div>
+            <div id="success-box" class="alert alert-success" style="display: none">
+                <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                <p id="success-text"></p>
+            </div>
+            <div id="information-box" class="alert alert-info" style="display: none">
+                <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                <p id="information-text"></p>
+            </div>
+
+            <form id="user-details" method="POST" onsubmit="return false;">
+
+                <div class="navbar">
+                    <div class="navbar-inner">
+                        <div class="container">
+                            <table style="width:100%">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:38px">
+                                            <a id="back-button" onclick="goBack();" style="cursor:pointer">
+                                                <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-big-01@2x.png">
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                                                <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                                    <span id="page-title" style="font-size: 16px"><strong>USER DETAILS</strong></span><br>
+                                                    <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="width:38px">
+                                            <a href="javascript:location.reload();">
+                                                <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./JobsForFixedNodeID_files/arrow-small-27@2x.png">
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+        <br/>
+
+
+
+            <div id="d3-label" class="d3-label" style="width: 100%;"><font color="red"></font></div>
+
+        <br/>
+        <br/>
+
+
+
+
+<div id="tiles-container" style="width: 100%; display: block">
+    <input id="tiles-search" type="text" placeholder="Search" style="width: 260px; display: none"  />
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="tiles-list" style="display: inline-block;">
+        <!-- Tiles will be loaded here via AJAX -->
+    </div>
+</div>
+
+</form>
+
+<script>
+    // Store user data globally
+    var userData = null;
+    var userId = null;
+
+    // Get user ID from URL
+    function getUserId() {
+        var urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('id');
+    }
+
+    // Go back to previous page
+    function goBack() {
+        if (userData && userData.customer_id) {
+            window.top.location.href = '/rollout-customer-details?id=' + userData.customer_id;
+        } else {
+            window.top.location.href = '/rollout-search';
+        }
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // Format phone number like D3: (XXX) XXX-XXXX or XXX-XXX-XXXX
+    function formatPhone(phone) {
+        if (!phone) return '';
+        var digits = phone.replace(/\D/g, '');
+        if (digits.length === 10) {
+            return digits.slice(0, 3) + '-' + digits.slice(3, 6) + '-' + digits.slice(6);
+        }
+        if (digits.length === 11 && digits[0] === '1') {
+            return digits.slice(1, 4) + '-' + digits.slice(4, 7) + '-' + digits.slice(7);
+        }
+        return phone;
+    }
+
+    // Tile invoke function (matches D3)
+    function tileInvoke(url) {
+        if (url.startsWith('tel:') || url.startsWith('mailto:')) {
+            window.location.href = url;
+        } else {
+            window.top.location.href = url;
+        }
+    }
+
+    // Send SMS
+    function sendSMS() {
+        if (!userId) return;
+        showLoadingIndicator();
+        $.ajax({
+            url: '/api/rollout/users/' + encodeURIComponent(userId) + '/sms',
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                hideLoadingIndicator();
+                if (response.success) {
+                    $('#success-box').css('display', 'block');
+                    $('#success-title').html('Success');
+                    $('#success-text').html('SMS download link sent successfully!');
+                } else {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error || 'Failed to send SMS');
+                }
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to send SMS: ' + error);
+            }
+        });
+    }
+
+    // Forget Password
+    function forgetPassword() {
+        if (!userId) return;
+        if (!confirm('Send password reset email to this user?')) return;
+        showLoadingIndicator();
+        $.ajax({
+            url: '/api/rollout/users/' + encodeURIComponent(userId) + '/forget-password',
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                hideLoadingIndicator();
+                if (response.success) {
+                    $('#success-box').css('display', 'block');
+                    $('#success-title').html('Success');
+                    $('#success-text').html('Password reset email sent!');
+                } else {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error || 'Failed to send password reset');
+                }
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to send password reset: ' + error);
+            }
+        });
+    }
+
+    // Disable User
+    function disableUser() {
+        if (!userId) return;
+        if (!confirm('Are you sure you want to disable this user? This will remove their access.')) return;
+        showLoadingIndicator();
+        $.ajax({
+            url: '/api/rollout/users/' + encodeURIComponent(userId) + '/disable',
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                hideLoadingIndicator();
+                if (response.success) {
+                    alert('User disabled successfully!');
+                    window.top.location.href = '/rollout-search';
+                } else {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error || 'Failed to disable user');
+                }
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to disable user: ' + error);
+            }
+        });
+    }
+
+    // Reinvite User
+    function reinviteUser() {
+        if (!userId) return;
+        if (!confirm('Reinvite this user?')) return;
+        showLoadingIndicator();
+        $.ajax({
+            url: '/api/rollout/users/' + encodeURIComponent(userId) + '/reinvite',
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                hideLoadingIndicator();
+                if (response.success) {
+                    $('#success-box').css('display', 'block');
+                    $('#success-title').html('Success');
+                    $('#success-text').html('User reinvited successfully!');
+                    setTimeout(function() { location.reload(); }, 1500);
+                } else {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error || 'Failed to reinvite user');
+                }
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to reinvite user: ' + error);
+            }
+        });
+    }
+
+    // Toggle Order Tile Access
+    function toggleOrderTile() {
+        if (!userId) return;
+        showLoadingIndicator();
+        $.ajax({
+            url: '/api/rollout/users/' + encodeURIComponent(userId) + '/order-tile',
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                hideLoadingIndicator();
+                if (response.success) {
+                    location.reload();
+                } else {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error || 'Failed to toggle order tile access');
+                }
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to toggle order tile access: ' + error);
+            }
+        });
+    }
+
+    // Toggle Forced Logout
+    function toggleForcedLogout() {
+        if (!userId) return;
+        showLoadingIndicator();
+        $.ajax({
+            url: '/api/rollout/users/' + encodeURIComponent(userId) + '/forced-logout',
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                hideLoadingIndicator();
+                if (response.success) {
+                    location.reload();
+                } else {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error || 'Failed to toggle forced logout');
+                }
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to toggle forced logout: ' + error);
+            }
+        });
+    }
+
+    // Render user details tiles - matching D3 exactly
+    function renderUserDetails(user) {
+        userData = user;
+        var name = user.full_name || '';
+        var NAME = name.toUpperCase();
+        var company = (user.customer_name || '').toUpperCase();
+        var phone = user.phone || '';
+        var email = user.email || '';
+        var phoneDigits = phone.replace(/\D/g, '');
+
+        var tilesHtml = '';
+
+        // Row 1: Phone | Email
+        // Phone tile (blue)
+        tilesHtml += '<div class="tile" style="position: relative; background-color: #2f7ed8; cursor: pointer" onclick="tileInvoke(\'tel:' + phoneDigits + '\');">' +
+            '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+            '<div class="tileContainer">' +
+                '<div class="tileIcon"><img src="/d3-static/JobsForFixedNodeID_files/phone-white@2x.png" /></div>' +
+                '<div class="tileInfoSection">' +
+                    '<div class="tileCell">' +
+                        '<div class="tileSuperTitle">' + escapeHtml(NAME) + '</div>' +
+                        '<div class="tileTitle">' + escapeHtml(formatPhone(phone) || 'No phone') + '</div>' +
+                        '<div class="tileSubTitle"></div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // Email tile (blue)
+        tilesHtml += '<div class="tile" style="position: relative; background-color: #2f7ed8; cursor: pointer" onclick="tileInvoke(\'mailto:' + escapeHtml(email) + '?Subject=TRUCKAST Access\');">' +
+            '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+            '<div class="tileContainer">' +
+                '<div class="tileIcon"><img src="/d3-static/JobsForFixedNodeID_files/email-white@2x.png" /></div>' +
+                '<div class="tileInfoSection">' +
+                    '<div class="tileCell">' +
+                        '<div class="tileSuperTitle">' + escapeHtml(NAME) + '</div>' +
+                        '<div class="tileTitle">' + escapeHtml(email || 'No email') + '</div>' +
+                        '<div class="tileSubTitle"></div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // Row 2: Invite More | SMS Download
+        // Invite more from company (blue)
+        var inviteHref = user.customer_id ? '/rollout-invite?id=' + user.customer_id + '&FromUserID=' + userId : '#';
+        tilesHtml += '<div class="tile" style="position: relative; background-color: #2f7ed8; cursor: pointer" onclick="tileInvoke(\'' + inviteHref + '\');">' +
+            '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+            '<div class="tileContainer">' +
+                '<div class="tileIcon"><img src="/d3-static/JobsForFixedNodeID_files/id-card-white@2x.png" /></div>' +
+                '<div class="tileInfoSection">' +
+                    '<div class="tileCell">' +
+                        '<div class="tileSuperTitle">INVITE MORE FROM</div>' +
+                        '<div class="tileTitle">' + escapeHtml(company || 'COMPANY') + '</div>' +
+                        '<div class="tileSubTitle"></div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // SMS download link (green)
+        tilesHtml += '<div class="tile" style="position: relative; background-color: #458b00; cursor: pointer" onclick="sendSMS();">' +
+            '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+            '<div class="tileContainer">' +
+                '<div class="tileIcon"><img src="/d3-static/JobsForFixedNodeID_files/message-notification-white@2x.png" /></div>' +
+                '<div class="tileInfoSection">' +
+                    '<div class="tileCell">' +
+                        '<div class="tileSuperTitle">SMS</div>' +
+                        '<div class="tileTitle">DOWNLOAD LINK TO</div>' +
+                        '<div class="tileSubTitle">' + escapeHtml(NAME) + '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // Row 3: Forget Password | Disable
+        // Forget password (blue)
+        tilesHtml += '<div class="tile" style="position: relative; background-color: #2f7ed8; cursor: pointer" onclick="forgetPassword();">' +
+            '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+            '<div class="tileContainer">' +
+                '<div class="tileIcon"><img src="/d3-static/JobsForFixedNodeID_files/id-card-white@2x.png" /></div>' +
+                '<div class="tileInfoSection">' +
+                    '<div class="tileCell">' +
+                        '<div class="tileSuperTitle">' + escapeHtml(name) + '</div>' +
+                        '<div class="tileTitle">Forget Password</div>' +
+                        '<div class="tileSubTitle"></div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // Disable user (red)
+        tilesHtml += '<div class="tile" style="position: relative; background-color: #c43926; cursor: pointer" onclick="disableUser();">' +
+            '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+            '<div class="tileContainer">' +
+                '<div class="tileIcon"><img src="/d3-static/JobsForFixedNodeID_files/Cancelled.png" /></div>' +
+                '<div class="tileInfoSection">' +
+                    '<div class="tileCell">' +
+                        '<div class="tileSuperTitle">DISABLE</div>' +
+                        '<div class="tileTitle">' + escapeHtml(NAME) + '</div>' +
+                        '<div class="tileSubTitle">REMOVE ACCESS</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // Row 4: Reinvite User | Assigned Companies
+        // Reinvite User (red with Paused icon - matching D3)
+        var invitedDate = user.reinvited_date || '';
+        tilesHtml += '<div class="tile" style="position: relative; background-color: #c43926; cursor: pointer" onclick="reinviteUser();">' +
+            '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+            '<div class="tileContainer">' +
+                '<div class="tileIcon"><img src="/d3-static/JobsForFixedNodeID_files/Paused.png" /></div>' +
+                '<div class="tileInfoSection">' +
+                    '<div class="tileCell">' +
+                        '<div class="tileSuperTitle">' + escapeHtml(name) + '</div>' +
+                        '<div class="tileTitle">REINVITE USER</div>' +
+                        '<div class="tileSubTitle">' + (invitedDate ? 'Invited Date: ' + escapeHtml(invitedDate) : '') + '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // Assigned companies (blue)
+        tilesHtml += '<div class="tile" style="position: relative; background-color: #2f7ed8; cursor: pointer" onclick="tileInvoke(\'/rollout-user-companies?id=' + userId + '\');">' +
+            '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+            '<div class="tileContainer">' +
+                '<div class="tileIcon"><img src="/d3-static/JobsForFixedNodeID_files/companyuser.png" /></div>' +
+                '<div class="tileInfoSection">' +
+                    '<div class="tileCell">' +
+                        '<div class="tileSuperTitle">ASSIGNED</div>' +
+                        '<div class="tileTitle">COMPANIES</div>' +
+                        '<div class="tileSubTitle"></div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // Row 5: Assigned Projects | Add Projects
+        // Assigned projects (blue)
+        tilesHtml += '<div class="tile" style="position: relative; background-color: #2f7ed8; cursor: pointer" onclick="tileInvoke(\'/rollout-user-projects?id=' + userId + '\');">' +
+            '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+            '<div class="tileContainer">' +
+                '<div class="tileIcon"><img src="/d3-static/JobsForFixedNodeID_files/projects.png" /></div>' +
+                '<div class="tileInfoSection">' +
+                    '<div class="tileCell">' +
+                        '<div class="tileSuperTitle">ASSIGNED</div>' +
+                        '<div class="tileTitle">PROJECTS</div>' +
+                        '<div class="tileSubTitle"></div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // Add projects (blue)
+        tilesHtml += '<div class="tile" style="position: relative; background-color: #2f7ed8; cursor: pointer" onclick="tileInvoke(\'/rollout-add-projects?id=' + userId + '\');">' +
+            '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+            '<div class="tileContainer">' +
+                '<div class="tileIcon"><img src="/d3-static/JobsForFixedNodeID_files/projects.png" /></div>' +
+                '<div class="tileInfoSection">' +
+                    '<div class="tileCell">' +
+                        '<div class="tileSuperTitle">ADD</div>' +
+                        '<div class="tileTitle">PROJECTS</div>' +
+                        '<div class="tileSubTitle"></div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // Row 6: Order Tile | Forced Logout
+        // Order tile access (red - not granted)
+        var orderTileAccess = user.order_tile_access || false;
+        tilesHtml += '<div class="tile" style="position: relative; background-color: #c43926; cursor: pointer" onclick="toggleOrderTile();">' +
+            '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+            '<div class="tileContainer">' +
+                '<div class="tileIcon"><img src="/d3-static/JobsForFixedNodeID_files/Cancelled.png" /></div>' +
+                '<div class="tileInfoSection">' +
+                    '<div class="tileCell">' +
+                        '<div class="tileSuperTitle">ACCESS TO</div>' +
+                        '<div class="tileTitle">ORDER TILE</div>' +
+                        '<div class="tileSubTitle">NOT GRANTED</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        // Forced logout (blue)
+        var forcedLogoutText = user.forced_logout ? 'Forced To Log Out.' : 'Currently Not Forced To Log Out.';
+        tilesHtml += '<div class="tile" style="position: relative; background-color: #2f7ed8; cursor: pointer" onclick="toggleForcedLogout();">' +
+            '<img src="/d3-static/JobsForFixedNodeID_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;" />' +
+            '<div class="tileContainer">' +
+                '<div class="tileIcon"><img src="/d3-static/JobsForFixedNodeID_files/user.png" /></div>' +
+                '<div class="tileInfoSection">' +
+                    '<div class="tileCell">' +
+                        '<div class="tileSuperTitle">' + escapeHtml(name) + '</div>' +
+                        '<div class="tileTitle">' + escapeHtml(forcedLogoutText) + '</div>' +
+                        '<div class="tileSubTitle"></div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        $('#tiles-list').html(tilesHtml);
+    }
+
+    // Load user details
+    function loadUserDetails() {
+        userId = getUserId();
+        if (!userId) {
+            $('#error-box').css('display', 'block');
+            $('#error-title').html('Error');
+            $('#error-text').html('No user ID provided');
+            return;
+        }
+
+        showLoadingIndicator();
+
+        $.ajax({
+            url: '/api/rollout/users/' + encodeURIComponent(userId),
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                hideLoadingIndicator();
+
+                if (response.error) {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error);
+                    return;
+                }
+
+                // Update page title
+                var userName = response.full_name || 'USER';
+                $('#page-title').html('<strong>' + escapeHtml(userName.toUpperCase()) + '</strong>');
+                document.title = userName + ' - User Details';
+
+                renderUserDetails(response);
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to load user details: ' + error);
+            }
+        });
+    }
+
+    // Load on page ready
+    $(document).ready(function() {
+        loadUserDetails();
+    });
+</script>
+        </div>
+
+    </div>
+    <script type="text/javascript">
+    </script>
+
+</body>
+</html>
