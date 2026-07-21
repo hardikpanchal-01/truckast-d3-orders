@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     // Search customers
     let customersQuery = supabase
       .from("customers")
-      .select("id, code, name, address1, address2, address3")
+      .select("id, code, name, contact, phone, email")
       .order("name", { ascending: true })
       .limit(100);
 
@@ -55,22 +55,13 @@ export async function GET(request: NextRequest) {
 
     // Format the results
     const results = (customers || []).map((c) => {
-      // Parse address3 for state (format: "STATE ZIPCODE")
-      let state = "";
-      if (c.address3) {
-        const parts = c.address3.trim().split(/\s+/);
-        if (parts.length >= 1 && !/^\d/.test(parts[0])) {
-          state = parts[0];
-        }
-      }
-
       return {
         id: c.id,
         code: c.code || "",
         name: c.name || "",
-        address: c.address1 || "",
-        city: c.address2 || "",
-        state: state,
+        contact: c.contact || "",
+        phone: c.phone || "",
+        email: c.email || "",
       };
     });
 
