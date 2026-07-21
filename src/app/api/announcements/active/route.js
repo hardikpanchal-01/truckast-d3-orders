@@ -1,56 +1,44 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { getSelectedTenant, getTenantCredentials } from "@/actions/tenantActions";
+import { getTenantSupabaseClient } from "@/actions/tenantActions";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/announcements/active
- * Returns announcements that are:
- * - is_published = true
- * - Current date is between start_date and end_date
+ * Active published announcements for the SELECTED tenant, read from that tenant's
+ * database (the same Postgres source the rest of the app uses — NOT the per-tenant
+ * Supabase project, whose URLs can be dead / unreachable). A tenant whose DB has no
+ * `announcements` table simply gets an empty list (no promo tile) instead of a 500,
+ * which the market page treats as "no announcements" — matching the orders page.
  */
 export async function GET() {
   try {
-    // Get selected tenant, default to Dolese Ready Mix
-    let selectedTenant = await getSelectedTenant();
-    if (!selectedTenant) {
-      selectedTenant = "Dolese Ready Mix";
+    const supabase = await getTenantSupabaseClient();
+    if (!supabase) {
+      return NextResponse.json({ success: true, data: [] });
     }
 
-    // Get tenant credentials and create client
-    const tenantCreds = await getTenantCredentials(selectedTenant);
-    if (!tenantCreds || !tenantCreds.supabase_url || !tenantCreds.supabase_service_key) {
-      return NextResponse.json({ success: false, error: "Could not connect to tenant database" }, { status: 500 });
-    }
+    const today = new Date().toISOString().split("T")[0];
 
-    const tenantClient = createClient(tenantCreds.supabase_url, tenantCreds.supabase_service_key, {
-      auth: { autoRefreshToken: false, persistSession: false }
-    });
-
-    // Get current date in YYYY-MM-DD format
-    const today = new Date().toISOString().split('T')[0];
-
-    // Fetch active published announcements
-    const { data: announcements, error } = await tenantClient
+    // select("*") so we never fail on a column a given tenant's table happens to lack;
+    // the client picks the fields it needs (id, tagline, title, subtitle, color, icon_or_percent).
+    const { data, error } = await supabase
       .from("announcements")
-      .select("id, name, tagline, title, subtitle, icon_or_percent, color, start_date, end_date, is_published")
+      .select("*")
       .eq("is_published", true)
       .lte("start_date", today)
       .gte("end_date", today)
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching active announcements:", error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      // Missing table / column for this tenant → no announcements, not an error.
+      console.warn("[announcements/active] no announcements for tenant:", error.message);
+      return NextResponse.json({ success: true, data: [] });
     }
 
-    return NextResponse.json({
-      success: true,
-      data: announcements || []
-    });
+    return NextResponse.json({ success: true, data: data || [] });
   } catch (error) {
-    console.error("Error in GET /api/announcements/active:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.warn("[announcements/active] error:", error?.message || error);
+    return NextResponse.json({ success: true, data: [] });
   }
 }

@@ -1,5 +1,6 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { getTenantBoardTitle } from "@/actions/tenantActions";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,9 @@ const TEMPLATE_PATH = join(process.cwd(), "public", "d3-static", "market.html");
 export async function GET(): Promise<Response> {
   let html = await readFile(TEMPLATE_PATH, "utf8");
   html = html.split("./MarketSummary_files/").join("/d3-static/MarketSummary_files/");
+  // Reflect the SELECTED tenant in the header (the shell hardcodes "Dolese Orders").
+  const title = await getTenantBoardTitle();
+  html = html.replace(/<strong>\s*Dolese\s+Orders\s*<\/strong>/g, `<strong>${title}</strong>`);
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
   });

@@ -1,6 +1,7 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type { DoleseOrderListItem, OrderStatus, DoleseAnnouncement } from "@/actions/orderActions";
+import { getTenantBoardTitle, getTenants, getSelectedTenantDisplayName } from "@/actions/tenantActions";
 
 /* ------------------------------------------------------------------ */
 /*  Hybrid renderer: takes the EXACT D3 export (public/d3-static/       */
@@ -197,6 +198,41 @@ export async function buildOrdersHtml(): Promise<string> {
   // resolve. Opened directly at /d3-static/orders.html the relative paths already
   // resolve, so the same file is live either way.
   html = html.split("./JobsForFixedNodeID_files/").join(ASSET + "/");
+
+  // Reflect the SELECTED tenant in the header (the shell hardcodes "Dolese Orders")
+  // so the board title always matches the tenant whose data is shown.
+  const title = await getTenantBoardTitle();
+  html = html.replace(/<strong>\s*Dolese\s+Orders\s*<\/strong>/g, `<strong>${title}</strong>`);
+
+  // The shell also hardcodes a single "DOLESE" plant option. Render one option per
+  // tenant instead, defaulting to the settings-selected tenant; only the selected
+  // option carries the live-total span (other tenants' totals would need a query
+  // per DB on every load). Switching is wired in orders-live.js (wirePlant), which
+  // POSTs /api/settings/tenant — same flow as the settings page — and reloads.
+  const [tenants, selectedDisplay] = await Promise.all([
+    getTenants().catch(() => []),
+    getSelectedTenantDisplayName(),
+  ]);
+  if (tenants.length) {
+    let selIdx = tenants.findIndex(
+      (t) => (t.d3_tenant_name || t.name).toUpperCase() === selectedDisplay,
+    );
+    if (selIdx < 0)
+      selIdx = tenants.findIndex((t) => (t.d3_tenant_name || t.name).toUpperCase() === "DOLESE");
+    if (selIdx < 0) selIdx = 0;
+    const options = tenants
+      .map((t, i) => {
+        const label = esc((t.d3_tenant_name || t.name).toUpperCase());
+        return i === selIdx
+          ? `<option value="${esc(t.name)}" selected="selected">${label} (<span id="d3PlantTotal">…</span> CY)</option>`
+          : `<option value="${esc(t.name)}">${label}</option>`;
+      })
+      .join("\n                    ");
+    html = html.replace(
+      /<select id="planturl"[\s\S]*?<\/select>/,
+      `<select id="planturl" name="planturl" style="width: 100%; margin-bottom: 0; display: block;">\n                    ${options}\n                </select>`,
+    );
+  }
 
   return html;
 }
