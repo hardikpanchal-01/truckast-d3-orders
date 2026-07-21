@@ -20,6 +20,7 @@
  * Embedded joins are resolved from the live foreign-key catalog (introspected once).
  */
 
+
 import pg, { Pool } from "pg";
 
 // node-postgres and PostgREST/supabase-js disagree on how some column types are
