@@ -26,6 +26,10 @@
     <link href="./JobsForFixedNodeID_files/bootstrap2-toggle.min.css" rel="stylesheet">
     <script src="./JobsForFixedNodeID_files/bootstrap2-toggle.min.js"></script>
 
+    <!-- Leaflet for Mapbox -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <style media="print" type="text/css">
         a:after { content:''; }
         a[href]:after { content: none !important; }
@@ -306,65 +310,33 @@
         return urlParams.get('id');
     }
 
-    // Initialize Google Map
+    // Initialize Leaflet Map with Mapbox tiles
     function initMap() {
-        map = new google.maps.Map(document.getElementById('map'), {
-            zoom: 10,
-            center: {lat: 35.4676, lng: -97.5164} // Default to Oklahoma
-        });
+        var MB = window.MAPBOX_TOKEN || '';
 
-        initTrafficLayer(map);
+        map = L.map('map').setView([35.4676, -97.5164], 10); // Default to Oklahoma
+
+        // Use Mapbox tiles if token available, otherwise fall back to OpenStreetMap
+        if (MB) {
+            L.tileLayer(
+                'https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=' + MB,
+                { tileSize: 512, zoomOffset: -1, maxZoom: 19, attribution: '&copy; Mapbox &copy; OpenStreetMap' }
+            ).addTo(map);
+        } else {
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+        }
 
         // Load plant data after map is initialized
         loadPlantData();
     }
 
-    // Initialize traffic layer control
-    function initTrafficLayer(map) {
-        var controlDiv = document.createElement('DIV');
-        $(controlDiv).addClass('gmap-control-container').addClass('gmnoprint');
-
-        var controlUI = document.createElement('DIV');
-        $(controlUI).addClass('gmap-control');
-        $(controlUI).text('Traffic');
-        $(controlDiv).append(controlUI);
-
-        var legend = '<ul>'
-            + '<li><span style="background-color: #30ac3e">&nbsp;&nbsp;</span><span style="color: #30ac3e">&nbsp;&nbsp; &gt; 50 mph (80+ km)</span></li>'
-            + '<li><span style="background-color: #ffcf00">&nbsp;&nbsp;</span><span style="color: #ffcf00">&nbsp;&nbsp; 25 - 50 mph (40 - 80 km)</span></li>'
-            + '<li><span style="background-color: #ff0000">&nbsp;&nbsp;</span><span style="color: #ff0000">&nbsp;&nbsp; &lt; 25 mph (40 km)</span></li>'
-            + '<li><span style="background-color: #c0c0c0">&nbsp;&nbsp;</span><span style="color: #c0c0c0">&nbsp;&nbsp; No data available</span></li>'
-            + '</ul>';
-
-        var controlLegend = document.createElement('DIV');
-        $(controlLegend).addClass('gmap-control-legend');
-        $(controlLegend).html(legend);
-        $(controlLegend).hide();
-        $(controlDiv).append(controlLegend);
-
-        $(controlUI)
-            .mouseenter(function() { $(controlLegend).show(); })
-            .mouseleave(function() { $(controlLegend).hide(); });
-
-        var trafficLayer = new google.maps.TrafficLayer();
-
-        google.maps.event.addDomListener(controlUI, 'click', function() {
-            if (typeof trafficLayer.getMap() == 'undefined' || trafficLayer.getMap() === null) {
-                $(controlUI).addClass('gmap-control-active');
-                trafficLayer.setMap(map);
-            } else {
-                trafficLayer.setMap(null);
-                $(controlUI).removeClass('gmap-control-active');
-            }
-        });
-
-        map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
-    }
-
     // Clear all markers
     function clearMarkers() {
         for (var i = 0; i < markers.length; i++) {
-            markers[i].setMap(null);
+            map.removeLayer(markers[i]);
         }
         markers = [];
     }
@@ -373,14 +345,14 @@
     function setPlantMarker(lat, lng, title, code) {
         clearMarkers();
 
-        var position = {lat: parseFloat(lat), lng: parseFloat(lng)};
+        var position = [parseFloat(lat), parseFloat(lng)];
 
-        var image = {
-            url: '/Marker/uscplant?text=' + encodeURIComponent(code || 'N/A'),
-            size: new google.maps.Size(40, 40),
-            origin: new google.maps.Point(0, 0),
-            anchor: new google.maps.Point(20, 39)
-        };
+        var icon = L.icon({
+            iconUrl: '/Marker/uscplant?text=' + encodeURIComponent(code || 'N/A'),
+            iconSize: [40, 40],
+            iconAnchor: [20, 39],
+            popupAnchor: [0, -39]
+        });
 
         var infoContent = '<small>Plant: ' + title + ' : ' + code + '</small><br>' +
             '<small>Address: ' + ($('#address').val() || '') + '</small><br>' +
@@ -388,27 +360,13 @@
             '<small>State: ' + ($('#stateorprovince').val() || '') + '</small><br>' +
             '<small>Zip: ' + ($('#postalcode').val() || '') + '</small>';
 
-        var infowindow = new google.maps.InfoWindow({
-            content: infoContent,
-            maxWidth: 200
-        });
-
-        var marker = new google.maps.Marker({
-            position: position,
-            map: map,
-            icon: image,
-            title: title
-        });
-
-        marker.addListener('click', function() {
-            infowindow.open(map, marker);
-        });
+        var marker = L.marker(position, { icon: icon, title: title }).addTo(map);
+        marker.bindPopup(infoContent, { maxWidth: 200 });
 
         markers.push(marker);
 
         // Center map on marker
-        map.setCenter(position);
-        map.setZoom(15);
+        map.setView(position, 15);
     }
 
     // Load plant data from API
@@ -570,8 +528,12 @@
     });
 </script>
 
-<!-- Google Maps API -->
-<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDKWr5u6AqpFYtA7pKGqZ0INctr7ILgVio&callback=initMap"></script>
+<!-- Initialize map on document ready -->
+<script>
+    $(document).ready(function() {
+        initMap();
+    });
+</script>
 
         </div>
     </div>
