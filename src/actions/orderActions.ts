@@ -18,15 +18,12 @@ import { getExcludedPatterns } from "@/actions/exclusionActions";
 import { filterExcludedOrders } from "@/lib/order-filters";
 import { getTenantSupabaseClient, getSelectedTenant, getSelectedTenantDisplayName } from "@/actions/tenantActions";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { getPgAdapterClient } from "@/supabase/pg-adapter";
 
-// Helper to get the appropriate Supabase client (tenant-specific or default)
+// Helper to get the appropriate Supabase client for the SELECTED tenant.
+// getTenantSupabaseClient() resolves the selected tenant's Postgres cluster
+// (dolese, concretesupply, …) or its Supabase project; fall back to the default
+// server client only if that yields nothing.
 async function getSupabaseClient(): Promise<SupabaseClient> {
-  // The new Dolese Postgres cluster (DOLESE_PG_URL) takes precedence over the
-  // per-tenant Supabase lookup — the orders data now lives there.
-  const pg = getPgAdapterClient();
-  if (pg) return pg as unknown as SupabaseClient;
-
   const tenantClient = await getTenantSupabaseClient();
   return tenantClient || supabaseServer;
 }
@@ -727,9 +724,12 @@ export async function getDoleseSummary(dateStr: string, dateToStr?: string): Pro
   let hasMore = true;
 
   while (hasMore) {
+    // Plain (left) embed, NOT !inner: D3's Tot/Act/Can count EVERY order of the day,
+    // including ones with no order_products rows (early-cancelled / will-call orders —
+    // concretesupply has ~35/day of these; an inner join undercounted all three numbers).
     const { data, error } = await supabase
       .from("orders")
-      .select("order_id, order_code, customer_name, delivery_addr1, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix, item_code)")
+      .select("order_id, order_code, customer_name, delivery_addr1, removed, remove_reason_code, order_products(order_qty, order_qty_unit, delv_qty, is_mix, item_code)")
       .gte("order_date", from)
       .lt("order_date", to)
       .range(offset, offset + PAGE_SIZE - 1);
@@ -748,11 +748,13 @@ export async function getDoleseSummary(dateStr: string, dateToStr?: string): Pro
     }
   }
 
-  // Filter to only CY/YDQ orders - different tenants use different unit codes
-  // CY = Cubic Yards (standard), YDQ = Cubic Yards (some tenants like Stevenson Weir)
+  // D3's count rule (verified against the live dolese board 2026-07-21): PRODUCTLESS
+  // orders are counted (they render as 0.00 CY tiles — dispatcher memos / early-
+  // cancelled orders), but orders whose products are ALL non-CY (tn/ea aggregate or
+  // admin lines) are not. So gate on CY unit only when the order has products.
   const cyOrders = allOrders.filter((o) => {
     const products = (o.order_products || []) as OrderProductRow[];
-    return products.some((p) => isCubicYardUnit(p.order_qty_unit));
+    return products.length === 0 || products.some((p) => isCubicYardUnit(p.order_qty_unit));
   });
 
   // Apply exclusion patterns filtering (matches D3 production)

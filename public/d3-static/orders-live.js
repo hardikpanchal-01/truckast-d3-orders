@@ -115,12 +115,32 @@
     };
   }
 
-  // ---- Plant dropdown: only DOLESE (our tenant) has live local data ----
+  // ---- Plant dropdown: one option per tenant (server-rendered, selected tenant
+  // defaulted). Picking another tenant sets the selected_tenant cookie via the
+  // same API the settings page uses, then reloads so the board re-renders from
+  // that tenant's database. On failure the selection snaps back. ----
   function wirePlant() {
     var sel = document.getElementById("planturl");
     if (!sel) return;
+    var initialIdx = sel.selectedIndex;
     sel.onchange = function () {
-      this.selectedIndex = 0;
+      var val = sel.value;
+      if (!val || sel.selectedIndex === initialIdx) return;
+      fetch("/api/settings/tenant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenant: val }),
+      })
+        .then(function (x) {
+          return x.ok ? x.json() : null;
+        })
+        .then(function (j) {
+          if (j && j.success) window.top.location.reload();
+          else sel.selectedIndex = initialIdx;
+        })
+        .catch(function () {
+          sel.selectedIndex = initialIdx;
+        });
     };
   }
 

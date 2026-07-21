@@ -9,7 +9,8 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Dolese Orders — TRUCKAST D3",
+  // Tenant-neutral: the app is multi-tenant, so don't brand the tab as "Dolese".
+  title: "Orders — TRUCKAST D3",
   description: "D3 order tracking — Market Summary, Orders, Order Detail",
 };
 

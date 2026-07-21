@@ -187,11 +187,6 @@ export async function getTenantCredentials(tenantName: string): Promise<TenantWi
 }
 
 export async function getTenantSupabaseClient(): Promise<SupabaseClient | null> {
-  // The new Dolese Postgres cluster (DOLESE_PG_URL), when configured, is the single
-  // data source for every tenant — short-circuit the per-tenant Supabase lookup.
-  const pg = getPgAdapterClient();
-  if (pg) return pg as unknown as SupabaseClient;
-
   console.log("========== [TENANT] Getting Supabase Client ==========");
 
   let selectedTenant = await getSelectedTenant();
@@ -201,6 +196,17 @@ export async function getTenantSupabaseClient(): Promise<SupabaseClient | null> 
   if (!selectedTenant) {
     console.log("[Tenant] No tenant selected, defaulting to dolese");
     selectedTenant = "dolese";
+  }
+
+  // Raw-Postgres tenant clusters (e.g. DOLESE_PG_URL, CONCRETESUPPLY_PG_URL) are the
+  // data source when configured. Route to the SELECTED tenant's database; if that
+  // tenant has no Postgres connection, fall back to the default cluster so existing
+  // single-tenant behavior is preserved. Only if neither exists do we fall through
+  // to the per-tenant Supabase lookup below.
+  const pg = getPgAdapterClient(selectedTenant) ?? getPgAdapterClient();
+  if (pg) {
+    console.log("[Tenant] Using Postgres cluster for tenant:", selectedTenant);
+    return pg as unknown as SupabaseClient;
   }
 
   console.log("[Tenant] Getting credentials for:", selectedTenant);
@@ -274,4 +280,18 @@ export async function getSelectedTenantDisplayName(): Promise<string> {
 
   // Use d3_tenant_name if available, otherwise use the tenant name
   return (tenant.d3_tenant_name || tenant.name || selectedTenant).toUpperCase();
+}
+
+/**
+ * The board/header title for the selected tenant, e.g. "Dolese Orders",
+ * "Concrete Supply Orders". Title-cased from the tenant display name so the
+ * header always matches the tenant whose data is being shown (no "Dolese Orders"
+ * over another tenant's data).
+ */
+export async function getTenantBoardTitle(): Promise<string> {
+  const display = await getSelectedTenantDisplayName(); // UPPERCASE
+  const titled = display
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return `${titled} Orders`;
 }
