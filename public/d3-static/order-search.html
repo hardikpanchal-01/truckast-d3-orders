@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<!-- D3 "OrderSearch" replica — the SEARCH form reached from the Dolese Orders date
+     dropdown. Faithful to D3's export (real d3_complete.css + Kendo datepickers), but the
+     SEARCH button navigates to OUR /orders?date=&dateTo= instead of D3's form POST.
+     Served at /orders/search (asset paths absolutized server-side) and openable directly
+     at /d3-static/order-search.html. -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="format-detection" content="telephone=no" />
+    <title></title>
+
+    <script src="./JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
+    <link href="./JobsForFixedNodeID_files/d3_complete.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    <div class="d3-page">
+      <div class="navbar navbar-fixed-top navbar-inverse">
+        <div class="navbar-inner">
+          <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+              <span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
+            </a>
+            <a id="header-bar-title" class="brand">TRUCKAST</a>
+            <div class="nav-collapse collapse">
+              <ul class="nav">
+                <li><a href="/">MARKETS</a></li>
+                <li><a href="/settings">SETTINGS</a></li>
+                <li><a href="/publish">PUBLISH</a></li>
+                <li><a href="/admin">ADMIN</a></li>
+                <li><a href="/order-request">ORDER</a></li>
+                <li><a href="/rollout-search">ROLLOUT</a></li>
+                <li><a href="/projects">PROJECTS</a></li>
+                <li><a href="/login">LOGOUT</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="container">
+        <form id="order-search" onsubmit="return false;">
+          <!-- Title bar: back | SEARCH | to-search -->
+          <div class="navbar">
+            <div class="navbar-inner">
+              <div class="container">
+                <table style="width: 100%">
+                  <tbody>
+                    <tr>
+                      <td style="width: 38px">
+                        <a onclick="history.back();"
+                          ><img id="titlebar-left-image" width="32" height="32"
+                            style="margin-top: 5px; margin-bottom: 5px"
+                            src="./JobsForFixedNodeID_files/arrow-big-01@2x.png"
+                        /></a>
+                      </td>
+                      <td>
+                        <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                          <div id="titlebar-caption" style="display: inline-block; margin: 5px">
+                            <span style="font-size: 16px"><strong>SEARCH</strong></span>
+                          </div>
+                        </div>
+                      </td>
+                      <td style="width: 38px"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div id="8fe3a945-2729-4fe4-9224-5a8fab433885" style="display: block; width: 100%">
+            <table class="table table-hover">
+              <tbody>
+                <tr>
+                  <td style="vertical-align: middle; width: 40%">
+                    <div class="d3-label" style="width: 100%">PICK A DATE</div>
+                  </td>
+                  <td style="vertical-align: middle; width: 60%">
+                    <div id="startdate" style="width: 120px; padding-right: 10px">
+                      <input id="startdate-input" name="startdate" style="width: 100%" type="text" />
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="vertical-align: middle; width: 40%">
+                    <div class="d3-label" style="width: 100%">END DATE (RETURNS MAXIMUM 30 DAYS FROM START DATE)</div>
+                  </td>
+                  <td style="vertical-align: middle; width: 60%">
+                    <div id="enddate" style="width: 120px; padding-right: 10px">
+                      <input id="enddate-input" name="enddate" style="width: 100%" type="text" />
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="vertical-align: middle; width: 40%">
+                    <div class="d3-label" style="width: 100%">PICK AN AREA</div>
+                  </td>
+                  <td style="vertical-align: middle; width: 60%">
+                    <select id="organization" name="organization" style="width: 100%; margin-bottom: 0; display: block">
+                      <!-- Only DOLESE has live local data in this mirror; the rest are shown for
+                           fidelity but resolve to the same DOLESE dataset. -->
+                      <option value="dolese" selected="selected">DOLESE</option>
+                      <option value="eastern">EASTERN</option>
+                      <option value="northern">NORTHERN</option>
+                      <option value="okc-metro">OKC METRO</option>
+                      <option value="southeastern">SOUTHEASTERN</option>
+                      <option value="southwestern">SOUTHWESTERN</option>
+                      <option value="tulsa">TULSA</option>
+                      <option value="western">WESTERN</option>
+                      <option value="piedmont">PIEDMONT</option>
+                    </select>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <button id="submit-button" class="btn btn-primary" type="button" onclick="doOrderSearch()" style="width: 75px">
+            SEARCH
+          </button>
+          <br /><br />
+        </form>
+      </div>
+    </div>
+
+    <script src="/d3-static/order-search-live.js?v=1"></script>
+  </body>
+</html>

@@ -84,4 +84,34 @@ body {
   li {
     line-height: 20px;
   }
+  /* Bootstrap 2's control cursors. Tailwind's preflight drops these, which left every
+     label/select/radio in the app on the default arrow where D3 shows a hand. Verified
+     against d3_complete.css; the `[readonly]` arm is BS2's too (it additionally sets
+     background-color:#eee, deliberately NOT restored here — every readonly control in
+     this app is a .form-control-style field that paints its own #f6f6f6 fill). */
+  label,
+  select,
+  button,
+  input[type="button"],
+  input[type="reset"],
+  input[type="submit"],
+  input[type="radio"],
+  input[type="checkbox"] {
+    cursor: pointer;
+  }
+  input[readonly],
+  select[readonly],
+  textarea[readonly],
+  input[disabled],
+  select[disabled],
+  textarea[disabled] {
+    cursor: not-allowed;
+  }
+  /* Bootstrap 2's flat #999 placeholder. Tailwind's preflight replaces it with
+     `color-mix(in oklab, currentColor 50%, transparent)`, i.e. a half-transparent
+     tint of each field's own text colour — visibly lighter than D3's. */
+  input::placeholder,
+  textarea::placeholder {
+    color: #999;
+  }
 }

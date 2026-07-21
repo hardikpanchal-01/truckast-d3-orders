@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAuth } from "@/supabase/server";
+import { getPgAdapterClient } from "@/supabase/pg-adapter";
 import crypto from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
@@ -186,6 +187,11 @@ export async function getTenantCredentials(tenantName: string): Promise<TenantWi
 }
 
 export async function getTenantSupabaseClient(): Promise<SupabaseClient | null> {
+  // The new Dolese Postgres cluster (DOLESE_PG_URL), when configured, is the single
+  // data source for every tenant — short-circuit the per-tenant Supabase lookup.
+  const pg = getPgAdapterClient();
+  if (pg) return pg as unknown as SupabaseClient;
+
   console.log("========== [TENANT] Getting Supabase Client ==========");
 
   let selectedTenant = await getSelectedTenant();

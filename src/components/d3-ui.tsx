@@ -60,7 +60,19 @@ const ROLLOUT_TABS = [
 ] as const;
 
 // The Order Request (order concrete) section uses its own brand + tab set.
-const ORDER_TABS = ["DASHBOARD", "ORDER FORM", "SETTINGS", "PUBLISH", "ADMIN", "TRUCKAST", "LOGOUT"] as const;
+// Order mirrors D3's DoleseORV2 navbar exactly — note ROLLOUT and HELP trail LOGOUT
+// there rather than preceding it, which is why they sit last.
+const ORDER_TABS = [
+  "DASHBOARD",
+  "ORDER FORM",
+  "SETTINGS",
+  "PUBLISH",
+  "ADMIN",
+  "TRUCKAST",
+  "LOGOUT",
+  "ROLLOUT",
+  "HELP",
+] as const;
 
 // The Projects section uses its own brand + tab set.
 const PROJECTS_TABS = [
@@ -96,6 +108,9 @@ const TAB_HREF: Record<string, string> = {
   PROJECTS: "/projects",
   ROLLOUT: "/rollout/search",
   ORDER: "/order-request",
+  // Only appears in ORDER_TABS, so a flat entry is unambiguous. Mirrors D3's
+  // OrderRequest/OrderByProject.
+  "ORDER FORM": "/order-request/order-by-project",
   // Admin section routes
   USERS: "/d3-static/user-search.html",
   INTERNAL: "/admin/internal",
@@ -114,6 +129,14 @@ const HELP_HREF: Record<string, string> = {
   default: "/help",
 };
 
+// DASHBOARD appears in both ORDER_TABS and ROLLOUT_TABS but means a different page in
+// each, so — like HELP — it can't live in the flat TAB_HREF map. Order maps to D3's
+// DoleseOrderRequestDashboardV2; rollout has no dashboard route yet, so it stays inert
+// there rather than pointing somewhere wrong.
+const DASHBOARD_HREF: Record<string, string | undefined> = {
+  order: "/order-request",
+};
+
 export function TopNav() {
   const pathname = usePathname();
   const isRollout = pathname?.startsWith("/rollout") ?? false;
@@ -127,9 +150,11 @@ export function TopNav() {
   const active = isAdmin || isRollout || isOrder || isProjects ? "" : MARKETS_TABS[0];
   const [open, setOpen] = React.useState(false);
   const renderTab = (tab: string, inMenu = false) => {
-    // Context-aware HELP route based on current section
+    // HELP and DASHBOARD resolve per-section; everything else is a flat lookup.
     const href = tab === "HELP"
       ? (isAdmin ? HELP_HREF.default : isRollout ? HELP_HREF.rollout : isOrder ? HELP_HREF.order : isProjects ? HELP_HREF.projects : isSettings ? HELP_HREF.settings : HELP_HREF.default)
+      : tab === "DASHBOARD"
+      ? (isOrder ? DASHBOARD_HREF.order : undefined)
       : TAB_HREF[tab];
     const isActive = tab === active;
     // Desktop tabs turn white when active/hovered; mobile-menu items stay gray (only the

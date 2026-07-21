@@ -18,9 +18,15 @@ import { getExcludedPatterns } from "@/actions/exclusionActions";
 import { filterExcludedOrders } from "@/lib/order-filters";
 import { getTenantSupabaseClient, getSelectedTenant, getSelectedTenantDisplayName } from "@/actions/tenantActions";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { getPgAdapterClient } from "@/supabase/pg-adapter";
 
 // Helper to get the appropriate Supabase client (tenant-specific or default)
 async function getSupabaseClient(): Promise<SupabaseClient> {
+  // The new Dolese Postgres cluster (DOLESE_PG_URL) takes precedence over the
+  // per-tenant Supabase lookup — the orders data now lives there.
+  const pg = getPgAdapterClient();
+  if (pg) return pg as unknown as SupabaseClient;
+
   const tenantClient = await getTenantSupabaseClient();
   return tenantClient || supabaseServer;
 }
@@ -496,6 +502,22 @@ function fmtTime(ts: string | null, hour12 = false): string | null {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
+// "Now", expressed the way ticket/GPS stamps are stored — the America/Chicago wall clock
+// placed in a UTC field (so its UTC parts read as the local clock). Lets us compare against
+// tickets.* and trucks.location_update_time, which use that same convention, and feed the
+// result back through fmtTime (which reads UTC parts). Used to gauge GPS-fix staleness and
+// to floor a live ETA at the present moment.
+function nowInCstClockMs(): number {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  }).formatToParts(new Date());
+  const g = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
+  const hh = g("hour") === "24" ? "00" : g("hour"); // some ICU builds emit 24 at midnight
+  return Date.parse(`${g("year")}-${g("month")}-${g("day")}T${hh}:${g("minute")}:${g("second")}Z`);
+}
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** "Jun 29 @ 9:18AM CST" (UTC parts = CST clock value). */
@@ -523,6 +545,33 @@ function fmtNoteStamp(ts: string | null): string | null {
   const g = (t: string) => parts.find((p) => p.type === t)?.value || "";
   return `${g("month")} ${g("day")} @ ${g("hour")}:${g("minute")}${g("dayPeriod").toUpperCase()} CST`;
 }
+
+/** A REAL tz-aware instant (note_date / order_change_logs.changed_at) expressed on the SAME
+ *  basis as ticket times — the America/Chicago wall clock placed in a UTC epoch — so the
+ *  activity feed can sort change events, notes and (CST-clock-in-UTC) truck messages together
+ *  in one newest→oldest order like D3's Social Stream. */
+function realInstantToCstClockMs(ts: string | null): number | null {
+  if (!ts) return null;
+  const d = new Date(ts);
+  if (Number.isNaN(d.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  }).formatToParts(d);
+  const g = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
+  const hh = g("hour") === "24" ? "00" : g("hour");
+  return Date.parse(`${g("year")}-${g("month")}-${g("day")}T${hh}:${g("minute")}:${g("second")}Z`);
+}
+
+// D3's Social-Stream short status names for current_status change events (numeric code →
+// label). Note these differ from the dispatch-board labels stored as *_display_value
+// ("Normal"/"Will Call") — D3's feed reads status 0 as "Firm", 4 as "Comp".
+const D3_FEED_STATUS: Record<string, string> = {
+  "0": "Firm", "1": "W/C", "2": "Active", "3": "Hold", "4": "Comp", "5": "Cancelled",
+};
+// Concrete volume shown to the half-yard, like D3 ("52.51" → "52.50").
+const halfYardLabel = (n: number) => (Math.round(n * 2) / 2).toFixed(2);
 
 /** "JUN 29 2026 2:32PM" (UTC parts = CST clock value). */
 function fmtDateTimeUpper(ts: string | null): string | null {
@@ -747,8 +796,11 @@ export async function getDoleseSummary(dateStr: string, dateToStr?: string): Pro
 /*  2. Orders list for a day                                          */
 /* ------------------------------------------------------------------ */
 
-export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListItem[]> {
-  const { from, to } = dayRange(dateStr);
+export async function getDoleseOrders(dateStr: string, dateToStr?: string): Promise<DoleseOrderListItem[]> {
+  // Support date ranges: with dateToStr the window runs from dateStr through the END of
+  // dateToStr (inclusive), else it's the single day. Mirrors getDoleseSummary.
+  const { from } = dayRange(dateStr);
+  const to = dateToStr ? dayRange(dateToStr).to : dayRange(dateStr).to;
 
   // Get tenant-specific Supabase client first
   const supabase = await getSupabaseClient();
@@ -842,23 +894,40 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
   // EVERY order in the day (not just the ones delv_qty already flagged active).
   const allIds = items.map((i) => Number(i.order_id));
   if (allIds.length > 0) {
-    const { data: tix } = await supabase
-      .from("tickets")
-      .select(`${TICKET_FIELDS}, order_id`)
-      .in("order_id", allIds)
-      .limit(10000);
-    const tickets = ((tix || []) as (TicketRow & { order_id: number })[]).filter(isValidTicket);
+    // Supabase/PostgREST caps EVERY response at its `max-rows` limit (1000 here); a bare
+    // `.limit(10000)`/`.limit(40000)` does NOT override it — it silently returns only the
+    // first 1000 rows. A busy day has far more tickets + ticket_products than that (07-17 had
+    // 2,432 products), so the tail loads of each order were dropped, undercounting poured
+    // volume and freezing FINISHED orders as "In Process" (e.g. 48107 read 346.5/357 → IN
+    // PROCESS on the board while the detail page correctly showed 357 → COMPLETED). Paginate:
+    // tickets by keyset range (ordered by the unique ticket_id), products by batching the
+    // ticket-id list so each request stays under the cap.
+    const tickets: (TicketRow & { order_id: number })[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data: tix } = await supabase
+        .from("tickets")
+        .select(`${TICKET_FIELDS}, order_id`)
+        .in("order_id", allIds)
+        .order("ticket_id")
+        .range(from, from + 999);
+      const rows = (tix || []) as (TicketRow & { order_id: number })[];
+      for (const t of rows) if (isValidTicket(t)) tickets.push(t);
+      if (rows.length < 1000) break;
+    }
 
     const cyByTicket = new Map<number, number>();
     if (tickets.length > 0) {
-      const { data: tp } = await supabase
-        .from("ticket_products")
-        .select("ticket_id, is_mix, load_qty, order_qty_unit")
-        .in("ticket_id", tickets.map((t) => t.ticket_id))
-        .limit(40000);
-      for (const p of tp || []) {
-        if (p.is_mix === true && isCubicYardUnit(p.order_qty_unit)) {
-          cyByTicket.set(p.ticket_id, (cyByTicket.get(p.ticket_id) || 0) + Number(p.load_qty || 0));
+      const tids = tickets.map((t) => t.ticket_id);
+      // ≤200 ticket ids per request keeps each response (≤~4 products/ticket) under the cap.
+      for (let i = 0; i < tids.length; i += 200) {
+        const { data: tp } = await supabase
+          .from("ticket_products")
+          .select("ticket_id, is_mix, load_qty, order_qty_unit")
+          .in("ticket_id", tids.slice(i, i + 200));
+        for (const p of tp || []) {
+          if (p.is_mix === true && isCubicYardUnit(p.order_qty_unit)) {
+            cyByTicket.set(p.ticket_id, (cyByTicket.get(p.ticket_id) || 0) + Number(p.load_qty || 0));
+          }
         }
       }
     }
@@ -933,6 +1002,16 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
         pouredVol,
         true,
       );
+      // D3 completes a dispatch-CLOSED order (current_status = 4) once every DELIVERED load has
+      // poured out — even when the delivered total fell short of the ORIGINAL order because the
+      // remaining loads were cancelled (e.g. 26404: ordered 84, only 14.5 ticketed+poured, dispatch
+      // closed → D3 shows "14.5 COMPLETE"). Our poured≥ordered rule wrongly held these In Process.
+      // `delivered`/`pouredVol` are over VALID (non-removed) tickets, so the cancelled tail isn't
+      // counted; a dispatch-closed order still actively pouring (pouredVol < delivered — a truck on
+      // the job, e.g. 48107 mid-pour) correctly stays In Process, matching D3.
+      if (it.status === "IN_PROCESS" && Number(meta?.cs) === 4 && delivered > 0 && pouredVol >= delivered - 0.02) {
+        it.status = "COMPLETED";
+      }
       // Ticket-based delivered is authoritative for the ticketed figure.
       it.ticketed_cy = Math.max(it.ticketed_cy, Math.round(delivered * 100) / 100);
       // Pie fill = volume POURED-OUT ÷ volume ordered — verified against the D3 export's own
@@ -994,17 +1073,26 @@ export async function getDoleseOrders(dateStr: string): Promise<DoleseOrderListI
   const rank = capturedSeq && capturedSeq.length ? new Map(capturedSeq.map((code, i) => [code, i])) : null;
   const END = Number.MAX_SAFE_INTEGER;
   items.sort((a, b) => {
+    // A captured D3 export for this date is AUTHORITATIVE: it already encodes D3's full board
+    // order (status grouping + intra-group dispatch sequence), so replay it verbatim. The
+    // status-group + scheduled-time heuristic below can't reproduce D3's intra-group order
+    // (same-minute / untimed orders follow D3's dispatch sequence, not derivable from our data),
+    // so it's only the fallback for LIVE dates that have no capture (which must re-sort as orders
+    // start/finish pouring). Orders absent from the capture (synced after it was taken) trail by id.
+    if (rank) {
+      const ra = rank.has(String(a.order_code)) ? (rank.get(String(a.order_code)) as number) : END;
+      const rb = rank.has(String(b.order_code)) ? (rank.get(String(b.order_code)) as number) : END;
+      if (ra !== rb) return ra - rb;
+      const ia0 = Number(a.order_id);
+      const ib0 = Number(b.order_id);
+      if (!Number.isNaN(ia0) && !Number.isNaN(ib0) && ia0 !== ib0) return ia0 - ib0;
+      return String(a.order_id).localeCompare(String(b.order_id));
+    }
     const g = groupRank(a.status) - groupRank(b.status);
     if (g !== 0) return g;
     const ta = startMinutes(a.start_time);
     const tb = startMinutes(b.start_time);
     if (ta !== tb) return ta - tb;
-    // Same group + same minute → captured D3 dispatch order when available.
-    if (rank) {
-      const ra = rank.has(String(a.order_code)) ? (rank.get(String(a.order_code)) as number) : END;
-      const rb = rank.has(String(b.order_code)) ? (rank.get(String(b.order_code)) as number) : END;
-      if (ra !== rb) return ra - rb;
-    }
     const ia = Number(a.order_id);
     const ib = Number(b.order_id);
     if (!Number.isNaN(ia) && !Number.isNaN(ib) && ia !== ib) return ia - ib;
@@ -1251,41 +1339,40 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   // line of 0, matching D3 (we were wrongly defaulting a 0 rate to 30). Only fall back to
   // 30 when the rate is genuinely absent (null/undefined).
   const scheduleRate = deliveryRatePerHour != null ? deliveryRatePerHour : 30;
-  // The delivered/poured-rate cap uses a positive fallback so a 0/absent schedule rate
-  // never clamps real delivered speeds to 0. It (and the first-point seed below) use the
-  // COMBINED ordered rate — the same 84 the "Ordered" line uses — so D3's Delivered line
-  // starts at the ordered rate and has the same headroom, rather than the per-wave 42.
-  const maxRateCap = (chartOrderedRate > 0 ? chartOrderedRate : 30) * 1.5;
-
-  // First delivery time (used as reference for elapsed time calculation)
+  // Rolling rate reference = the SCHEDULED START (order_product_schedules.start_time),
+  // matching D3. D3's Delivered/Poured line at each point is the cumulative CY delivered/
+  // poured DIVIDED BY the hours elapsed since the scheduled pour start — NOT since the first
+  // truck arrived. Measuring from the first arrival made the opening interval tiny (loads
+  // bunch at the start), so cumCY ÷ that window exploded (23705: 21 CY ÷ 5.5 min = 227 CY/HR),
+  // which the old code then clamped to the ordered rate — flattening the real curve to 42.
+  // Anchoring to the scheduled start reproduces D3 across the whole curve with no cap
+  // (23705 point 2: 21 CY ÷ (04:19:29 − 04:00) = 64.7 vs D3's 63; later points 15/19/11 match).
   const firstDeliveryTime = deliveredTickets.length > 0 && deliveredTickets[0].on_job_time
     ? new Date(deliveredTickets[0].on_job_time).getTime()
     : null;
+  const scheduleStartMs = scheduledTime ? new Date(scheduledTime).getTime() : null;
+  // Use the scheduled start when present and it precedes the first delivery (the normal case).
+  // Otherwise (no schedule, or a truck that arrived BEFORE the scheduled start) fall back to
+  // the first delivery so the elapsed window stays positive.
+  const rateStartMs =
+    scheduleStartMs != null && (firstDeliveryTime == null || scheduleStartMs <= firstDeliveryTime)
+      ? scheduleStartMs
+      : firstDeliveryTime;
+  // cumulative CY ÷ hours since rateStartMs. A non-positive window (only the very first point,
+  // if it coincides with the reference) seeds at the ordered rate, like D3.
+  const rollingRate = (cum: number, atMs: number): number => {
+    if (rateStartMs == null) return chartOrderedRate;
+    const elapsedHours = (atMs - rateStartMs) / 3_600_000;
+    return elapsedHours > 0 ? cum / elapsedHours : chartOrderedRate;
+  };
 
   let cumD = 0;
-  const delivered = deliveredTickets.map((t, index) => {
+  const delivered = deliveredTickets.map((t) => {
     cumD += cyByTicket.get(t.ticket_id) || 0;
-    const deliveryTime = new Date(t.on_job_time!).getTime();
-
-    let rate: number;
-    if (index === 0 || !firstDeliveryTime) {
-      // First delivery: no elapsed window yet — seed at the combined ordered rate (D3's
-      // Delivered line starts at the Ordered rate, then trends to the real delivered speed).
-      rate = chartOrderedRate;
-    } else {
-      // Calculate elapsed hours from first delivery
-      const elapsedMs = deliveryTime - firstDeliveryTime;
-      const elapsedHours = elapsedMs / (1000 * 60 * 60);
-      if (elapsedHours > 0) {
-        rate = Math.min(cumD / elapsedHours, maxRateCap);
-      } else {
-        rate = chartOrderedRate;
-      }
-    }
-    return { t: tsMin(t.on_job_time)!, v: r2(rate), ts: t.on_job_time || undefined };
+    return { t: tsMin(t.on_job_time)!, v: r2(rollingRate(cumD, new Date(t.on_job_time!).getTime())), ts: t.on_job_time || undefined };
   });
 
-  // Poured rate: cumulative_qty / elapsed_hours (from first delivery)
+  // Poured rate: cumulative poured-out CY ÷ hours since the scheduled start (same basis).
   const pouredTickets = tickets
     .filter((t) => tsMin(pourOutTime(t)) != null)
     .sort((a, b) => (pourOutTime(a) || "").localeCompare(pourOutTime(b) || ""));
@@ -1293,22 +1380,7 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   let cumP = 0;
   const poured = pouredTickets.map((t) => {
     cumP += cyByTicket.get(t.ticket_id) || 0;
-    const pourTime = new Date(pourOutTime(t)!).getTime();
-
-    let rate: number;
-    if (!firstDeliveryTime) {
-      rate = chartOrderedRate;
-    } else {
-      // Calculate elapsed hours from first delivery
-      const elapsedMs = pourTime - firstDeliveryTime;
-      const elapsedHours = elapsedMs / (1000 * 60 * 60);
-      if (elapsedHours > 0) {
-        rate = Math.min(cumP / elapsedHours, maxRateCap);
-      } else {
-        rate = chartOrderedRate;
-      }
-    }
-    return { t: tsMin(pourOutTime(t))!, v: r2(rate), ts: pourOutTime(t) || undefined };
+    return { t: tsMin(pourOutTime(t))!, v: r2(rollingRate(cumP, new Date(pourOutTime(t)!).getTime())), ts: pourOutTime(t) || undefined };
   });
 
   // Trucks on the job: waiting (arrived, not pouring) vs pouring, over time.
@@ -1452,7 +1524,17 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   // order = 60 × 10.5 CY ÷ 32 CY/hr = 19.69 min, which reproduces D3's Planned On Job
   // column exactly (03:00:00, 03:19:41, 03:39:22 …). Falls back to truck_space, then the
   // observed arrival gap, when the rate/loads aren't known.
-  const schedStartMin = scheduledTime ? tsMin(scheduledTime) : null;
+  // Producer "DUE" reference: D3 measures producer (Dolese) lateness from the ORDER's requested
+  // on-job time — the time-of-day carried on order_date — NOT the plant's per-load scheduled
+  // slot. They coincide for most orders (48506: order 15:30 = scheduled 15:30, delay 0), but
+  // when the plant reschedules a load LATER than the customer asked, D3 still measures from the
+  // request: 26202 was ordered for 14:00 yet scheduled 15:00, and D3's DUE is 14:00 (truck
+  // arrived 15:08 → 69 MIN, not 9). Fall back to the schedule start only when order_date carries
+  // no time (midnight / date-only).
+  const orderDateMin = order.order_date ? tsMin(order.order_date as string) : null;
+  const schedStartMin = orderDateMin != null && orderDateMin > 0
+    ? orderDateMin
+    : (scheduledTime ? tsMin(scheduledTime) : null);
   const loadCY = numberOfLoads && numberOfLoads > 0 ? ordered / numberOfLoads : 0;
   const cadence =
     deliveryRatePerHour && deliveryRatePerHour > 0 && loadCY > 0
@@ -1516,10 +1598,14 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
     // matches D3 here (the scheduled count is only an estimate and under-counted).
     const prod = prodRef != null && onJob != null
       ? Math.max(0, Math.round(onJob - prodRef)) : 0;
-    // D3 "Waiting To Pour" = max(0, Begin Pour − At Job): the on-site wait — how long the
-    // truck sat on the job after ARRIVING before it began pouring (measured from the
-    // actual arrival, NOT the planned slot).
-    const wait = begin != null && onJob != null ? Math.max(0, Math.round(begin - onJob)) : 0;
+    // D3 "Waiting To Pour" = max(0, Begin Pour − max(At Job, Scheduled slot)): the on-site wait
+    // the CONTRACTOR is responsible for. It's measured from actual arrival for an on-time/late
+    // truck, but from the SCHEDULED slot when the truck arrived EARLY — the minutes it idled
+    // before it was even due aren't a contractor delay (48506: At Job 15:08, scheduled 15:30,
+    // Begin Pour 16:26 → wait 56 from the slot, not 78 from arrival → contractor 2, matching D3).
+    const sched = tsMin(t.scheduled_on_job_time);
+    const readyRef = onJob != null && sched != null ? Math.max(onJob, sched) : onJob;
+    const wait = begin != null && readyRef != null ? Math.max(0, Math.round(begin - readyRef)) : 0;
     // D3 "Pour Min Over" = (End Pour − Begin Pour) − allotment, SIGNED — negative when the
     // pour finished inside the allotted window. End Pour = end_unload → wash_time → to_plant.
     const over = endPour != null && begin != null && allotment > 0
@@ -1561,43 +1647,94 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   const onTimeNum = loadDelays.filter((l) => l.prod_delay === 0).length;
   onTimePct = onTimeDen ? Math.floor((100 * onTimeNum) / onTimeDen) : 100;
 
-  // Activity feed: truck-movement messages derived from ticket timestamps
-  // (newest first). Status/product-change history isn't available in the data.
+  // Activity feed = D3's Social Stream. Three sources, merged newest→oldest:
+  //   1. truck-movement messages, reconstructed from ticket timestamps (D3 live-recomputes
+  //      these "expected to arrive" ETAs, so we compute them too rather than replay the log);
+  //   2. user-entered notes (order_notes);
+  //   3. dispatch change events (order_change_logs) — status & volume changes like
+  //      "Status changed from Firm to Hold" / "Volume changed from 52.50 to 63.00".
+  // Every item carries a CST-wall-clock sort key so the three streams interleave in one true
+  // chronological order (ticket times are CST-clock-in-UTC; note/change times are real
+  // instants normalised via realInstantToCstClockMs).
+  type FeedItem = { text: string; time: string; ms: number; ord: number };
   const addrLabel = order.delivery_addr1 || order.project_name || "the job";
   const moved = tickets
     .filter((t) => has(t.to_job_time) || has(t.on_job_time))
     .sort((a, b) =>
       (b.to_job_time || b.on_job_time || "").localeCompare(a.to_job_time || a.on_job_time || ""),
     );
-  const activity = moved
-    .map((t, idx) => {
-      const stamp = fmtStamp(t.to_job_time || t.on_job_time);
+  const truckActivity = moved
+    .map((t, idx): FeedItem | null => {
+      const raw = t.to_job_time || t.on_job_time;
+      const stamp = fmtStamp(raw);
       if (!stamp || !t.truck_code) return null;
       const arrive = fmtTime(t.on_job_time || t.to_job_time, false) || "";
       const text =
         idx === 0
           ? `Truck ${t.truck_code} is your last load for ${addrLabel}. If you need more concrete, please call Dispatch.`
           : `Truck ${t.truck_code} heading to ${addrLabel} and is expected to arrive at ${arrive}`;
-      return { text, time: stamp };
+      return { text, time: stamp, ms: new Date(raw!).getTime(), ord: 0 };
     })
-    .filter((m): m is { text: string; time: string } => m != null);
+    .filter((m): m is FeedItem => m != null);
 
-  // User-entered notes from order_notes = D3's "user generated posts" in the Social
-  // Stream. note_date is a real tz-aware instant → format to CST. (D3 also shows auto
-  // change-events like "Status changed from W/C to Firm" / "Volume changed…"; those are
-  // D3 audit-log entries that aren't synced into our DB, so they can't be reproduced.)
+  // User-entered notes from order_notes = D3's "user generated posts". note_date is a real
+  // tz-aware instant → format/sort in CST.
   const { data: noteRows } = await supabase
     .from("order_notes")
     .select("note_description, note_date")
     .eq("order_id", orderId)
     .order("note_date", { ascending: false })
     .limit(200);
-  const noteActivity = (noteRows || [])
+  const noteActivity: FeedItem[] = (noteRows || [])
     .filter((n) => (n.note_description || "").toString().trim() !== "")
-    .map((n) => ({ text: String(n.note_description).trim(), time: fmtNoteStamp(n.note_date) || "" }));
-  // Truck-movement messages (recent) first, then user notes — the order-summary card is
-  // appended last by the client, matching D3's newest→oldest feed.
-  const activityFeed = [...activity, ...noteActivity];
+    .map((n) => ({
+      text: String(n.note_description).trim(),
+      time: fmtNoteStamp(n.note_date) || "",
+      ms: realInstantToCstClockMs(n.note_date) ?? 0,
+      ord: 0,
+    }));
+
+  // Dispatch change events from order_change_logs — D3's audit entries. These ARE now in the
+  // DB (the full production cluster carries order_change_logs; the old thin mirror did not, so
+  // this feed used to omit them). We render the two the D3 stream shows as their own bubbles —
+  // current_status and order volume — matching D3's wording: short status names (0 = "Firm",
+  // 4 = "Comp") and half-yard volumes, and we DROP no-op changes (a 52.51→52.50 volume edit
+  // that rounds to the same figure, or a status that maps to the same label), exactly as D3 does.
+  const { data: changeRows } = await supabase
+    .from("order_change_logs")
+    .select("changed_at, display_order, field_name, old_value, new_value")
+    .eq("order_id", orderId)
+    .in("field_name", ["current_status", "volume"])
+    .order("changed_at", { ascending: false })
+    .limit(300);
+  const changeActivity = (changeRows || [])
+    .map((r): FeedItem | null => {
+      let text = "";
+      if (r.field_name === "current_status") {
+        const from = D3_FEED_STATUS[String(r.old_value)] ?? String(r.old_value ?? "");
+        const to = D3_FEED_STATUS[String(r.new_value)] ?? String(r.new_value ?? "");
+        if (!to || from === to) return null;
+        text = `Status changed from ${from} to ${to}`;
+      } else {
+        const o = halfYardLabel(Number(r.old_value));
+        const n = halfYardLabel(Number(r.new_value));
+        if (!Number.isFinite(Number(r.new_value)) || o === n) return null;
+        text = `Volume changed from ${o} to ${n}`;
+      }
+      // order_change_logs.changed_at is a CST clock value in a UTC field (like ticket times,
+      // and UNLIKE order_notes.note_date which is a real instant) — D3 reads its UTC parts
+      // directly as the CST clock (09:13Z → "9:13AM CST"). So format/sort with fmtStamp +
+      // getTime, matching D3 (converting it via fmtNoteStamp shifted every event 5h early).
+      return { text, time: fmtStamp(r.changed_at) || "", ms: new Date(r.changed_at!).getTime(), ord: Number(r.display_order) || 0 };
+    })
+    .filter((m): m is FeedItem => m != null);
+
+  // Merge all three streams newest→oldest (ties broken by display_order so a status + volume
+  // change at the same instant read in D3's order). The order-summary card is appended last by
+  // the client. Strip the sort keys before returning.
+  const activityFeed = [...truckActivity, ...noteActivity, ...changeActivity]
+    .sort((a, b) => b.ms - a.ms || a.ord - b.ord)
+    .map(({ text, time }) => ({ text, time }));
 
   // Measured concrete temperature for the evaporation estimate — D3 uses the CURRENT
   // load's Verifi reading (temp at discharge/pour), not a fixed value, so the tile and
@@ -1692,7 +1829,14 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   // e.g. 48508 reads ~12 vs D3's 16. That's a data-sync gap, not a formula bug.
   const loadRates: number[] = [];
   for (const t of tickets) {
-    const arr = tsMin(t.on_job_time);
+    const arrRaw = tsMin(t.on_job_time);
+    const sched = tsMin(t.scheduled_on_job_time);
+    // On-site cycle starts at the LATER of actual arrival and the scheduled slot: a truck that
+    // shows up EARLY and sits until its slot shouldn't have that idle time dragging its rate
+    // down. D3 measures from the slot in that case (48506: At Job 15:08 but scheduled 15:30 —
+    // cycle 15:30→to-plant, rate 5, not 15:08→to-plant, rate 3). A late truck (arrival ≥ slot)
+    // is unchanged since max(arrival, slot) = arrival.
+    const arr = arrRaw != null && sched != null ? Math.max(arrRaw, sched) : arrRaw;
     const fin = tsMin(t.to_plant_time || t.wash_time || t.end_unload);
     const cyv = cyByTicket.get(t.ticket_id) || 0;
     if (arr == null || fin == null || fin <= arr || cyv <= 0) continue;
@@ -1748,10 +1892,21 @@ export async function getDoleseOrderDetail(orderId: number | string): Promise<Do
   }
 
   let pourFinish: string | null = null;
-  const finishMs =
+  let finishMs =
     scheduleFinishMs != null && progressFinishMs != null
       ? Math.max(scheduleFinishMs, progressFinishMs) // running behind → push later
       : (progressFinishMs ?? scheduleFinishMs);
+  // An in-process order's pour cannot finish in the PAST. Our "now" proxy (nowMin) is the
+  // latest ticket stamp, which freezes when stamps stop arriving at the tail of a pour — so
+  // a projection anchored to it can fall behind the real clock (48107: last stamp 08:53 while
+  // the real clock was 09:11, so the tile showed a 08:53 finish 18 min in the past). Floor
+  // the finish at the live Central clock so it never reads a past time. NOTE: this stops the
+  // under-report but won't reach D3's later value — D3 knows the last truck is still pouring
+  // (it projects that discharge forward); our mirror lacks that load's pour-out stamp, so our
+  // "poured after 20 min on job" heuristic treats it as already done (remaining ≈ 0).
+  if (finishMs != null && status !== "COMPLETED") {
+    finishMs = Math.max(finishMs, nowInCstClockMs());
+  }
   if (finishMs != null) {
     pourFinish = fmtTime(new Date(finishMs).toISOString(), true);
   } else {
@@ -2279,7 +2434,7 @@ export async function getDoleseTruckArrival(orderId: number): Promise<DoleseTruc
 
   const { data: order, error } = await supabase
     .from("orders")
-    .select("order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products(order_qty, order_qty_unit, is_mix)")
+    .select("order_id, order_code, order_date, customer_name, delivery_addr1, project_name, latitude, longitude, current_status, removed, remove_reason_code, order_products(order_qty, order_qty_unit, is_mix)")
     .eq("order_id", orderId)
     .limit(1)
     .maybeSingle();
@@ -2330,14 +2485,70 @@ export async function getDoleseTruckArrival(orderId: number): Promise<DoleseTruc
   // Dispatch order (printed ascending) — the pouring/earliest truck leads, newest trails.
   const active = [...byTruck.values()].sort((a, b) => (a.printed_time || "").localeCompare(b.printed_time || ""));
 
+  // ---- Live arrival ETA via Mapbox (en-route trucks) --------------------------------
+  // D3 predicts a not-yet-arrived truck's arrival by routing its live GPS to the jobsite.
+  // Our sync is meant to do the same into tickets.eta_data, but that pipeline's Google
+  // Routes API is disabled/unbilled on its GCP project — every eta_data row is a 403 error
+  // — so eta_data is unusable. We route with Mapbox instead (the token the truck map
+  // already uses). Scope: trucks that have LEFT the plant (to_job_time set) but not yet
+  // arrived — where a GPS route is meaningful. GPS fix time is a local-clock value in a UTC
+  // field (same convention as the ticket stamps: verified location_update_time 08:24 while
+  // the sync's real-UTC updated_at was 13:27), so `fix + drive` stays in that convention and
+  // fmtTime renders it directly. Best-effort: any miss (no token, no/stale GPS, Mapbox error
+  // or timeout) leaves the ticket out of the map and the tile falls back to the schedule.
+  const mapboxEtaByTicket = new Map<number, string>();
+  const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+  const jobLat = (order as { latitude?: number | null }).latitude;
+  const jobLng = (order as { longitude?: number | null }).longitude;
+  if (MAPBOX_TOKEN && jobLat != null && jobLng != null) {
+    const enRoute = active.filter((t) => !has(t.on_job_time) && has(t.to_job_time));
+    const codes = [...new Set(enRoute.map((t) => (t.truck_code || "").trim()).filter(Boolean))];
+    if (codes.length) {
+      const { data: gpsRows } = await supabase
+        .from("trucks")
+        .select("code, latitude, longitude, location_update_time")
+        .in("code", codes);
+      const gpsByCode = new Map(
+        (gpsRows || [])
+          .filter((g) => g.latitude != null && g.longitude != null)
+          .map((g) => [String(g.code).trim(), g as { code: string; latitude: number; longitude: number; location_update_time: string | null }]),
+      );
+      const nowCstMs = nowInCstClockMs();
+      await Promise.all(
+        enRoute.map(async (t) => {
+          const g = gpsByCode.get((t.truck_code || "").trim());
+          if (!g) return;
+          const fixMs = g.location_update_time ? new Date(g.location_update_time).getTime() : NaN;
+          // Skip a GPS fix older than 30 min — the truck may have moved far from it.
+          if (Number.isNaN(fixMs) || nowCstMs - fixMs > 30 * 60000) return;
+          try {
+            const url =
+              `https://api.mapbox.com/directions/v5/mapbox/driving/` +
+              `${g.longitude},${g.latitude};${jobLng},${jobLat}` +
+              `?access_token=${MAPBOX_TOKEN}&overview=false`;
+            const res = await fetch(url, { signal: AbortSignal.timeout(2500) });
+            if (!res.ok) return;
+            const j = (await res.json()) as { routes?: { duration?: number }[] };
+            const dur = j.routes?.[0]?.duration;
+            if (typeof dur !== "number") return;
+            // Floor at "now" so a truck already past its fix never shows a past clock time.
+            const etaMs = Math.max(fixMs + dur * 1000, nowCstMs);
+            mapboxEtaByTicket.set(t.ticket_id, new Date(etaMs).toISOString());
+          } catch {
+            /* timeout / network / parse error — fall back to scheduled */
+          }
+        }),
+      );
+    }
+  }
+
   const trucks: DoleseTruckArrivalTile[] = active.map((t) => {
     const stage = ticketStage(t);
-    // D3's subtitle is ALWAYS "TRUCK n ON JOB: {time}", regardless of the truck's
-    // current stage. The time is its arrival on the job: the actual on_job_time once
-    // it has arrived, otherwise the predicted arrival. D3's prediction comes from live
-    // GPS (eta_data, null in our mirror), so we fall back to scheduled_on_job_time —
-    // which matches D3 to within ~1–2 min. The icon still reflects the current stage.
-    const arrivalTs = t.on_job_time || t.scheduled_on_job_time;
+    // D3's subtitle is ALWAYS "TRUCK n ON JOB: {time}", regardless of the truck's current
+    // stage. The time is its arrival on the job: the actual on_job_time once it has arrived,
+    // otherwise the live Mapbox ETA (above) for en-route trucks, otherwise the scheduled
+    // arrival. The icon still reflects the current stage.
+    const arrivalTs = t.on_job_time || mapboxEtaByTicket.get(t.ticket_id) || t.scheduled_on_job_time;
     return {
       ticket_id: t.ticket_id,
       ticket_code: t.ticket_code,
