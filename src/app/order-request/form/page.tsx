@@ -1,11 +1,9 @@
 import { getRolloutCustomer, getProjectBasic, getReferencedOrders } from "@/actions/orderActions";
 import JobAddressField from "./JobAddressField";
+import { CARD, INP, LBL, REQ } from "./styles";
+import css from "./form.module.css";
 
 export const dynamic = "force-dynamic";
-
-// Matches D3's .form-control: grey fill, 4px left accent bar, square corners, 42px tall.
-const INP =
-  "block h-[42px] w-full rounded-none border border-[#f6f6f6] border-l-4 border-l-[#cfcfcf] bg-[#f6f6f6] px-3 py-1 text-sm text-[#555] outline-none focus:border-[#ffcb05] focus:border-l-[#ffcb05]";
 
 // Matches D3's <li class="form-group badge-li"> + absolute .number-badge (25px yellow circle
 // in the left gutter). The gutter itself comes from the <ol> content-box margin below.
@@ -13,25 +11,51 @@ function Field({
   n,
   label,
   required,
+  extraGap,
   children,
 }: {
   n: number;
   label: string;
   required?: boolean;
+  /** D3 trails the Admixture and Other Products rows with a stray `<br>` after their
+   *  hidden inputs, which renders a 20px line box on top of the row's own 20px margin. */
+  extraGap?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <li className="relative mb-5 pl-[25px]">
+    <li className={`relative pl-[25px] ${extraGap ? "mb-10" : "mb-5"}`}>
       <span className="absolute left-[-30px] top-[-1px] flex h-[25px] w-[25px] items-center justify-center rounded-full bg-[#ffcb05] text-[14px] font-bold text-black">
         {n}
       </span>
-      {/* D3 .wizard-form-text-label: inline, 15px/500/#575757, no margin (block input drops below). */}
-      <label className="text-[15px] font-medium text-[#575757]">
+      {/* D3 keeps the space OUTSIDE span.require ("Label <span>*</span>"), so the span box
+          is just the asterisk. */}
+      <label className={LBL}>
         {label}
-        {required ? <span className="text-red-500"> *</span> : null}
+        {required ? <> <span className={REQ}>*</span></> : null}
       </label>
       {children}
     </li>
+  );
+}
+
+// D3 .custom-radio > .form-input-radio > .custom-input-radio--wrapper: a row of Yes/No
+// (stacking below 600px), each item 5px/20px-margined, 5px between the dot and its text.
+function YesNo({ name, defaultChecked }: { name: string; defaultChecked?: "yes" | "no" }) {
+  return (
+    <div className={`${css.radioGroup} text-sm text-[#333]`}>
+      {(["yes", "no"] as const).map((v) => (
+        <label key={v} className="my-[5px] mr-5 flex items-center">
+          <input
+            type="radio"
+            name={name}
+            value={`${name}${v}`}
+            defaultChecked={defaultChecked === v}
+            className="mr-[5px]"
+          />
+          {v === "yes" ? "Yes" : "No"}
+        </label>
+      ))}
+    </div>
   );
 }
 
@@ -78,25 +102,22 @@ export default async function OrderRequestFormPage({
   }
 
   return (
-    <div className="space-y-4">
+    // space-y-5 is D3 .header-banner's `margin-bottom: 20px` down to the card.
+    <div className="space-y-5">
       {/* D3 .header-banner: yellow bar, 5px slate top border, 30px title (left-aligned on
-          narrow widths), logo pinned right. */}
-      <div className="relative mx-auto w-full min-[768px]:max-w-[750px] min-[992px]:max-w-[970px] min-[1200px]:max-w-[1170px] border-t-[5px] border-[#44525d] bg-[#ffcb05] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.12)]">
-        <span className="block text-center text-[30px] font-bold text-[#00502f] max-[980px]:text-left max-[631px]:text-[25px] max-[431px]:text-[15px]">
-          Order Request Form
-        </span>
+          narrow widths), logo pinned right. D3 puts NO box-shadow on this bar. */}
+      <div className={`${CARD} relative border-t-[5px] border-[#44525d] bg-[#ffcb05] p-5`}>
+        {/* Title + logo carry D3's max-width breakpoints, which live in form.module.css —
+            see the note there on why they can't be Tailwind variants. */}
+        <span className={css.bannerTitle}>Order Request Form</span>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://d3.truckast.com/images/logos/dolese-logo.svg"
-          alt="DOLESE"
-          className="absolute right-[10px] top-[3px] h-[35px] w-auto"
-        />
+        <img src="https://d3.truckast.com/images/logos/dolese-logo.svg" alt="DOLESE" className={css.bannerLogo} />
       </div>
 
       {/* D3 .order-request-form--wrapper: 40px padding, soft shadow, square-ish card. */}
-      <form className="mx-auto w-full min-[768px]:max-w-[750px] min-[992px]:max-w-[970px] min-[1200px]:max-w-[1170px] rounded-[10px] bg-white p-10 shadow-[0_0_12px_2px_rgba(0,0,0,0.16)]">
+      <form className={`${CARD} rounded-[10px] bg-white p-10 shadow-[0_0_12px_2px_rgba(0,0,0,0.16)]`}>
         {/* D3 .order-form-content-box: 3em side inset (1em on ≤600px) — the field gutter. */}
-        <ol className="mx-12 list-none p-0 max-[600px]:mx-4">
+        <ol className={css.contentBox}>
         <Field n={1} label="Company">
           {/* Read-only: the company is fixed by the customer/project the form was opened for. */}
           <select className={`${INP} cursor-not-allowed opacity-90`} defaultValue={companyName} disabled>
@@ -130,14 +151,7 @@ export default async function OrderRequestFormPage({
           <input className={INP} defaultValue="(310)555-5555" />
         </Field>
         <Field n={8} label="Add a Job Site Contact">
-          <div className="flex items-center gap-4 text-sm text-[#333]">
-            <label className="flex items-center gap-1">
-              <input type="radio" name="jobsite" /> Yes
-            </label>
-            <label className="flex items-center gap-1">
-              <input type="radio" name="jobsite" defaultChecked /> No
-            </label>
-          </div>
+          <YesNo name="jobsite" defaultChecked="no" />
         </Field>
         <Field n={9} label="On Job Date" required>
           <select className={INP} defaultValue={dateOptions[0]}>
@@ -147,7 +161,8 @@ export default async function OrderRequestFormPage({
           </select>
         </Field>
         <Field n={10} label="On Job Time" required>
-          <select className={INP} defaultValue="00:00">
+          {/* D3 .form-control-time trims this one control to 36px (every other is 42px). */}
+          <select className={`${INP} !h-[36px] cursor-pointer`} defaultValue="00:00">
             {timeOptions.map((t) => (
               <option key={t}>{t}</option>
             ))}
@@ -162,14 +177,7 @@ export default async function OrderRequestFormPage({
           </select>
         </Field>
         <Field n={13} label="Do You Know The Mix Code?" required>
-          <div className="flex items-center gap-4 text-sm text-[#333]">
-            <label className="flex items-center gap-1">
-              <input type="radio" name="mixcode" /> Yes
-            </label>
-            <label className="flex items-center gap-1">
-              <input type="radio" name="mixcode" /> No
-            </label>
-          </div>
+          <YesNo name="mixcode" />
         </Field>
         <Field n={14} label="Slump" required>
           <select className={INP}>
@@ -195,30 +203,33 @@ export default async function OrderRequestFormPage({
           </select>
         </Field>
         <Field n={19} label="Pumped">
-          <div className="flex items-center gap-4 text-sm text-[#333]">
-            <label className="flex items-center gap-1">
-              <input type="radio" name="pumped" /> Yes
-            </label>
-            <label className="flex items-center gap-1">
-              <input type="radio" name="pumped" defaultChecked /> No
-            </label>
-          </div>
+          <YesNo name="pumped" defaultChecked="no" />
         </Field>
-        <Field n={20} label="Admixture Product">
+        <Field n={20} label="Admixture Product" extraGap>
           <input className={INP} placeholder="Select Admixture" />
         </Field>
-        <Field n={21} label="Other Products">
+        <Field n={21} label="Other Products" extraGap>
           <input className={INP} placeholder="Select Other Products" />
         </Field>
         <Field n={22} label="Notes & Comments">
-          <textarea className={`${INP} !h-[100px] resize-none`} placeholder="Enter Notes, Comments, Delivery Instructions, etc." />
+          {/* D3 .txtarea overrides .form-control's line-height with 130%. */}
+          <textarea
+            className={`${INP} !h-[100px] resize-none leading-[130%]`}
+            placeholder="Enter Notes, Comments, Delivery Instructions, etc."
+          />
         </Field>
 
         </ol>
-        <div className="pt-4 text-center">
+        {/* D3 .form-group-btn--wrapper + .btn-success: the 20px standoff is the button's own
+            margin-top, and its padding is em-based off its 14px font-size (9.8px/42px).
+            D3's markup is `class="btn-success"` WITHOUT `btn`, so `.btn`'s `margin: 0 2px`
+            never lands — the button has no horizontal margin. The inline <style> kills
+            .btn-success's gradient (`background-image: none !important`) but NOT its
+            text-shadow, which survives from d3_complete.css and is still painted. */}
+        <div className="flex justify-center">
           <button
             type="submit"
-            className="rounded-[4px] bg-[#f5c518] px-8 py-2 text-sm font-semibold text-[#1f3a2d] hover:bg-[#e6b800]"
+            className="mt-5 rounded-[5px] border-0 bg-[#ffcb05] px-[3em] py-[0.7em] text-sm font-normal text-[#00502f] [text-shadow:0_-1px_0_rgba(0,0,0,0.25)]"
           >
             Submit
           </button>

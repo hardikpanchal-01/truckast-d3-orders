@@ -4,12 +4,18 @@
  */
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { getPgAdapterClient } from "@/supabase/pg-adapter";
 
 // Lazy initialization to avoid build-time errors when env vars aren't available
 let _supabaseServer: SupabaseClient | null = null;
 let _supabaseAuth: SupabaseClient | null = null;
 
 function getSupabaseServer(): SupabaseClient {
+  // When the new Dolese Postgres cluster is configured (DOLESE_PG_URL), serve the
+  // DATA layer from it via the pg adapter instead of the Supabase REST client.
+  const pg = getPgAdapterClient();
+  if (pg) return pg as unknown as SupabaseClient;
+
   if (!_supabaseServer) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey =

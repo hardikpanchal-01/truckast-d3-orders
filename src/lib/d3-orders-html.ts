@@ -107,7 +107,12 @@ function orderTile(o: DoleseOrderListItem): string {
   const isPie = o.status === "IN_PROCESS";
   const isComplete = o.status === "COMPLETED";
   const isPrePour = o.status === "PRE_POUR";
-  const superTitle = `${o.order_code}-${md(o.order_date)}: ${cyLabel(o.ordered_cy)} CY (${statusLabel(o)})`;
+  // Tile CY, matching D3: a STARTED order (In-Process / Complete) shows the DELIVERED
+  // (ticketed) volume — which, for an order that took less than ordered before dispatch
+  // closed, is below the original order (26404: ordered 84, delivered 14.5 → D3 shows 14.5).
+  // A not-yet-started order (Pre-Pour / On-Hold) or a Cancelled one shows the ORDERED volume.
+  const shownCy = isComplete || isPie ? o.ticketed_cy : o.ordered_cy;
+  const superTitle = `${o.order_code}-${md(o.order_date)}: ${cyLabel(shownCy)} CY (${statusLabel(o)})`;
   const start = isPrePour ? startLabel(o.start_time) : "";
   const addr = o.delivery_addr1 || o.project_name || "";
   const title = `${start} ${addr}`.trim().toUpperCase();
@@ -166,6 +171,19 @@ function fuelTile(ann?: DoleseAnnouncement | null): string {
  *  on its own from /api/orders-tiles so the client can re-render it live. */
 export function renderTiles(orders: DoleseOrderListItem[], announcement?: DoleseAnnouncement | null): string {
   return fuelTile(announcement) + orders.map(orderTile).join("");
+}
+
+const SEARCH_TEMPLATE_PATH = join(process.cwd(), "public", "d3-static", "order-search.html");
+
+/**
+ * The D3 "OrderSearch" form (reached from the orders date dropdown's SEARCH option).
+ * Same hybrid approach as buildOrdersHtml: serve the static shell with its relative asset
+ * paths absolutized so the D3 CSS/JS resolve at /orders/search. The SEARCH button itself is
+ * wired client-side (order-search-live.js) to navigate to /orders?date=&dateTo=.
+ */
+export async function buildOrderSearchHtml(): Promise<string> {
+  const html = await readFile(SEARCH_TEMPLATE_PATH, "utf8");
+  return html.split("./JobsForFixedNodeID_files/").join(ASSET + "/");
 }
 
 export async function buildOrdersHtml(): Promise<string> {

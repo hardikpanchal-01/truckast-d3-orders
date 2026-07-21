@@ -17,7 +17,22 @@
     );
   }
   if (!D) D = iso(new Date());
+  var DT = q.get("dateTo"); // range end (present for Last 7 / month / Future / etc.)
   var BASE = location.pathname;
+  // Query string for the tile + summary feeds — carries the range end when present.
+  function feedQS() { return "date=" + encodeURIComponent(D) + (DT ? "&dateTo=" + encodeURIComponent(DT) : ""); }
+  // Friendly label for the download tile — the preset NAME D3 shows ("Yesterday"), the date,
+  // or the range span. Mirrors the date dropdown's own relative-day logic (mdy/iso defined
+  // below are hoisted). D3 shows "Yesterday", not "07/17/2026", on the ORDERS download tile.
+  function friendlyDate() {
+    if (DT) return mdy(new Date(D + "T00:00:00")) + " - " + mdy(new Date(DT + "T00:00:00"));
+    var todayISO = iso(new Date());
+    var n = Math.round((new Date(D + "T00:00:00") - new Date(todayISO + "T00:00:00")) / 86400000);
+    if (n === 0) return "Today";
+    if (n === -1) return "Yesterday";
+    if (n === 1) return "Tomorrow";
+    return mdy(new Date(D + "T00:00:00"));
+  }
 
   // Download tile → same-origin CSV export for the selected date.
   window.d3Export = function () {
@@ -29,9 +44,8 @@
     return c[c.length - 1] || null;
   }
 
-  // ---- Date dropdown: built dynamically (last ~30 days + near future, per D3),
-  //      each option navigates to that date on OUR origin. No static D3 labels. ----
-  var WD = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  // ---- Date dropdown: built dynamically to match D3's preset list, each option navigating
+  //      on OUR origin. No static D3 labels. ----
   function mdy(dt) {
     return (
       String(dt.getMonth() + 1).padStart(2, "0") +
@@ -41,39 +55,63 @@
       dt.getFullYear()
     );
   }
-  function dateLabel(dt, todayISO) {
-    var di = iso(dt);
-    var diff = Math.round((new Date(di + "T00:00:00") - new Date(todayISO + "T00:00:00")) / 86400000);
-    if (diff === 0) return "TODAY - " + mdy(dt);
-    if (diff === 1) return "TOMORROW - " + mdy(dt);
-    if (diff === -1) return "YESTERDAY - " + mdy(dt);
-    return WD[dt.getDay()] + " - " + mdy(dt);
+  // Month-year label like D3 ("AUGUST 2026").
+  function monthLabel(dt) {
+    return dt.toLocaleDateString("en-US", { month: "long", year: "numeric" }).toUpperCase();
   }
+  // D3's preset list: TODAY / TOMORROW / YESTERDAY, the next 5 individual days, the rest of
+  // this month, LAST 7 / LAST 30 DAYS, the next 3 months, FUTURE and SEARCH. Range presets
+  // carry a "start|end" value and navigate with ?date=&dateTo=; single presets use ?date=.
   function wireDates() {
     var sel = document.getElementById("daterangeurl");
     if (!sel) return;
-    var todayISO = iso(new Date());
-    var offsets = [0];
-    for (var f = 1; f <= 7; f++) offsets.push(f); // near future
-    for (var p = 1; p <= 30; p++) offsets.push(-p); // last 30 days
+    var today = new Date(iso(new Date()) + "T00:00:00");
+    function shift(n) { var d = new Date(today); d.setDate(today.getDate() + n); return d; }
+    var tmr = shift(1), yst = shift(-1);
+    var eom = new Date(today.getFullYear(), today.getMonth() + 1, 0); // last day of this month
+    var opts = [];
+    opts.push({ v: iso(today), t: "TODAY - " + mdy(today) });
+    opts.push({ v: iso(tmr), t: "TOMORROW - " + mdy(tmr) });
+    opts.push({ v: iso(yst), t: "YESTERDAY" });
+    for (var i = 2; i <= 6; i++) { var d = shift(i); opts.push({ v: iso(d), t: mdy(d) }); }
+    opts.push({ v: iso(tmr) + "|" + iso(eom), t: mdy(tmr) + " - " + mdy(eom) }); // rest of this month
+    opts.push({ v: iso(shift(-6)) + "|" + iso(today), t: "LAST 7 DAYS" });
+    opts.push({ v: iso(shift(-29)) + "|" + iso(today), t: "LAST 30 DAYS" });
+    for (var m = 1; m <= 3; m++) {
+      var f0 = new Date(today.getFullYear(), today.getMonth() + m, 1);
+      var l0 = new Date(today.getFullYear(), today.getMonth() + m + 1, 0);
+      opts.push({ v: iso(f0) + "|" + iso(l0), t: monthLabel(f0) });
+    }
+    opts.push({ v: iso(tmr) + "|" + iso(shift(30)), t: "FUTURE" });
+    opts.push({ v: "search", t: "SEARCH" });
+
+    var curVal = DT ? D + "|" + DT : D;
     var html = "";
-    var hasD = false;
-    for (var i = 0; i < offsets.length; i++) {
-      var dt = new Date(todayISO + "T00:00:00");
-      dt.setDate(dt.getDate() + offsets[i]);
-      var v = iso(dt);
-      if (v === D) hasD = true;
-      html += '<option value="' + v + '">' + dateLabel(dt, todayISO) + "</option>";
+    if (!opts.some(function (o) { return o.v === curVal; })) {
+      // The selected date/range isn't one of the presets — prepend it so it stays selectable.
+      var lbl = DT
+        ? mdy(new Date(D + "T00:00:00")) + " - " + mdy(new Date(DT + "T00:00:00"))
+        : mdy(new Date(D + "T00:00:00"));
+      html += '<option value="' + curVal + '">' + lbl + "</option>";
     }
-    if (!hasD) {
-      // selected date is outside the window — add it so it stays selectable
-      var dd = new Date(D + "T00:00:00");
-      html = '<option value="' + D + '">' + dateLabel(dd, todayISO) + "</option>" + html;
-    }
+    for (var k = 0; k < opts.length; k++) html += '<option value="' + opts[k].v + '">' + opts[k].t + "</option>";
     sel.innerHTML = html;
-    sel.value = D;
+    sel.value = curVal;
     sel.onchange = function () {
-      if (this.value) window.top.location.href = BASE + "?date=" + encodeURIComponent(this.value);
+      var val = this.value;
+      if (!val) return;
+      if (val === "search") {
+        // Open the D3 OrderSearch form (start/end date + area), carrying the current date
+        // as its start default. Its SEARCH button navigates back to /orders?date=&dateTo=.
+        window.top.location.href = "/orders/search?date=" + encodeURIComponent(D);
+        return;
+      }
+      if (val.indexOf("|") >= 0) {
+        var pr = val.split("|");
+        window.top.location.href = BASE + "?date=" + encodeURIComponent(pr[0]) + "&dateTo=" + encodeURIComponent(pr[1]);
+      } else {
+        window.top.location.href = BASE + "?date=" + encodeURIComponent(val);
+      }
     };
   }
 
@@ -130,7 +168,7 @@
   function tiles() {
     var t = ordersContainer();
     if (!t) return;
-    fetch("/api/orders-tiles?date=" + encodeURIComponent(D), { cache: "no-store" })
+    fetch("/api/orders-tiles?" + feedQS(), { cache: "no-store" })
       .then(function (x) {
         return x.ok ? x.text() : null;
       })
@@ -222,7 +260,7 @@
     }
   }
   function summary() {
-    fetch("/api/orders-summary?date=" + encodeURIComponent(D), { cache: "no-store" })
+    fetch("/api/orders-summary?" + feedQS(), { cache: "no-store" })
       .then(function (x) {
         return x.ok ? x.json() : null;
       })
@@ -230,8 +268,10 @@
         if (!j) return;
         var pt = document.getElementById("d3PlantTotal");
         if (pt && j.totalLabel) pt.textContent = j.totalLabel;
+        // D3's download tile shows the preset name ("Yesterday" / "Today") or the date/range,
+        // not the raw mdy — computed client-side so it tracks the browser's "today".
         var dd = document.getElementById("d3DlDate");
-        if (dd && j.dateLabel) dd.textContent = j.dateLabel;
+        if (dd) dd.textContent = friendlyDate();
       })
       .catch(function () {});
   }

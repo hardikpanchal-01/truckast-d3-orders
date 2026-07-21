@@ -435,10 +435,12 @@
           tile1x1("RATE", d.delivery_rate != null ? Number(d.delivery_rate).toFixed(2) : "—", "CY/HR");
       }
       if (det) {
+        // Pre-Pour shows ONLY the product tiles — no weather tile. D3 adds weather once the
+        // order is under way (in-process / completed); a not-yet-started order omits it. The
+        // trailing clear div contains the floated product tiles.
         det.innerHTML =
           (d.products || []).map(productTile).join("") +
-          '<div style="width: 100%; height: 1px; clear: both"></div>' +
-          weatherTile(d.weather);
+          '<div style="width: 100%; height: 1px; clear: both"></div>';
       }
     } else if (d.status === "COMPLETED") {
       // Completed layout (D3 COMPLETE spec): LOADS / LOADS %ON TIME / POURED, then
@@ -478,6 +480,9 @@
       }
     } else {
       // In-Process / Complete layout.
+      // NEXT TRUCK shows D3's live truck state — a countdown ("9 MIN"), "Now",
+      // "Waiting", the next scheduled arrival time, or "None" once every load is
+      // dispatched. splitTime peels the unit ("9 MIN" → 9 / MIN) like the other tiles.
       var nt = splitTime(d.next_truck);
       var pf = splitTime(d.pour_finish);
       if (hdr) {
