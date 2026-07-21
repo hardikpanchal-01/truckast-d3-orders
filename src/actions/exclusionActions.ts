@@ -6,6 +6,7 @@
  */
 
 import supabaseServer from "@/supabase/server";
+import { getTenantSupabaseClient, getSelectedTenant } from "@/actions/tenantActions";
 
 export type ExclusionPatternType = "customer" | "product" | "delivery_address";
 
@@ -16,26 +17,34 @@ export interface ExclusionPatterns {
 }
 
 /**
- * In-memory cache for excluded patterns (server-side)
+ * In-memory cache for excluded patterns (server-side), KEYED BY TENANT. Exclusion
+ * patterns live in each tenant's own DB, so a single global cache would serve one
+ * tenant's patterns to another right after a switch — key by the selected tenant so
+ * switching never leaks patterns across tenants.
  */
-let patternCache: { patterns: ExclusionPatterns; timestamp: number } | null = null;
+const patternCache = new Map<string, { patterns: ExclusionPatterns; timestamp: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Fetches all excluded patterns grouped by type.
+ * Fetches all excluded patterns grouped by type, from the SELECTED tenant's DB.
  * Only fetches patterns where affects_counts=true (for summary counts).
  */
 export async function getExcludedPatterns(): Promise<ExclusionPatterns> {
   const now = Date.now();
+  const tenantKey = (await getSelectedTenant()) || "default";
 
-  // Return cached patterns if still valid
-  if (patternCache && now - patternCache.timestamp < CACHE_TTL_MS) {
-    return patternCache.patterns;
+  // Return cached patterns for THIS tenant if still valid
+  const cached = patternCache.get(tenantKey);
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.patterns;
   }
+
+  // Read from the selected tenant's database (not the default server client).
+  const supabase = (await getTenantSupabaseClient()) || supabaseServer;
 
   try {
     // Fetch patterns where affects_counts=true (for summary counts)
-    let { data, error } = await supabaseServer
+    let { data, error } = await supabase
       .from("excluded_order_patterns")
       .select("type, pattern")
       .eq("active", true)
@@ -46,7 +55,7 @@ export async function getExcludedPatterns(): Promise<ExclusionPatterns> {
       console.warn(
         "[getExcludedPatterns] affects_counts column missing — falling back to full pattern set."
       );
-      const fallback = await supabaseServer
+      const fallback = await supabase
         .from("excluded_order_patterns")
         .select("type, pattern")
         .eq("active", true);
@@ -80,8 +89,8 @@ export async function getExcludedPatterns(): Promise<ExclusionPatterns> {
 
     const patterns = { customers, products, deliveryAddresses };
 
-    // Cache the patterns
-    patternCache = { patterns, timestamp: now };
+    // Cache the patterns for this tenant
+    patternCache.set(tenantKey, { patterns, timestamp: now });
 
     return patterns;
   } catch (error) {
@@ -94,5 +103,5 @@ export async function getExcludedPatterns(): Promise<ExclusionPatterns> {
  * Invalidates the pattern cache
  */
 export async function invalidatePatternCache(): Promise<void> {
-  patternCache = null;
+  patternCache.clear();
 }

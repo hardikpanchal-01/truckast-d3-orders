@@ -42,43 +42,15 @@ pg.types.setTypeParser(1082, (v) => v); // date → keep "YYYY-MM-DD" string (no
 
 /* ----------------------------- connection ------------------------------ */
 
-interface PgGlobal {
-  pool?: Pool;
-  meta?: Promise<Meta>;
+/** One tenant's Postgres connection, read from env (URL form or discrete fields). */
+interface TenantConn {
+  url?: string;
+  host?: string;
+  port?: number;
+  database?: string;
+  user?: string;
+  password?: string;
 }
-const g = globalThis as unknown as { __dolesePg?: PgGlobal };
-if (!g.__dolesePg) g.__dolesePg = {};
-
-export function isPgAdapterConfigured(): boolean {
-  return !!(process.env.DOLESE_PG_URL || process.env.DOLESE_PG_HOST);
-}
-
-function getPool(): Pool {
-  if (!g.__dolesePg!.pool) {
-    let url = process.env.DOLESE_PG_URL;
-    // The NodePort endpoint presents a self-signed cert, so we encrypt WITHOUT CA
-    // verification (matches DBeaver "require"). Newer pg maps a `sslmode=require`
-    // query param to `verify-full`, which would override the `ssl` option below and
-    // reject the cert — so strip any ssl* query param and drive SSL from `ssl` only.
-    const ssl = { rejectUnauthorized: false };
-    if (url) url = url.replace(/([?&])(sslmode|ssl)=[^&]*/gi, "$1").replace(/[?&]+$/g, "").replace(/([?&])&+/g, "$1");
-    g.__dolesePg!.pool = url
-      ? new Pool({ connectionString: url, ssl, max: 8, idleTimeoutMillis: 30000 })
-      : new Pool({
-          host: process.env.DOLESE_PG_HOST,
-          port: Number(process.env.DOLESE_PG_PORT || 5432),
-          database: process.env.DOLESE_PG_DATABASE,
-          user: process.env.DOLESE_PG_USER,
-          password: process.env.DOLESE_PG_PASSWORD,
-          ssl,
-          max: 8,
-          idleTimeoutMillis: 30000,
-        });
-  }
-  return g.__dolesePg!.pool!;
-}
-
-/* --------------------------- introspection ----------------------------- */
 
 interface Fk {
   child_table: string;
@@ -88,29 +60,179 @@ interface Fk {
 }
 interface Meta {
   fks: Fk[];
+  cols: Map<string, Set<string>>; // table_name -> column names, for convention joins
 }
 
-function ensureMeta(): Promise<Meta> {
-  if (!g.__dolesePg!.meta) {
-    g.__dolesePg!.meta = getPool()
-      .query(
-        `select tc.table_name as child_table, kcu.column_name as child_column,
-                ccu.table_name as parent_table, ccu.column_name as parent_column
-           from information_schema.table_constraints tc
-           join information_schema.key_column_usage kcu
-             on kcu.constraint_name = tc.constraint_name and kcu.table_schema = tc.table_schema
-           join information_schema.constraint_column_usage ccu
-             on ccu.constraint_name = tc.constraint_name and ccu.table_schema = tc.table_schema
-          where tc.constraint_type = 'FOREIGN KEY' and tc.table_schema = 'public'`,
-      )
-      .then((r) => ({ fks: r.rows as Fk[] }))
-      .catch((e) => {
-        // Reset so a transient failure doesn't permanently poison the cache.
-        g.__dolesePg!.meta = undefined;
-        throw e;
-      });
+// Everything is keyed by tenant so we can hold connections to several tenant
+// databases (dolese, concretesupply, …) at once and route each query to the one
+// the caller selected. Cached on globalThis to survive Next.js hot reloads.
+interface PgGlobal {
+  registry?: Map<string, TenantConn>;
+  pools: Map<string, Pool>;
+  metas: Map<string, Promise<Meta>>;
+  clients: Map<string, PgAdapterClient>;
+}
+const g = globalThis as unknown as { __dolesePg?: PgGlobal };
+if (!g.__dolesePg) g.__dolesePg = { pools: new Map(), metas: new Map(), clients: new Map() };
+
+/**
+ * Discover the configured tenant databases from the environment. A tenant is a
+ * `<TENANT>_PG_URL` (preferred) or a `<TENANT>_PG_HOST` (+`_PG_PORT`/`_PG_DATABASE`/
+ * `_PG_USER`/`_PG_PASSWORD`) group; the tenant key is the lower-cased prefix, which
+ * matches the `selected_tenant` cookie / `auth_tenant.tenants.name`. So adding a
+ * tenant is just adding one env var — no code change:
+ *   DOLESE_PG_URL=...          ->  tenant "dolese"
+ *   CONCRETESUPPLY_PG_URL=...   ->  tenant "concretesupply"
+ */
+function getRegistry(): Map<string, TenantConn> {
+  if (g.__dolesePg!.registry) return g.__dolesePg!.registry;
+  const reg = new Map<string, TenantConn>();
+  for (const [k, v] of Object.entries(process.env)) {
+    if (!v) continue;
+    // Tenant keys may contain underscores (e.g. CRH_HARRISON_PG_URL -> "crh_harrison",
+    // VCNA_CBM_PG_URL -> "vcna_cbm"); the trailing _PG_URL anchor splits them correctly.
+    const m = k.match(/^([A-Z0-9_]+)_PG_URL$/);
+    if (m) reg.set(m[1].toLowerCase(), { url: v });
   }
-  return g.__dolesePg!.meta;
+  for (const [k, v] of Object.entries(process.env)) {
+    if (!v) continue;
+    const m = k.match(/^([A-Z0-9_]+)_PG_HOST$/);
+    if (!m) continue;
+    const key = m[1].toLowerCase();
+    if (reg.has(key)) continue; // a matching *_PG_URL wins over discrete fields
+    const P = m[1];
+    reg.set(key, {
+      host: v,
+      port: Number(process.env[`${P}_PG_PORT`] || 5432),
+      database: process.env[`${P}_PG_DATABASE`],
+      user: process.env[`${P}_PG_USER`],
+      password: process.env[`${P}_PG_PASSWORD`],
+    });
+  }
+  g.__dolesePg!.registry = reg;
+  return reg;
+}
+
+/** The tenant used when a caller doesn't name one (keeps existing single-tenant behavior). */
+function defaultTenantKey(): string | null {
+  const reg = getRegistry();
+  const explicit = process.env.DEFAULT_PG_TENANT?.toLowerCase();
+  if (explicit && reg.has(explicit)) return explicit;
+  if (reg.has("dolese")) return "dolese"; // historical default
+  const first = reg.keys().next();
+  return first.done ? null : first.value;
+}
+
+// The settings dropdown / `selected_tenant` cookie holds the tenant DISPLAY name
+// (auth_tenant.tenants.name, e.g. "Concrete Supply", "Canada Building Materials"),
+// which doesn't always equal the database/registry key. Map the ones that differ.
+// Keyed by the alphanumeric-normalized display name -> registry key.
+const TENANT_ALIASES: Record<string, string> = {
+  canadabuildingmaterials: "vcna_cbm",
+  concretesupply: "concretesupply",
+  deltaindustries: "delta",
+  dolesereadymix: "dolese",
+  hercules: "hercules",
+  preferredmaterials: "pm",
+  stevensonweir: "stevensonweir",
+  sunrise: "sunrise",
+  superiormaterials: "vcna_superior",
+};
+
+const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/**
+ * Resolve any tenant identifier (registry key, DB name, or the settings display
+ * name) to a configured registry key. Returns null when the input doesn't map to
+ * a configured tenant; undefined input yields the default tenant.
+ * Match order: exact key -> alphanumeric-normalized key -> display-name alias.
+ */
+function resolveTenantKey(input?: string | null): string | null {
+  const reg = getRegistry();
+  if (input == null || input === "") return defaultTenantKey();
+  const lc = input.toLowerCase();
+  if (reg.has(lc)) return lc;
+  const norm = normalize(input);
+  for (const k of reg.keys()) if (normalize(k) === norm) return k;
+  const alias = TENANT_ALIASES[norm];
+  if (alias && reg.has(alias)) return alias;
+  return null;
+}
+
+export function isPgAdapterConfigured(): boolean {
+  return getRegistry().size > 0;
+}
+
+function getPool(tenant: string): Pool {
+  const existing = g.__dolesePg!.pools.get(tenant);
+  if (existing) return existing;
+  const cfg = getRegistry().get(tenant);
+  if (!cfg) throw new Error(`pg-adapter: no Postgres connection configured for tenant "${tenant}"`);
+  // The NodePort endpoint presents a self-signed cert, so we encrypt WITHOUT CA
+  // verification (matches DBeaver "require"). Newer pg maps a `sslmode=require`
+  // query param to `verify-full`, which would override the `ssl` option below and
+  // reject the cert — so strip any ssl* query param and drive SSL from `ssl` only.
+  const ssl = { rejectUnauthorized: false };
+  let pool: Pool;
+  if (cfg.url) {
+    const url = cfg.url.replace(/([?&])(sslmode|ssl)=[^&]*/gi, "$1").replace(/[?&]+$/g, "").replace(/([?&])&+/g, "$1");
+    pool = new Pool({ connectionString: url, ssl, max: 8, idleTimeoutMillis: 30000 });
+  } else {
+    pool = new Pool({
+      host: cfg.host,
+      port: cfg.port,
+      database: cfg.database,
+      user: cfg.user,
+      password: cfg.password,
+      ssl,
+      max: 8,
+      idleTimeoutMillis: 30000,
+    });
+  }
+  g.__dolesePg!.pools.set(tenant, pool);
+  return pool;
+}
+
+/* --------------------------- introspection ----------------------------- */
+
+// FK catalog is per-database, so cache one Meta per tenant.
+function ensureMeta(tenant: string): Promise<Meta> {
+  const cached = g.__dolesePg!.metas.get(tenant);
+  if (cached) return cached;
+  const pool = getPool(tenant);
+  const p = Promise.all([
+    pool.query(
+      `select tc.table_name as child_table, kcu.column_name as child_column,
+              ccu.table_name as parent_table, ccu.column_name as parent_column
+         from information_schema.table_constraints tc
+         join information_schema.key_column_usage kcu
+           on kcu.constraint_name = tc.constraint_name and kcu.table_schema = tc.table_schema
+         join information_schema.constraint_column_usage ccu
+           on ccu.constraint_name = tc.constraint_name and ccu.table_schema = tc.table_schema
+        where tc.constraint_type = 'FOREIGN KEY' and tc.table_schema = 'public'`,
+    ),
+    // Column catalog — used to resolve embeds by naming convention when a tenant DB
+    // has the tables but no declared FKs (the pm-postgres tenant DBs ship no FKs).
+    pool.query(
+      `select table_name, column_name from information_schema.columns where table_schema = 'public'`,
+    ),
+  ])
+    .then(([fkRes, colRes]) => {
+      const cols = new Map<string, Set<string>>();
+      for (const r of colRes.rows as { table_name: string; column_name: string }[]) {
+        let set = cols.get(r.table_name);
+        if (!set) cols.set(r.table_name, (set = new Set()));
+        set.add(r.column_name);
+      }
+      return { fks: fkRes.rows as Fk[], cols };
+    })
+    .catch((e) => {
+      // Reset so a transient failure doesn't permanently poison the cache.
+      g.__dolesePg!.metas.delete(tenant);
+      throw e;
+    });
+  g.__dolesePg!.metas.set(tenant, p);
+  return p;
 }
 
 /** Resolve an embedded relation `rel` declared under `parentTable`. */
@@ -137,6 +259,40 @@ function resolveRel(
       join: (c, p) => `${c}."${one.parent_column}" = ${p}."${one.child_column}"`,
     };
   }
+
+  // Convention fallback — for tenant DBs that have the tables but NO declared FKs
+  // (the pm-postgres cluster ships none). Infer the join from column names, which
+  // follow a consistent pattern verified against the old FK-bearing Dolese cluster:
+  //   child.<singular(parent)>_id = parent.(<singular(parent)>_id | id)
+  // e.g. order_products.order_id = orders.order_id,
+  //      order_product_schedules.order_product_id = order_products.id,
+  //      ticket_products.ticket_id = tickets.ticket_id
+  const singular = (t: string) => t.replace(/s$/, "");
+  const has = (t: string, c: string) => meta.cols.get(t)?.has(c) ?? false;
+  // parent key column: prefer "<singular>_id" (e.g. orders.order_id), else "id".
+  const keyCol = (t: string) => (has(t, `${singular(t)}_id`) ? `${singular(t)}_id` : "id");
+
+  // one-to-many: rel is the child; it carries "<singular(parentTable)>_id".
+  const manyFk = `${singular(parentTable)}_id`;
+  if (has(rel, manyFk)) {
+    const parentKey = keyCol(parentTable);
+    return {
+      target: rel,
+      kind: "many",
+      join: (c, p) => `${c}."${manyFk}" = ${p}."${parentKey}"`,
+    };
+  }
+  // many-to-one: parentTable is the child; it carries "<singular(rel)>_id".
+  const oneFk = `${singular(rel)}_id`;
+  if (has(parentTable, oneFk)) {
+    const relKey = keyCol(rel);
+    return {
+      target: rel,
+      kind: "one",
+      join: (c, p) => `${c}."${relKey}" = ${p}."${oneFk}"`,
+    };
+  }
+
   throw new Error(`pg-adapter: no foreign-key relationship found between "${parentTable}" and "${rel}"`);
 }
 
@@ -292,9 +448,11 @@ class PgQueryBuilder implements PromiseLike<Result<unknown>> {
   private payload: Record<string, unknown> | Record<string, unknown>[] | null = null;
   private singleMode: "single" | "maybe" | null = null;
   private table: string;
+  private tenant: string;
 
-  constructor(table: string) {
+  constructor(table: string, tenant: string) {
     this.table = table;
+    this.tenant = tenant;
   }
 
   select(sel?: string): this {
@@ -405,7 +563,7 @@ class PgQueryBuilder implements PromiseLike<Result<unknown>> {
   }
 
   private async run(): Promise<Result<unknown>> {
-    const meta = await ensureMeta();
+    const meta = await ensureMeta(this.tenant);
     const params: unknown[] = [];
     let sql: string;
 
@@ -434,7 +592,7 @@ class PgQueryBuilder implements PromiseLike<Result<unknown>> {
 
     let rows: Record<string, unknown>[];
     try {
-      const res = await getPool().query(sql, params as unknown[]);
+      const res = await getPool(this.tenant).query(sql, params as unknown[]);
       rows = res.rows;
     } catch (e) {
       return { data: null, error: { message: (e as Error).message } };
@@ -471,10 +629,10 @@ export interface PgAdapterClient {
   rpc(fn: string, args?: Record<string, unknown>): Promise<Result<unknown>>;
 }
 
-export function createPgAdapterClient(): PgAdapterClient {
+export function createPgAdapterClient(tenant: string): PgAdapterClient {
   return {
     from(table: string) {
-      return new PgQueryBuilder(table);
+      return new PgQueryBuilder(table, tenant);
     },
     async rpc(fn: string, args: Record<string, unknown> = {}) {
       // Not used by the app today; provide a best-effort named-arg call.
@@ -482,7 +640,7 @@ export function createPgAdapterClient(): PgAdapterClient {
       const params = keys.map((k) => args[k]);
       const argSql = keys.map((k, i) => `"${k}" => $${i + 1}`).join(", ");
       try {
-        const res = await getPool().query(`select * from "${fn}"(${argSql})`, params);
+        const res = await getPool(tenant).query(`select * from "${fn}"(${argSql})`, params);
         return { data: res.rows, error: null };
       } catch (e) {
         return { data: null, error: { message: (e as Error).message } };
@@ -491,10 +649,27 @@ export function createPgAdapterClient(): PgAdapterClient {
   };
 }
 
-let _client: PgAdapterClient | null = null;
-/** Cached singleton adapter (or null when the Postgres env isn't configured). */
-export function getPgAdapterClient(): PgAdapterClient | null {
-  if (!isPgAdapterConfigured()) return null;
-  if (!_client) _client = createPgAdapterClient();
-  return _client;
+/** List the tenant keys that have a Postgres connection configured. */
+export function getConfiguredPgTenants(): string[] {
+  return [...getRegistry().keys()];
+}
+
+/**
+ * Cached adapter client for a tenant's Postgres database.
+ *  - `getPgAdapterClient()`              -> the default tenant (backward compatible).
+ *  - `getPgAdapterClient("concretesupply")` -> that tenant, or `null` if it has no
+ *    connection configured (so the caller can fall back).
+ * Returns `null` when no tenant Postgres is configured at all.
+ */
+export function getPgAdapterClient(tenant?: string): PgAdapterClient | null {
+  const reg = getRegistry();
+  if (reg.size === 0) return null;
+  const key = resolveTenantKey(tenant); // accepts registry key, DB name, or display name
+  if (!key) return null; // named tenant isn't configured -> caller can fall back
+  let client = g.__dolesePg!.clients.get(key);
+  if (!client) {
+    client = createPgAdapterClient(key);
+    g.__dolesePg!.clients.set(key, client);
+  }
+  return client;
 }
