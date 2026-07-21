@@ -93,9 +93,29 @@
     return colorMap[c] || color;
   }
 
+  // Detect if current tenant is Concrete Supply (check cookie or page content)
+  function isConcreteSupply() {
+    // Check from page title or document
+    var titleEl = document.querySelector('#titlebar-caption strong');
+    if (titleEl && titleEl.textContent.toLowerCase().includes('market')) return true;
+    if (titleEl && titleEl.textContent.toLowerCase().includes('concrete')) return true;
+    // Also check for cookie
+    var cookies = document.cookie.split(';');
+    for (var i = 0; i < cookies.length; i++) {
+      var c = cookies[i].trim();
+      if (c.indexOf('selected_tenant=') === 0) {
+        var tenant = decodeURIComponent(c.substring(16));
+        if (tenant.toLowerCase().includes('concrete')) return true;
+      }
+    }
+    return false;
+  }
+
   function announcementTile(a) {
     var bgColor = getColor(a.color);
-    var icon = a.icon_or_percent || (ASSET + '/dolesepublish.png');
+    // Use Concrete Supply logo if tenant is Concrete Supply, otherwise Dolese logo
+    var defaultIcon = isConcreteSupply() ? '/Images/concretesupplyco-tile-nb.png' : (ASSET + '/dolesepublish.png');
+    var icon = a.icon_or_percent || defaultIcon;
     var tagline = esc(a.tagline || '');
     var title = esc(a.title || a.name || '');
     var subtitle = esc(a.subtitle || '');
