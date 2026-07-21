@@ -174,10 +174,14 @@ function getPool(tenant: string): Pool {
   // query param to `verify-full`, which would override the `ssl` option below and
   // reject the cert — so strip any ssl* query param and drive SSL from `ssl` only.
   const ssl = { rejectUnauthorized: false };
+  // Fail fast on an unreachable DB (e.g. a firewalled host from Vercel) instead of
+  // hanging on the OS TCP timeout (~2 min) and blowing the serverless function limit —
+  // so a blocked deploy surfaces a clear ETIMEDOUT quickly rather than an opaque 504.
+  const CONNECT_TIMEOUT_MS = 8000;
   let pool: Pool;
   if (cfg.url) {
     const url = cfg.url.replace(/([?&])(sslmode|ssl)=[^&]*/gi, "$1").replace(/[?&]+$/g, "").replace(/([?&])&+/g, "$1");
-    pool = new Pool({ connectionString: url, ssl, max: 8, idleTimeoutMillis: 30000 });
+    pool = new Pool({ connectionString: url, ssl, max: 8, idleTimeoutMillis: 30000, connectionTimeoutMillis: CONNECT_TIMEOUT_MS });
   } else {
     pool = new Pool({
       host: cfg.host,
@@ -188,6 +192,7 @@ function getPool(tenant: string): Pool {
       ssl,
       max: 8,
       idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
     });
   }
   g.__dolesePg!.pools.set(tenant, pool);
