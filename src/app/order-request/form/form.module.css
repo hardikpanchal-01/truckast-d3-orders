@@ -1,0 +1,98 @@
+/* ------------------------------------------------------------------
+   Order Request form — the max-width responsive rules, transcribed
+   VERBATIM from the inline <style> on D3's DoleseORV2 page.
+
+   Why plain CSS and not Tailwind (same reasoning as d3-chrome.module.css):
+
+   1. Tailwind's `max-[980px]` compiles to an EXCLUSIVE `@media (width < 980px)`,
+      but D3's `@media (max-width: 980px)` is INCLUSIVE — they disagree on the
+      boundary pixel itself.
+   2. Tailwind cannot sort arbitrary `[@media(...)]` variants by breakpoint, so a
+      `max-width:980px` rule would emit after `max-width:631px` and win at every
+      width below 631 — the logo would never reach its 150x30 size.
+
+   Both were caught by measuring this page against the saved DoleseORV2.htm in
+   Chrome. Source order below is D3's own, widest query first, so the cascade
+   resolves exactly as it does on D3.
+
+   `em` values are D3's own; body is 14px, so 3em = 42px and 1em = 14px.
+   ------------------------------------------------------------------ */
+
+/* ---- D3 .order-form-content-box — the numbered-field gutter ---- */
+.contentBox {
+  list-style-type: none;
+  margin: 0 3em;
+  padding: 0;
+}
+@media screen and (max-width: 600px) {
+  .contentBox {
+    margin: 0 1em;
+  }
+}
+
+/* ---- D3 .header-banner p — the "Order Request Form" title ----
+   font-weight comes from D3's blanket `p { font-weight: bold }`. */
+.bannerTitle {
+  display: block;
+  font-size: 30px;
+  font-weight: bold;
+  line-height: 20px;
+  margin-bottom: 0;
+  text-align: center;
+  color: #00502f;
+}
+@media only screen and (max-width: 980px) {
+  .bannerTitle {
+    font-size: 30px;
+    text-align: left;
+  }
+}
+@media only screen and (max-width: 631px) {
+  .bannerTitle {
+    font-size: 25px;
+    text-align: left;
+  }
+}
+@media only screen and (max-width: 431px) {
+  .bannerTitle {
+    font-size: 15px;
+    text-align: left;
+  }
+}
+
+/* ---- D3 .header-banner img — the Dolese logo pinned to the bar ----
+   The base rule's `margin-top: 9px` and `top: 3px` are NOT restated by the 980
+   query, so they persist until 631 replaces `top` with 20%. */
+.bannerLogo {
+  position: absolute;
+  right: 10px;
+  top: 3px;
+  height: 35px;
+  margin-top: 9px;
+}
+@media only screen and (max-width: 980px) {
+  .bannerLogo {
+    right: 10px;
+    height: 50px;
+    width: 270px;
+  }
+}
+@media only screen and (max-width: 631px) {
+  .bannerLogo {
+    right: 10px;
+    top: 20%;
+    height: 30px;
+    width: 150px;
+  }
+}
+
+/* ---- D3 .custom-radio — the Yes/No pair, stacking on narrow screens ---- */
+.radioGroup {
+  display: flex;
+  flex-flow: row;
+}
+@media screen and (max-width: 600px) {
+  .radioGroup {
+    flex-flow: column;
+  }
+}

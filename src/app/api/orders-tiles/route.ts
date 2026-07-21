@@ -12,8 +12,9 @@ export async function GET(request: Request): Promise<Response> {
   const { searchParams } = new URL(request.url);
   const today = new Date().toISOString().slice(0, 10);
   const dateStr = searchParams.get("date") || today;
+  const dateToStr = searchParams.get("dateTo") || undefined; // range end (Last 7 / month / Future / …)
 
-  const [orders, announcement] = await Promise.all([getDoleseOrders(dateStr), getActiveAnnouncement()]);
+  const [orders, announcement] = await Promise.all([getDoleseOrders(dateStr, dateToStr), getActiveAnnouncement()]);
   const html = renderTiles(orders, announcement);
 
   return new Response(html, {
