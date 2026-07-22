@@ -794,11 +794,177 @@ export async function getDoleseSummary(dateStr: string, dateToStr?: string): Pro
   };
 }
 
+/** One market/plant card on the MARKETS page (e.g. "1 - NEW FAIRVIEW"). */
+export interface DoleseMarketPlant {
+  code: string; // plant number D3 prefixes the tile with (plants.code), sorted ascending
+  name: string;
+  usedCY: number;
+  totalCY: number;
+  totalOrders: number;
+  activeOrders: number;
+  cancelledOrders: number;
+}
+export interface DoleseMarketSummary extends DoleseSummary {
+  plants: DoleseMarketPlant[];
+  /** Whether the MARKET page should render the per-plant tiles (D3 shows them for some
+   *  tenants like Sunrise, not others like Dolese). The board dropdown ignores this. */
+  showPlants: boolean;
+}
+
+/**
+ * Company roll-up PLUS a per-plant breakdown for the MARKETS landing page — the
+ * D3 market summary shows one card per plant ("1 - NEW FAIRVIEW", "2 - PONDER", …)
+ * beside the company total. Same order set / CY / cancellation rules as
+ * getDoleseSummary (so the company numbers match exactly); each order is bucketed
+ * to its plant via order_products → order_product_schedules → plant, and D3's tile
+ * number + sort come from plants.code (verified: 1=NEW FAIRVIEW … on the Sunrise DB).
+ */
+export async function getMarketByPlant(dateStr: string, dateToStr?: string): Promise<DoleseMarketSummary> {
+  const from = dateStr;
+  const to = dateToStr ? dayRange(dateToStr).to : dayRange(dateStr).to;
+
+  const [supabase, selectedTenant, exclusionPatterns, tenantDisplayName] = await Promise.all([
+    getSupabaseClient(),
+    getSelectedTenant(),
+    getExcludedPatterns(),
+    getSelectedTenantDisplayName(),
+  ]);
+  const tenantName = tenantDisplayName || selectedTenant || "DOLESE";
+
+  // Plant lookup (small table): id -> { code, name }. code is D3's tile number.
+  const plantMap = new Map<number, { code: string; name: string }>();
+  const { data: plantRows } = await supabase.from("plants").select("id, code, description");
+  for (const p of (plantRows || []) as { id: number; code: string | number | null; description: string | null }[]) {
+    plantMap.set(Number(p.id), { code: String(p.code ?? ""), name: (p.description || "").trim() });
+  }
+
+  type Row = {
+    order_id: number;
+    order_code: string;
+    customer_name: string | null;
+    delivery_addr1: string | null;
+    removed: boolean | null;
+    remove_reason_code: string | null;
+    order_products: (OrderProductRow & { order_product_schedules?: { plant_id: number | null }[] | null })[];
+  };
+  const PAGE_SIZE = 1000;
+  let allOrders: Row[] = [];
+  let offset = 0;
+  let hasMore = true;
+  while (hasMore) {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("order_id, order_code, customer_name, delivery_addr1, removed, remove_reason_code, order_products(order_qty, order_qty_unit, delv_qty, is_mix, item_code, order_product_schedules(plant_id))")
+      .gte("order_date", from)
+      .lt("order_date", to)
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (error) {
+      console.error("[ERROR] getMarketByPlant pagination:", error.message);
+      break;
+    }
+    if (data && data.length > 0) {
+      allOrders = allOrders.concat(data as Row[]);
+      offset += data.length;
+      hasMore = data.length === PAGE_SIZE;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  // Same product/exclusion gating as getDoleseSummary so the company total matches.
+  const cyOrders = allOrders.filter((o) => {
+    const products = o.order_products || [];
+    return products.length === 0 || products.some((p) => isCubicYardUnit(p.order_qty_unit));
+  });
+  const filteredOrders = filterExcludedOrders(
+    cyOrders.map((o) => ({
+      order_id: o.order_id,
+      order_code: o.order_code,
+      customer_name: o.customer_name,
+      delivery_addr1: o.delivery_addr1,
+      order_products: o.order_products,
+      removed: o.removed,
+      remove_reason_code: o.remove_reason_code,
+    })),
+    exclusionPatterns,
+  );
+
+  const blank = () => ({ usedCY: 0, totalCY: 0, totalOrders: 0, activeOrders: 0, cancelledOrders: 0 });
+  const company = blank();
+  const buckets = new Map<string, { code: string; name: string } & ReturnType<typeof blank>>();
+
+  for (const o of filteredOrders) {
+    const original = cyOrders.find((x) => x.order_id === o.order_id);
+    const products = original?.order_products || [];
+
+    // Resolve the order's plant = first product's first schedule that carries a plant.
+    let plantId: number | null = null;
+    for (const p of products) {
+      for (const s of p.order_product_schedules || []) {
+        if (s && s.plant_id != null) { plantId = Number(s.plant_id); break; }
+      }
+      if (plantId != null) break;
+    }
+    const plant = plantId != null ? plantMap.get(plantId) : undefined;
+
+    const isCancelled = o.removed === true && (o.remove_reason_code || "").trim() !== "";
+    const { ordered, ticketed } = isCancelled ? { ordered: 0, ticketed: 0 } : sumCY(products);
+
+    company.totalOrders++;
+    if (isCancelled) company.cancelledOrders++;
+    else { company.activeOrders++; company.totalCY += ordered; company.usedCY += ticketed; }
+
+    if (plant) {
+      const key = plant.code || plant.name;
+      let b = buckets.get(key);
+      if (!b) { b = { code: plant.code, name: plant.name, ...blank() }; buckets.set(key, b); }
+      b.totalOrders++;
+      if (isCancelled) b.cancelledOrders++;
+      else { b.activeOrders++; b.totalCY += ordered; b.usedCY += ticketed; }
+    }
+  }
+
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const plants: DoleseMarketPlant[] = [...buckets.values()]
+    .map((b) => ({
+      code: b.code,
+      name: b.name,
+      usedCY: round2(b.usedCY),
+      totalCY: round2(b.totalCY),
+      totalOrders: b.totalOrders,
+      activeOrders: b.activeOrders,
+      cancelledOrders: b.cancelledOrders,
+    }))
+    .sort((a, b) => (Number(a.code) - Number(b.code)) || a.name.localeCompare(b.name));
+
+  // D3 shows the per-plant market breakdown on the MARKET page for some tenants
+  // (Sunrise: NEW FAIRVIEW, PONDER, …) but NOT others (Dolese's market page is the
+  // company roll-up only). `plants` is still always returned — the ORDERS-board plant
+  // dropdown needs it for every tenant — but `showPlants` tells the market page whether
+  // to render the per-plant tiles. Configurable via MARKET_PLANT_BREAKDOWN_TENANTS
+  // (comma-separated tenant substrings), default "sunrise".
+  const allow = (process.env.MARKET_PLANT_BREAKDOWN_TENANTS || "sunrise")
+    .toLowerCase().split(",").map((s) => s.trim()).filter(Boolean);
+  const tkey = ((selectedTenant || "") + " " + (tenantDisplayName || "")).toLowerCase();
+  const showPlants = allow.some((a) => tkey.includes(a));
+
+  return {
+    name: tenantName,
+    usedCY: round2(company.usedCY),
+    totalCY: round2(company.totalCY),
+    totalOrders: company.totalOrders,
+    activeOrders: company.activeOrders,
+    cancelledOrders: company.cancelledOrders,
+    plants,
+    showPlants,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /*  2. Orders list for a day                                          */
 /* ------------------------------------------------------------------ */
 
-export async function getDoleseOrders(dateStr: string, dateToStr?: string): Promise<DoleseOrderListItem[]> {
+export async function getDoleseOrders(dateStr: string, dateToStr?: string, plantCode?: string): Promise<DoleseOrderListItem[]> {
   // Support date ranges: with dateToStr the window runs from dateStr through the END of
   // dateToStr (inclusive), else it's the single day. Mirrors getDoleseSummary.
   const { from } = dayRange(dateStr);
@@ -807,19 +973,27 @@ export async function getDoleseOrders(dateStr: string, dateToStr?: string): Prom
   // Get tenant-specific Supabase client first
   const supabase = await getSupabaseClient();
 
-  // Fetch orders and exclusion patterns in parallel
-  const [ordersResult, exclusionPatterns] = await Promise.all([
+  // Fetch orders, exclusion patterns, and the plant lookup in parallel. plant_id is
+  // pulled onto each schedule so the board's plant/market dropdown can filter to one
+  // plant (D3's "1 - NEW FAIRVIEW", …); plantCode "" / undefined = all plants.
+  const [ordersResult, exclusionPatterns, plantsRes] = await Promise.all([
     supabase
       .from("orders")
       .select(
-        "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix, item_code, order_product_schedules(start_time, delivery_rate_per_hour))",
+        "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix, item_code, order_product_schedules(start_time, delivery_rate_per_hour, plant_id))",
       )
       .gte("order_date", from)
       .lt("order_date", to)
       .order("order_date", { ascending: true })
       .limit(1000),
     getExcludedPatterns(),
+    supabase.from("plants").select("id, code"),
   ]);
+  const plantCodeById = new Map<number, string>();
+  for (const p of ((plantsRes as { data?: { id: number; code: string | number | null }[] })?.data || [])) {
+    plantCodeById.set(Number(p.id), String(p.code ?? ""));
+  }
+  const plantByOrder = new Map<number, string>();
 
   const { data, error } = ordersResult;
 
@@ -858,13 +1032,18 @@ export async function getDoleseOrders(dateStr: string, dateToStr?: string): Prom
     .filter((o) => filteredIds.has(o.order_id))
     .map((o) => {
       const products = (o.order_products || []) as (OrderProductRow & {
-        order_product_schedules?: { start_time: string | null; delivery_rate_per_hour?: number | null }[];
+        order_product_schedules?: { start_time: string | null; delivery_rate_per_hour?: number | null; plant_id?: number | null }[];
       })[];
       const { ordered, ticketed } = sumCY(products);
       const planned = products
         .flatMap((p) => p.order_product_schedules || [])
         .find((s) => s?.delivery_rate_per_hour != null)?.delivery_rate_per_hour;
       if (planned != null) plannedByOrder.set(Number(o.order_id), Number(planned));
+      // Resolve the order's plant (first schedule that carries one) for the plant filter.
+      const pid = products
+        .flatMap((p) => p.order_product_schedules || [])
+        .find((s) => s?.plant_id != null)?.plant_id;
+      if (pid != null) plantByOrder.set(Number(o.order_id), plantCodeById.get(Number(pid)) || "");
       metaByOrder.set(Number(o.order_id), {
         cs: (o as { current_status: number | null }).current_status,
         ordered,
@@ -1100,6 +1279,13 @@ export async function getDoleseOrders(dateStr: string, dateToStr?: string): Prom
     if (!Number.isNaN(ia) && !Number.isNaN(ib) && ia !== ib) return ia - ib;
     return String(a.order_id).localeCompare(String(b.order_id));
   });
+
+  // Plant/market filter (D3's dropdown): keep only orders on the chosen plant. Sort
+  // order is preserved (filter is order-stable). Empty/undefined = all plants.
+  if (plantCode) {
+    const want = String(plantCode);
+    return items.filter((i) => plantByOrder.get(Number(i.order_id)) === want);
+  }
   return items;
 }
 
