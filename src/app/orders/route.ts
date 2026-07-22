@@ -1,16 +1,18 @@
 import { buildOrdersHtml } from "@/lib/d3-orders-html";
+import { applyTenantToUrl } from "@/lib/tenant-url";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Dolese orders — returns the exact D3 "JobsForFixedNodeID" HTML document
- * directly as the /orders response (no iframe, no app chrome). The shell is the
- * real D3 export (public/d3-static, real d3_complete.css + assets) and is now
- * self-dynamic: it renders the order tiles from /api/orders-tiles and the plant
- * total / date from /api/orders-summary on the client (nothing baked in). The
- * server only absolutizes the asset paths for this route.
+ * Orders board ("JobsForFixedNodeID") — returns the D3 HTML document directly as the
+ * /orders response, self-dynamic from /api/orders-tiles + /api/orders-summary. The URL
+ * carries ?tenant=<x> (like D3's /dv/v1/<tenant>/…) so you can see which tenant's data
+ * this is; that param is authoritative and drives the tenant.
  */
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
+  const redirect = await applyTenantToUrl(request);
+  if (redirect) return redirect;
+
   const html = await buildOrdersHtml();
 
   return new Response(html, {

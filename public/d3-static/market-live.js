@@ -177,24 +177,51 @@
     return html;
   }
 
-  // ---- DOLESE business-unit summary tile (pie mount + used-of-total + counts) ----
-  function summaryTile(s) {
+  // ---- One green summary tile (pie mount + used-of-total + counts). Used for both
+  //      the company roll-up and each per-plant market card. `label` is the tile's
+  //      super-title; `href` is where clicking it navigates. ----
+  // D3 abbreviates the count labels once a number is 3+ digits (it wouldn't fit on the
+  // tile otherwise): "Total 12, Active 10, Cancelled 2" but "Tot 385, Act 275, Can 110".
+  function countsLine(s) {
+    var t = s.totalOrders || 0, a = s.activeOrders || 0, c = s.cancelledOrders || 0;
+    var big = String(t).length > 2 || String(a).length > 2 || String(c).length > 2;
+    return big
+      ? "Tot " + t + ", Act " + a + ", Can " + c
+      : "Total " + t + ", Active " + a + ", Cancelled " + c;
+  }
+  function marketTile(label, s, href) {
     var used = Number(s.usedCY || 0);
     var total = Number(s.totalCY || 0);
     var usedPct = total > 0 ? Math.max(0, Math.min(100, Math.round((used / total) * 100))) : 0;
-    var name = (s.name || "DOLESE").toString().toUpperCase();
     return (
       '<div class="tile" style="position: relative; background-color: ' + GREEN + '; cursor: pointer; display: block;" ' +
-      "onclick=\"window.top.location.href='/orders?date=" + encodeURIComponent(D) + "'\">" +
+      "onclick=\"window.top.location.href='" + href + "'\">" +
       '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px;">' +
       '<div class="tileContainer">' +
       '<div class="mkt-pie" data-pct="' + usedPct + '" style="width:72px; height:80px; margin-right:5px; float:left"></div>' +
       '<div class="tileInfoSection"><div class="tileCell">' +
-      '<div class="tileSuperTitle">' + esc(name) + "</div>" +
+      '<div class="tileSuperTitle">' + esc(label) + "</div>" +
       '<div class="tileTitle">' + comma(used) + " OF " + comma(total) + " CY</div>" +
-      '<div class="tileSubTitle">Tot ' + (s.totalOrders || 0) + ", Act " + (s.activeOrders || 0) + ", Can " + (s.cancelledOrders || 0) + "</div>" +
+      '<div class="tileSubTitle">' + countsLine(s) + "</div>" +
       "</div></div></div></div>"
     );
+  }
+
+  // Company roll-up tile + one card per plant/market ("1 - NEW FAIRVIEW", …), D3 order.
+  function summaryTiles(s) {
+    var dateHref = "/orders?date=" + encodeURIComponent(D);
+    var html = marketTile((s.name || "DOLESE").toString().toUpperCase(), s, dateHref);
+    // Per-plant tiles only for tenants D3 breaks down (Sunrise); Dolese = company-only.
+    var plants = (s && s.showPlants && s.plants) || [];
+    for (var i = 0; i < plants.length; i++) {
+      var p = plants[i];
+      var label = (p.code ? p.code + " - " : "") + String(p.name || "").toUpperCase();
+      // Clicking a plant tile opens the board filtered to that plant (?plant=<code>),
+      // which pre-selects it in the board's plant dropdown.
+      var plantHref = dateHref + (p.code ? "&plant=" + encodeURIComponent(p.code) : "");
+      html += marketTile(label, p, plantHref);
+    }
+    return html;
   }
 
   // ---- Highcharts used/remaining pie (D3's tileInitPie config verbatim) ----
@@ -252,7 +279,7 @@
         type: 'GET',
         success: function(s) {
           if (!s || s.error) return;
-          var html = announcementTiles() + summaryTile(s);
+          var html = announcementTiles() + summaryTiles(s);
           if (html === lastHtml) return;
           lastHtml = html;
           t.innerHTML = html;

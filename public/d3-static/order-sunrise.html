@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<!-- saved from url=(0097)https://d3.truckast.com/dv/v1/sunrise/Truckast/Order?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254 -->
+<html xmlns="http://www.w3.org/1999/xhtml" class="k-webkit k-webkit150"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="format-detection" content="telephone=no">
+        <title></title>
+
+        <!-- Required javascript and css all rolled up in one -->
+        <script src="./Order_files/d3_complete_nohc.js.download"></script>
+        
+        <link href="./Order_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+        <!-- Highcharts -->
+        <script src="./Order_files/highcharts.js.download"></script>
+        <script src="./Order_files/highcharts-more.js.download"></script>
+        <script src="./Order_files/data.js.download"></script>
+        
+        <!-- need to rollup into d3_complete upon approval -->
+        <script src="./Order_files/jquery.rateit.min.js.download"></script>
+        <link href="./Order_files/rateit.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/hopscotch.min.js.download"></script>
+        <link href="./Order_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+        <script src="./Order_files/chardinjs.min.js.download"></script>
+        <link href="./Order_files/chardinjs.css" rel="stylesheet" type="text/css">
+                   
+        <link href="./Order_files/bootstrap2-toggle.min.css" rel="stylesheet">
+        <script src="./Order_files/bootstrap2-toggle.min.js.download"></script>
+                     
+        <!-- Google Analytics -->
+        
+
+        <style media="print" type="text/css">
+            a:after { content:''; }
+            a[href]:after { content: none !important; }
+        </style>
+    </head>
+    <body>
+        <script>
+            // document load initialization
+            $(document).ready(function () {
+                hideLoadingIndicator();
+                loadLogin();
+            });
+            $(window).unload(function () {
+                hideLoadingIndicator();
+                saveLogin();
+            });
+        </script>
+        
+<script type="text/javascript">
+    $(document).ready(function () {
+        var errormsg = getParameterByName("pageerror");
+        if (errormsg != null && errormsg.length > 0) {
+            displayError('ERROR', trimString(errormsg));
+        }
+        Highcharts.setOptions({
+            colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+        });
+    });
+</script>
+<div class="d3-page">
+
+<div class="navbar navbar-fixed-top navbar-inverse">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+
+            <a id="header-bar-title" class="brand">TRUCKAST</a>
+
+            <div class="nav-collapse collapse">
+                <ul class="nav">
+                                            <li><a href="https://d3.truckast.com/dv/v1/sunrise/Truckast/MarketSummary">MARKETS</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/sunrise/Truckast/Settings">SETTINGS</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/sunrise/Announcements/AnnouncementForm">PUBLISH</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/sunrise/TKAdmin/UserSearch">ADMIN</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/sunrise/OrderRequest/OrderRequestDashboard">ORDER</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/sunrise/Rollout/Search">ROLLOUT</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/sunrise/Project/InviteTo">PROJECTS</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/sunrise/Truckast/Help?App=Truckast&amp;HelpPage=Order">HELP</a></li>
+                                            <li><a href="https://d3.truckast.com/dv/v1/d3/Accounts/Logout">LOGOUT</a></li>
+
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+                <div class="container"> 
+                    <div id="error-box" class="alert alert-error" style="display: none">
+                        <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                        <p id="error-text"></p>
+                    </div>
+                    <div id="warning-box" class="alert alert-block" style="display: none">
+                        <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                        <p id="warning-text"></p>
+                    </div>
+                    <div id="success-box" class="alert alert-success" style="display: none">
+                        <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                        <p id="success-text"></p>
+                    </div>
+                    <div id="information-box" class="alert alert-info" style="display: none">
+                        <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                        <p id="information-text"></p>
+                    </div>
+
+<form id="order" method="POST">
+
+<div class="navbar">
+    <div class="navbar-inner">
+        <div class="container">
+            <table style="width:100%">
+                <tbody><tr>
+                    <td style="width:38px">
+                        <a onclick="history.back();hideLoadingIndicator();">
+                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./Order_files/arrow-big-01@2x.png">
+                            
+                        </a>                    
+                    </td>
+                    <td>
+                    <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                        <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                            <span style="font-size: 16px"><strong>ORDER 2000-7/22</strong></span><br>
+                            <span style="font-size: 11px; padding: 0"><strong>1144 ROBSON RANCH RD</strong></span>
+                        </div>
+                    </div>                    
+                    </td>
+                    <td style="width:38px">
+                        <a href="https://d3.truckast.com/dv/v1/sunrise/Truckast/Order?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254">
+                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./Order_files/arrow-small-27@2x.png">
+                            
+                        </a>                    
+                    </td>
+                </tr>
+            </tbody></table>
+        </div>
+    </div>
+</div>
+            <div id="Header" class="d3-label" style="width: 100%;"><script>
+			$(".brand").click(function(){
+				location.href="https://d3.truckast.com/dv/v1/sunrise/Truckast/marketsummary";
+			});</script></div>
+
+                <div id="db8181a2-8b97-4a25-af99-ac8413b698f1" class="d3-label" style="width: 100%;"><h4>IN PROCESS - REDDEN CONCRETE INC.</h4></div>
+
+                <div id="10c8c1d4-f547-47f0-9fbc-2701bf54945d" class="d3-label" style="width: 100%;"><h4></h4></div>
+
+            <a id="Relese-button" href="https://d3.truckast.com/dv/v1/sunrise/Truckast/Order?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;IsRelese=1" class="btn btn-danger " style="width: 60px; display: none">Relese</a>
+
+            <a id="Confirm-button" href="https://d3.truckast.com/dv/v1/sunrise/Truckast/Order?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;IsConfirm=1" class="btn btn-danger " style="width: 60px; display: none">Confirm</a>
+
+            <a id="21c639dd-811a-4b6e-abe8-bd3f9d71b2d8" href="https://d3.truckast.com/export/pdf?url=https%3A%2F%2Fd3.truckast.com%2Fdv%2Fv1%2Fsunrise%2FTruckast%2FOrderExport%3FOrderID%3D8BABD2AC%2D6E7C%2DF111%2D82CC%2D9F6F49760254%26giid%3DD4E3FA38%2DE744%2DE411%2DBE57%2DA5D86181E080&amp;inline=false&amp;viewwidth=1024" class="btn btn-danger btn-small " style="width: 100px; display: none">Download PDF</a>
+
+        <br>
+        <br>
+
+
+
+
+
+<div id="e9b9bdf9-2183-4a26-8f64-6e2c0d8b9830" style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 95%">
+
+
+    <div class="toggle btn btn-default off" data-toggle="toggle" style="width: 59px; height: 20px;"><input id="8BABD2AC-6E7C-F111-82CC-9F6F49760254" type="checkbox" data-on="Sign" data-off="Review" data-toggle="toggle"><div class="toggle-group"><label class="btn btn-primary toggle-on">Sign</label><label class="btn btn-default active toggle-off">Review</label><span class="toggle-handle btn btn-default"></span></div></div>
+<script>
+  $(function() {
+      $('#8BABD2AC-6E7C-F111-82CC-9F6F49760254').change(function ()
+      {
+          var asyncurl = '/dd/v1/sunrise/MticketToggleAsyncTarget';
+          if(asyncurl != '') {
+              var checked = $(this).prop('checked');
+              updateServer(asyncurl, '#8BABD2AC-6E7C-F111-82CC-9F6F49760254', '8BABD2AC-6E7C-F111-82CC-9F6F49760254', checked);
+          }
+      })
+  })
+    function updateServer(url, toggleid, safeid, checked)
+    {
+        var checkedTitle = 'on';
+        if(!checked)
+            checkedTitle = 'off';
+
+        var fullurl = url + '?toggleid=' + safeid + '&togglestate=' + checkedTitle;
+        console.log(fullurl);
+
+        var jqxhr = $.getJSON(fullurl, function(data) {
+
+            var records = [];
+            var index = 1;
+            $.each( data.Rows, function( i, item ) {
+                var toggleid = '#' + item.Fields[0];
+                var instruction = item.Fields[1];
+
+                if(instruction.indexOf("disable") >= 0)
+                {
+                    $(toggleid).bootstrapToggle('disable');
+                }
+                if(instruction.indexOf("enable") >= 0)
+                {
+                    $(toggleid).bootstrapToggle('enable');
+                }
+                if(instruction.indexOf("hide") >= 0)
+                {
+                    $(toggleid).hide();
+                }
+                if(instruction.indexOf("show") >= 0)
+                {
+                    $(toggleid).show();
+                }
+                if(instruction.indexOf("off") >= 0)
+                {
+                    $(toggleid).bootstrapToggle('off');
+                }
+                if(instruction.indexOf("on") >= 0)
+                {
+                    $(toggleid).bootstrapToggle('on');
+                }
+            });
+        })
+        .success(function () {
+        })
+        .fail(function() {
+            console.log( "error" );
+        })
+        .always(function() {
+        });
+    }
+</script>
+
+
+
+    
+            </td>
+
+    </tr></tbody>
+</table>
+</div>                <div style="float:right;padding:5px;visibility:visible"><a href="https://d3.truckast.com/export/pdf?url=https://d3.truckast.com/dv/v1/sunrise/Truckast/OrderExport?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;inline=false&amp;viewwidth=1024"><img alt="Download" src="./Order_files/pdf-icon.48x48pixel.png"></a></div>
+
+                
+
+        <br>
+        <br>
+
+
+
+
+<script>
+    // ---------- Searching Functionality ---------- //
+    (function($) {
+        jQuery.expr[':'].Contains = function(a, i, m) {
+            return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        function listFilter() {
+            $('#873b0038-ca5d-4215-aede-245012e40655-search').change(function () {
+                var filter = $(this).val();
+                if (filter) {
+                    $('#873b0038-ca5d-4215-aede-245012e40655-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+                    $('#873b0038-ca5d-4215-aede-245012e40655-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+                }
+                else {
+                    $('#873b0038-ca5d-4215-aede-245012e40655-tiles .tile').css('display', 'block');
+                }
+                return false;
+            }).keyup(function () { $(this).change(); });
+        }
+
+        $(function() {
+            listFilter();
+        });
+    }(jQuery));
+
+    // ---------- Pageshow Event Handler (to restore previous pages search text on Back button) ---------- //
+    window.addEventListener("pageshow", function(evt){
+        var filter = $('#873b0038-ca5d-4215-aede-245012e40655-search').val();
+        if (filter) {
+            $('#873b0038-ca5d-4215-aede-245012e40655-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#873b0038-ca5d-4215-aede-245012e40655-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#873b0038-ca5d-4215-aede-245012e40655-tiles .tile').css('display', 'block');
+        }
+    }, false);
+
+    // ---------- Set the Ajax Timer for Callbacks ---------- //
+    window.setInterval(function() {
+        var url = 'https://d3.truckast.com/dd/v1/sunrise/D3TKOrderStatus_MobileTicket?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;Request%2fUserAgent=Mozilla%2f5.0+(Windows+NT+10.0%3b+Win64%3b+x64)+AppleWebKit%2f537.36+(KHTML%2c+like+Gecko)+Chrome%2f150.0.0.0+Safari%2f537.36&amp;Request%2fHostHeader=d3.truckast.com&amp;Request%2fUrlScheme=https&amp;Request%2fRootUri=https%3a%2f%2fd3.truckast.com&amp;Request%2fRawUrl=%2fdv%2fv1%2fsunrise%2fTruckast%2fOrder%3fOrderID%3d8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;Request%2fTenant=sunrise&amp;Request%2fSolution=Truckast&amp;Request%2fPage=Order&amp;Request%2fCultureCode=en-US&amp;Request%2fUrlRoot=https%3a%2f%2fd3.truckast.com&amp;tenant=sunrise&amp;solution=Truckast&amp;page=Order&amp;controller=D3&amp;action=GetSolutionPage&amp;Identity%2fIsAuthenticated=Yes&amp;Identity%2fUserID=d4e3fa38-e744-e411-be57-a5d86181e080&amp;photovis=Show&amp;PhotoTopicID=AppID%253D000-00000-0000-0001%2cOrderID%253D8BABD2AC-6E7C-F111-82CC-9F6F49760254%2cUserID%253DD4E3FA38-E744-E411-BE57-A5D86181E080&amp;photoimage=%3ca+href%3d%22https%3a%2f%2fd3.truckast.com%2fdv%2fv1%2fd3%2ffeatures%2fphoto%3ftenant%3dsunrise%26topicid%3dAppID%253D000-00000-0000-0001%2cOrderID%253D8BABD2AC-6E7C-F111-82CC-9F6F49760254%2cUserID%253DD4E3FA38-E744-E411-BE57-A5D86181E080%22%3e%3cimg+src%3d%22%2fImages%2fIcons%2ftab-bar%2fblack%2fphotography-camera%402x.png%22+alt%3d%22Photo%22+%3e%3c%2fa%3e&amp;products=Hidden&amp;headertiles=show&amp;detailtiles=show&amp;pourspeedvis=Show&amp;pourspeedunit=CY&amp;concretevis=Show&amp;pourchartvis=Show&amp;title=ORDER+2000-7%2f22&amp;jobname=1144+ROBSON+RANCH+RD&amp;jobsitecontact=Show&amp;pourstatename=IN+PROCESS+-+REDDEN+CONCRETE+INC.&amp;refresh=https%3a%2f%2fd3.truckast.com%2fdv%2fv1%2fsunrise%2fTruckast%2fOrder%3fOrderID%3d8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;ticketwithstatustime=hidden&amp;ticketwithstatustimeOrderPage=hidden&amp;delaydetailbtnvis=hidden&amp;messagetxtvis=Show&amp;messagebtnvis=Show&amp;pdfexportbtnvis=hidden&amp;pdfurl=https%253A%252F%252Fd3.truckast.com%252Fdv%252Fv1%252Fsunrise%252FTruckast%252FOrderExport%253FOrderID%253D8BABD2AC%252D6E7C%252DF111%252D82CC%252D9F6F49760254%2526giid%253DD4E3FA38%252DE744%252DE411%252DBE57%252DA5D86181E080&amp;delaydetailpdfurl=https%253A%252F%252Fd3.truckast.com%252Fdv%252Fv1%252Fsunrise%252FTruckast%252Fticketstatusdetailsexport%253FOrderID%253D8BABD2AC%252D6E7C%252DF111%252D82CC%252D9F6F49760254%2526ShowDetail%253D1%2526giid%253DD4E3FA38%252DE744%252DE411%252DBE57%252DA5D86181E080&amp;usertime=07%2f22%2f2026++6%3a47AM+CST&amp;showlotinputbutton=Hidden&amp;usertoggle=Show&amp;Relese=Hidden&amp;Confirm=Hidden&amp;HeaderScript=%3cscript%3e%0d%0a%09%09%09%24(%22.brand%22).click(function()%7b%0d%0a%09%09%09%09location.href%3d%22https%3a%2f%2fd3.truckast.com%2fdv%2fv1%2fsunrise%2fTruckast%2fmarketsummary%22%3b%0d%0a%09%09%09%7d)%3b%3c%2fscript%3e';
+        var target = "#873b0038-ca5d-4215-aede-245012e40655-tiles";
+        var postHtml = "";
+        UpdateTilesViaAjax(url, target, postHtml, function () {
+        var filter = $('#873b0038-ca5d-4215-aede-245012e40655-search').val();
+        if (filter) {
+            $('#873b0038-ca5d-4215-aede-245012e40655-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#873b0038-ca5d-4215-aede-245012e40655-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#873b0038-ca5d-4215-aede-245012e40655-tiles .tile').css('display', 'block');
+        }    
+       });
+    }, 10000);
+</script> 
+
+<div id="873b0038-ca5d-4215-aede-245012e40655" style="width: 100%; display: block">
+    <input id="873b0038-ca5d-4215-aede-245012e40655-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="873b0038-ca5d-4215-aede-245012e40655-tiles" style="display: inline-block;"><div class="tile" style="position: relative; background-color: rgb(47, 126, 216); cursor: pointer; display: block;" onclick="tileInvoke(&#39;https://d3.truckast.com/dv/v1/sunrise/mticket/MobileTickets?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;startdate=2026-07-22&amp;enddate=2026-07-22&amp;default=All&#39;);"><img src="./Order_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; "><div class="tileContainer"><div class="tileIcon"><img src="./Order_files/MOBILETICKET.PNG"></div><div class="tileInfoSection"><div class="tileCell"><div class="tileSuperTitle">27 OF 0 SIGNED</div><div class="tileTitle">MOBILE TICKET</div><div class="tileSubTitle">Tot:27 Sign:27</div></div></div></div></div></div>
+</div>
+
+<script>
+    // ---------- Searching Functionality ---------- //
+    (function($) {
+        jQuery.expr[':'].Contains = function(a, i, m) {
+            return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        function listFilter() {
+            $('#1223ede3-9bdb-4733-9b10-3655a4b44c53-search').change(function () {
+                var filter = $(this).val();
+                if (filter) {
+                    $('#1223ede3-9bdb-4733-9b10-3655a4b44c53-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+                    $('#1223ede3-9bdb-4733-9b10-3655a4b44c53-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+                }
+                else {
+                    $('#1223ede3-9bdb-4733-9b10-3655a4b44c53-tiles .tile').css('display', 'block');
+                }
+                return false;
+            }).keyup(function () { $(this).change(); });
+        }
+
+        $(function() {
+            listFilter();
+        });
+    }(jQuery));
+
+    // ---------- Pageshow Event Handler (to restore previous pages search text on Back button) ---------- //
+    window.addEventListener("pageshow", function(evt){
+        var filter = $('#1223ede3-9bdb-4733-9b10-3655a4b44c53-search').val();
+        if (filter) {
+            $('#1223ede3-9bdb-4733-9b10-3655a4b44c53-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#1223ede3-9bdb-4733-9b10-3655a4b44c53-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#1223ede3-9bdb-4733-9b10-3655a4b44c53-tiles .tile').css('display', 'block');
+        }
+    }, false);
+
+    // ---------- Set the Ajax Timer for Callbacks ---------- //
+    window.setInterval(function() {
+        var url = 'https://d3.truckast.com/dd/v1/sunrise/D3TKOrderStatus_PrePourPlant?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;Request%2fUserAgent=Mozilla%2f5.0+(Windows+NT+10.0%3b+Win64%3b+x64)+AppleWebKit%2f537.36+(KHTML%2c+like+Gecko)+Chrome%2f150.0.0.0+Safari%2f537.36&amp;Request%2fHostHeader=d3.truckast.com&amp;Request%2fUrlScheme=https&amp;Request%2fRootUri=https%3a%2f%2fd3.truckast.com&amp;Request%2fRawUrl=%2fdv%2fv1%2fsunrise%2fTruckast%2fOrder%3fOrderID%3d8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;Request%2fTenant=sunrise&amp;Request%2fSolution=Truckast&amp;Request%2fPage=Order&amp;Request%2fCultureCode=en-US&amp;Request%2fUrlRoot=https%3a%2f%2fd3.truckast.com&amp;tenant=sunrise&amp;solution=Truckast&amp;page=Order&amp;controller=D3&amp;action=GetSolutionPage&amp;Identity%2fIsAuthenticated=Yes&amp;Identity%2fUserID=d4e3fa38-e744-e411-be57-a5d86181e080&amp;photovis=Show&amp;PhotoTopicID=AppID%253D000-00000-0000-0001%2cOrderID%253D8BABD2AC-6E7C-F111-82CC-9F6F49760254%2cUserID%253DD4E3FA38-E744-E411-BE57-A5D86181E080&amp;photoimage=%3ca+href%3d%22https%3a%2f%2fd3.truckast.com%2fdv%2fv1%2fd3%2ffeatures%2fphoto%3ftenant%3dsunrise%26topicid%3dAppID%253D000-00000-0000-0001%2cOrderID%253D8BABD2AC-6E7C-F111-82CC-9F6F49760254%2cUserID%253DD4E3FA38-E744-E411-BE57-A5D86181E080%22%3e%3cimg+src%3d%22%2fImages%2fIcons%2ftab-bar%2fblack%2fphotography-camera%402x.png%22+alt%3d%22Photo%22+%3e%3c%2fa%3e&amp;products=Hidden&amp;headertiles=show&amp;detailtiles=show&amp;pourspeedvis=Show&amp;pourspeedunit=CY&amp;concretevis=Show&amp;pourchartvis=Show&amp;title=ORDER+2000-7%2f22&amp;jobname=1144+ROBSON+RANCH+RD&amp;jobsitecontact=Show&amp;pourstatename=IN+PROCESS+-+REDDEN+CONCRETE+INC.&amp;refresh=https%3a%2f%2fd3.truckast.com%2fdv%2fv1%2fsunrise%2fTruckast%2fOrder%3fOrderID%3d8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;ticketwithstatustime=hidden&amp;ticketwithstatustimeOrderPage=hidden&amp;delaydetailbtnvis=hidden&amp;messagetxtvis=Show&amp;messagebtnvis=Show&amp;pdfexportbtnvis=hidden&amp;pdfurl=https%253A%252F%252Fd3.truckast.com%252Fdv%252Fv1%252Fsunrise%252FTruckast%252FOrderExport%253FOrderID%253D8BABD2AC%252D6E7C%252DF111%252D82CC%252D9F6F49760254%2526giid%253DD4E3FA38%252DE744%252DE411%252DBE57%252DA5D86181E080&amp;delaydetailpdfurl=https%253A%252F%252Fd3.truckast.com%252Fdv%252Fv1%252Fsunrise%252FTruckast%252Fticketstatusdetailsexport%253FOrderID%253D8BABD2AC%252D6E7C%252DF111%252D82CC%252D9F6F49760254%2526ShowDetail%253D1%2526giid%253DD4E3FA38%252DE744%252DE411%252DBE57%252DA5D86181E080&amp;usertime=07%2f22%2f2026++6%3a47AM+CST&amp;showlotinputbutton=Hidden&amp;usertoggle=Show&amp;Relese=Hidden&amp;Confirm=Hidden&amp;HeaderScript=%3cscript%3e%0d%0a%09%09%09%24(%22.brand%22).click(function()%7b%0d%0a%09%09%09%09location.href%3d%22https%3a%2f%2fd3.truckast.com%2fdv%2fv1%2fsunrise%2fTruckast%2fmarketsummary%22%3b%0d%0a%09%09%09%7d)%3b%3c%2fscript%3e';
+        var target = "#1223ede3-9bdb-4733-9b10-3655a4b44c53-tiles";
+        var postHtml = "";
+        UpdateTilesViaAjax(url, target, postHtml, function () {
+        var filter = $('#1223ede3-9bdb-4733-9b10-3655a4b44c53-search').val();
+        if (filter) {
+            $('#1223ede3-9bdb-4733-9b10-3655a4b44c53-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#1223ede3-9bdb-4733-9b10-3655a4b44c53-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#1223ede3-9bdb-4733-9b10-3655a4b44c53-tiles .tile').css('display', 'block');
+        }    
+       });
+    }, 10000);
+</script> 
+
+<div id="1223ede3-9bdb-4733-9b10-3655a4b44c53" style="width: 100%; display: block">
+    <input id="1223ede3-9bdb-4733-9b10-3655a4b44c53-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="1223ede3-9bdb-4733-9b10-3655a4b44c53-tiles" style="display: inline-block;"></div>
+</div>
+
+<script>
+    // ---------- Searching Functionality ---------- //
+    (function($) {
+        jQuery.expr[':'].Contains = function(a, i, m) {
+            return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        function listFilter() {
+            $('#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-search').change(function () {
+                var filter = $(this).val();
+                if (filter) {
+                    $('#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+                    $('#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+                }
+                else {
+                    $('#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-tiles .tile').css('display', 'block');
+                }
+                return false;
+            }).keyup(function () { $(this).change(); });
+        }
+
+        $(function() {
+            listFilter();
+        });
+    }(jQuery));
+
+    // ---------- Pageshow Event Handler (to restore previous pages search text on Back button) ---------- //
+    window.addEventListener("pageshow", function(evt){
+        var filter = $('#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-search').val();
+        if (filter) {
+            $('#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-tiles .tile').css('display', 'block');
+        }
+    }, false);
+
+    // ---------- Set the Ajax Timer for Callbacks ---------- //
+    window.setInterval(function() {
+        var url = 'https://d3.truckast.com/dd/v1/sunrise/D3TKOrderStatusHeader?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;Request%2fUserAgent=Mozilla%2f5.0+(Windows+NT+10.0%3b+Win64%3b+x64)+AppleWebKit%2f537.36+(KHTML%2c+like+Gecko)+Chrome%2f150.0.0.0+Safari%2f537.36&amp;Request%2fHostHeader=d3.truckast.com&amp;Request%2fUrlScheme=https&amp;Request%2fRootUri=https%3a%2f%2fd3.truckast.com&amp;Request%2fRawUrl=%2fdv%2fv1%2fsunrise%2fTruckast%2fOrder%3fOrderID%3d8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;Request%2fTenant=sunrise&amp;Request%2fSolution=Truckast&amp;Request%2fPage=Order&amp;Request%2fCultureCode=en-US&amp;Request%2fUrlRoot=https%3a%2f%2fd3.truckast.com&amp;tenant=sunrise&amp;solution=Truckast&amp;page=Order&amp;controller=D3&amp;action=GetSolutionPage&amp;Identity%2fIsAuthenticated=Yes&amp;Identity%2fUserID=d4e3fa38-e744-e411-be57-a5d86181e080&amp;photovis=Show&amp;PhotoTopicID=AppID%253D000-00000-0000-0001%2cOrderID%253D8BABD2AC-6E7C-F111-82CC-9F6F49760254%2cUserID%253DD4E3FA38-E744-E411-BE57-A5D86181E080&amp;photoimage=%3ca+href%3d%22https%3a%2f%2fd3.truckast.com%2fdv%2fv1%2fd3%2ffeatures%2fphoto%3ftenant%3dsunrise%26topicid%3dAppID%253D000-00000-0000-0001%2cOrderID%253D8BABD2AC-6E7C-F111-82CC-9F6F49760254%2cUserID%253DD4E3FA38-E744-E411-BE57-A5D86181E080%22%3e%3cimg+src%3d%22%2fImages%2fIcons%2ftab-bar%2fblack%2fphotography-camera%402x.png%22+alt%3d%22Photo%22+%3e%3c%2fa%3e&amp;products=Hidden&amp;headertiles=show&amp;detailtiles=show&amp;pourspeedvis=Show&amp;pourspeedunit=CY&amp;concretevis=Show&amp;pourchartvis=Show&amp;title=ORDER+2000-7%2f22&amp;jobname=1144+ROBSON+RANCH+RD&amp;jobsitecontact=Show&amp;pourstatename=IN+PROCESS+-+REDDEN+CONCRETE+INC.&amp;refresh=https%3a%2f%2fd3.truckast.com%2fdv%2fv1%2fsunrise%2fTruckast%2fOrder%3fOrderID%3d8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;ticketwithstatustime=hidden&amp;ticketwithstatustimeOrderPage=hidden&amp;delaydetailbtnvis=hidden&amp;messagetxtvis=Show&amp;messagebtnvis=Show&amp;pdfexportbtnvis=hidden&amp;pdfurl=https%253A%252F%252Fd3.truckast.com%252Fdv%252Fv1%252Fsunrise%252FTruckast%252FOrderExport%253FOrderID%253D8BABD2AC%252D6E7C%252DF111%252D82CC%252D9F6F49760254%2526giid%253DD4E3FA38%252DE744%252DE411%252DBE57%252DA5D86181E080&amp;delaydetailpdfurl=https%253A%252F%252Fd3.truckast.com%252Fdv%252Fv1%252Fsunrise%252FTruckast%252Fticketstatusdetailsexport%253FOrderID%253D8BABD2AC%252D6E7C%252DF111%252D82CC%252D9F6F49760254%2526ShowDetail%253D1%2526giid%253DD4E3FA38%252DE744%252DE411%252DBE57%252DA5D86181E080&amp;usertime=07%2f22%2f2026++6%3a47AM+CST&amp;showlotinputbutton=Hidden&amp;usertoggle=Show&amp;Relese=Hidden&amp;Confirm=Hidden&amp;HeaderScript=%3cscript%3e%0d%0a%09%09%09%24(%22.brand%22).click(function()%7b%0d%0a%09%09%09%09location.href%3d%22https%3a%2f%2fd3.truckast.com%2fdv%2fv1%2fsunrise%2fTruckast%2fmarketsummary%22%3b%0d%0a%09%09%09%7d)%3b%3c%2fscript%3e';
+        var target = "#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-tiles";
+        var postHtml = "";
+        UpdateTilesViaAjax(url, target, postHtml, function () {
+        var filter = $('#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-search').val();
+        if (filter) {
+            $('#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#15abcc1b-c2b0-48f7-9227-25c9eebbafc9-tiles .tile').css('display', 'block');
+        }    
+       });
+    }, 10000);
+</script> 
+
+<div id="15abcc1b-c2b0-48f7-9227-25c9eebbafc9" style="width: 100%; display: block">
+    <input id="15abcc1b-c2b0-48f7-9227-25c9eebbafc9-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="15abcc1b-c2b0-48f7-9227-25c9eebbafc9-tiles" style="display: inline-block;"><div class="tile" style="position: relative; width: 88px; height: 90px; margin-right: 5px; margin-bottom: 5px; background-color: rgb(47, 126, 216); float: left; color: white; cursor: pointer; display: block;" onclick="tileInvoke(&#39;https://d3.truckast.com/dv/v1/sunrise/Truckast/TruckArrival?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&#39;);"><img src="./Order_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; "><div style="padding:5px"><div style="text-align: center; font-size: 12px; font-weight: bold">NEXT TRUCK</div><div style="width:100%; height:40px; line-height: 40px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 24px">25</div><div style="text-align: center; font-size: 12px">MIN</div></div></div><div class="tile" style="position: relative; width: 88px; height: 90px; margin-right: 5px; margin-bottom: 5px; background-color: rgb(47, 126, 216); float: left; color: white; cursor: default; display: block;"><div style="padding:5px"><div style="text-align: center; font-size: 12px; font-weight: bold">POUR FINISH</div><div style="width:100%; height:40px; line-height: 40px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 24px">9:50</div><div style="text-align: center; font-size: 12px">AM</div></div></div><div class="tile" style="position: relative; width: 88px; height: 90px; margin-right: 5px; margin-bottom: 5px; background-color: rgb(47, 126, 216); float: left; color: white; cursor: pointer; display: block;" onclick="tileInvoke(&#39;https://d3.truckast.com/dv/v1/sunrise/Truckast/TruckMap?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&#39;);"><img src="./Order_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; "><div style="padding:5px"><div style="text-align: center; font-size: 12px; font-weight: bold"><div style="display: flex; flex-flow:column;"><p style="display: flex; flex-flow:column; margin-bottom:5px;">TRUCKS<span style="color: black; font-size: 9px; line-height:10px;">Loaded</span></p><span style="color: white; font-size: 20px;">5</span><span>MAP</span></div></div><div style="width:100%; height:40px; line-height: 40px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 24px"></div><div style="text-align: center; font-size: 12px"></div></div></div></div>
+</div>
+
+<script>
+    // ---------- Searching Functionality ---------- //
+    (function($) {
+        jQuery.expr[':'].Contains = function(a, i, m) {
+            return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        function listFilter() {
+            $('#6154c0b3-5a95-407f-b24c-b508a7d407ef-search').change(function () {
+                var filter = $(this).val();
+                if (filter) {
+                    $('#6154c0b3-5a95-407f-b24c-b508a7d407ef-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+                    $('#6154c0b3-5a95-407f-b24c-b508a7d407ef-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+                }
+                else {
+                    $('#6154c0b3-5a95-407f-b24c-b508a7d407ef-tiles .tile').css('display', 'block');
+                }
+                return false;
+            }).keyup(function () { $(this).change(); });
+        }
+
+        $(function() {
+            listFilter();
+        });
+    }(jQuery));
+
+    // ---------- Pageshow Event Handler (to restore previous pages search text on Back button) ---------- //
+    window.addEventListener("pageshow", function(evt){
+        var filter = $('#6154c0b3-5a95-407f-b24c-b508a7d407ef-search').val();
+        if (filter) {
+            $('#6154c0b3-5a95-407f-b24c-b508a7d407ef-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#6154c0b3-5a95-407f-b24c-b508a7d407ef-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#6154c0b3-5a95-407f-b24c-b508a7d407ef-tiles .tile').css('display', 'block');
+        }
+    }, false);
+
+    // ---------- Set the Ajax Timer for Callbacks ---------- //
+    window.setInterval(function() {
+        var url = 'https://d3.truckast.com/dd/v1/sunrise/D3TKOrderStatusDetails?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;Request%2fUserAgent=Mozilla%2f5.0+(Windows+NT+10.0%3b+Win64%3b+x64)+AppleWebKit%2f537.36+(KHTML%2c+like+Gecko)+Chrome%2f150.0.0.0+Safari%2f537.36&amp;Request%2fHostHeader=d3.truckast.com&amp;Request%2fUrlScheme=https&amp;Request%2fRootUri=https%3a%2f%2fd3.truckast.com&amp;Request%2fRawUrl=%2fdv%2fv1%2fsunrise%2fTruckast%2fOrder%3fOrderID%3d8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;Request%2fTenant=sunrise&amp;Request%2fSolution=Truckast&amp;Request%2fPage=Order&amp;Request%2fCultureCode=en-US&amp;Request%2fUrlRoot=https%3a%2f%2fd3.truckast.com&amp;tenant=sunrise&amp;solution=Truckast&amp;page=Order&amp;controller=D3&amp;action=GetSolutionPage&amp;Identity%2fIsAuthenticated=Yes&amp;Identity%2fUserID=d4e3fa38-e744-e411-be57-a5d86181e080&amp;photovis=Show&amp;PhotoTopicID=AppID%253D000-00000-0000-0001%2cOrderID%253D8BABD2AC-6E7C-F111-82CC-9F6F49760254%2cUserID%253DD4E3FA38-E744-E411-BE57-A5D86181E080&amp;photoimage=%3ca+href%3d%22https%3a%2f%2fd3.truckast.com%2fdv%2fv1%2fd3%2ffeatures%2fphoto%3ftenant%3dsunrise%26topicid%3dAppID%253D000-00000-0000-0001%2cOrderID%253D8BABD2AC-6E7C-F111-82CC-9F6F49760254%2cUserID%253DD4E3FA38-E744-E411-BE57-A5D86181E080%22%3e%3cimg+src%3d%22%2fImages%2fIcons%2ftab-bar%2fblack%2fphotography-camera%402x.png%22+alt%3d%22Photo%22+%3e%3c%2fa%3e&amp;products=Hidden&amp;headertiles=show&amp;detailtiles=show&amp;pourspeedvis=Show&amp;pourspeedunit=CY&amp;concretevis=Show&amp;pourchartvis=Show&amp;title=ORDER+2000-7%2f22&amp;jobname=1144+ROBSON+RANCH+RD&amp;jobsitecontact=Show&amp;pourstatename=IN+PROCESS+-+REDDEN+CONCRETE+INC.&amp;refresh=https%3a%2f%2fd3.truckast.com%2fdv%2fv1%2fsunrise%2fTruckast%2fOrder%3fOrderID%3d8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;ticketwithstatustime=hidden&amp;ticketwithstatustimeOrderPage=hidden&amp;delaydetailbtnvis=hidden&amp;messagetxtvis=Show&amp;messagebtnvis=Show&amp;pdfexportbtnvis=hidden&amp;pdfurl=https%253A%252F%252Fd3.truckast.com%252Fdv%252Fv1%252Fsunrise%252FTruckast%252FOrderExport%253FOrderID%253D8BABD2AC%252D6E7C%252DF111%252D82CC%252D9F6F49760254%2526giid%253DD4E3FA38%252DE744%252DE411%252DBE57%252DA5D86181E080&amp;delaydetailpdfurl=https%253A%252F%252Fd3.truckast.com%252Fdv%252Fv1%252Fsunrise%252FTruckast%252Fticketstatusdetailsexport%253FOrderID%253D8BABD2AC%252D6E7C%252DF111%252D82CC%252D9F6F49760254%2526ShowDetail%253D1%2526giid%253DD4E3FA38%252DE744%252DE411%252DBE57%252DA5D86181E080&amp;usertime=07%2f22%2f2026++6%3a47AM+CST&amp;showlotinputbutton=Hidden&amp;usertoggle=Show&amp;Relese=Hidden&amp;Confirm=Hidden&amp;HeaderScript=%3cscript%3e%0d%0a%09%09%09%24(%22.brand%22).click(function()%7b%0d%0a%09%09%09%09location.href%3d%22https%3a%2f%2fd3.truckast.com%2fdv%2fv1%2fsunrise%2fTruckast%2fmarketsummary%22%3b%0d%0a%09%09%09%7d)%3b%3c%2fscript%3e';
+        var target = "#6154c0b3-5a95-407f-b24c-b508a7d407ef-tiles";
+        var postHtml = "";
+        UpdateTilesViaAjax(url, target, postHtml, function () {
+        var filter = $('#6154c0b3-5a95-407f-b24c-b508a7d407ef-search').val();
+        if (filter) {
+            $('#6154c0b3-5a95-407f-b24c-b508a7d407ef-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#6154c0b3-5a95-407f-b24c-b508a7d407ef-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#6154c0b3-5a95-407f-b24c-b508a7d407ef-tiles .tile').css('display', 'block');
+        }    
+       });
+    }, 60000);
+</script> 
+
+<div id="6154c0b3-5a95-407f-b24c-b508a7d407ef" style="width: 100%; display: block">
+    <input id="6154c0b3-5a95-407f-b24c-b508a7d407ef-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="6154c0b3-5a95-407f-b24c-b508a7d407ef-tiles" style="display: inline-block;">
+                <div class="tile" style="position: relative; width: 88px; height: 90px; margin-right: 5px; margin-bottom: 5px; background-color: rgb(47, 126, 216); float: left; color: white; cursor: pointer; display: block;" onclick="tileInvoke(&#39;https://d3.truckast.com/dv/v1/sunrise/Truckast/OrderDetails?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&#39;);">
+                    <img src="./Order_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;">
+                    <div style="padding:5px">
+                        <div style="text-align: center; font-size: 12px; font-weight: bold">ORDERED</div>
+                        <div style="width:100%; height:40px; line-height: 40px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 24px">500.00</div>
+                        <div style="text-align: center; font-size: 12px">CY</div>
+                    </div>
+                </div>
+                <div class="tile" style="position: relative; width: 88px; height: 90px; margin-right: 5px; margin-bottom: 5px; background-color: rgb(47, 126, 216); float: left; color: white; cursor: pointer; display: block;" onclick="tileInvoke(&#39;https://d3.truckast.com/dv/v1/sunrise/Truckast/TicketSummary?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&#39;);">
+                    <img src="./Order_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;">
+                    <div style="padding:5px">
+                        <div style="text-align: center; font-size: 12px; font-weight: bold">TICKETED</div>
+                        <div style="width:100%; height:40px; line-height: 40px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 24px">270.00</div>
+                        <div style="text-align: center; font-size: 12px">CY</div>
+                    </div>
+                </div>
+                <div class="tile" style="position: relative; width: 88px; height: 90px; margin-right: 5px; margin-bottom: 5px; background-color: rgb(47, 126, 216); float: left; color: white; cursor: default; display: block;">
+                    <img src="./Order_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: none;">
+                    <div style="padding:5px">
+                        <div style="text-align: center; font-size: 12px; font-weight: bold">ON JOB</div>
+                        <div style="width:100%; height:40px; line-height: 40px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 24px">250.00</div>
+                        <div style="text-align: center; font-size: 12px">CY</div>
+                    </div>
+                </div>
+                <div style="width: 100%; height: 1px; clear: both"></div>
+                <div class="tile" style="position: relative; background-color: rgb(47, 126, 216); cursor: default; display: block;">
+                    <img src="./Order_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: none;">
+                    <div class="tileContainer">
+                        <div class="tileIcon"><img src="./Order_files/01n.png"></div>
+                        <div class="tileInfoSection">
+                            <div class="tileCell">
+                                <div class="tileSuperTitle"><span style="font-size: 11px; font-weight: bold;">NEW FAIRVIEW Plant </span></div>
+                                <div class="tileTitle"><span style="font-size: 14px; font-weight: bold;">81.55F Clear Sky</span></div>
+                                <div class="tileSubTitle">H: 73%   P: 1012   W: 0.83 E<br>Last Update: 6:46AM CST</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    </div>
+</div>
+
+<script>
+    // ---------- Searching Functionality ---------- //
+    (function($) {
+        jQuery.expr[':'].Contains = function(a, i, m) {
+            return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        function listFilter() {
+            $('#e496ed5b-5113-4fa6-8149-d5f421c15264-search').change(function () {
+                var filter = $(this).val();
+                if (filter) {
+                    $('#e496ed5b-5113-4fa6-8149-d5f421c15264-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+                    $('#e496ed5b-5113-4fa6-8149-d5f421c15264-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+                }
+                else {
+                    $('#e496ed5b-5113-4fa6-8149-d5f421c15264-tiles .tile').css('display', 'block');
+                }
+                return false;
+            }).keyup(function () { $(this).change(); });
+        }
+
+        $(function() {
+            listFilter();
+        });
+    }(jQuery));
+
+    // ---------- Pageshow Event Handler (to restore previous pages search text on Back button) ---------- //
+    window.addEventListener("pageshow", function(evt){
+        var filter = $('#e496ed5b-5113-4fa6-8149-d5f421c15264-search').val();
+        if (filter) {
+            $('#e496ed5b-5113-4fa6-8149-d5f421c15264-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#e496ed5b-5113-4fa6-8149-d5f421c15264-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#e496ed5b-5113-4fa6-8149-d5f421c15264-tiles .tile').css('display', 'block');
+        }
+    }, false);
+
+    // ---------- Set the Ajax Timer for Callbacks ---------- //
+</script> 
+
+<div id="e496ed5b-5113-4fa6-8149-d5f421c15264" style="width: 100%; display: block">
+    <input id="e496ed5b-5113-4fa6-8149-d5f421c15264-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="e496ed5b-5113-4fa6-8149-d5f421c15264-tiles" style="display: inline-block;">
+    </div>
+</div>
+
+<script>
+    // ---------- Searching Functionality ---------- //
+    (function($) {
+        jQuery.expr[':'].Contains = function(a, i, m) {
+            return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        function listFilter() {
+            $('#95804fa4-2589-42e2-ae0f-162b566a6261-search').change(function () {
+                var filter = $(this).val();
+                if (filter) {
+                    $('#95804fa4-2589-42e2-ae0f-162b566a6261-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+                    $('#95804fa4-2589-42e2-ae0f-162b566a6261-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+                }
+                else {
+                    $('#95804fa4-2589-42e2-ae0f-162b566a6261-tiles .tile').css('display', 'block');
+                }
+                return false;
+            }).keyup(function () { $(this).change(); });
+        }
+
+        $(function() {
+            listFilter();
+        });
+    }(jQuery));
+
+    // ---------- Pageshow Event Handler (to restore previous pages search text on Back button) ---------- //
+    window.addEventListener("pageshow", function(evt){
+        var filter = $('#95804fa4-2589-42e2-ae0f-162b566a6261-search').val();
+        if (filter) {
+            $('#95804fa4-2589-42e2-ae0f-162b566a6261-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#95804fa4-2589-42e2-ae0f-162b566a6261-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#95804fa4-2589-42e2-ae0f-162b566a6261-tiles .tile').css('display', 'block');
+        }
+    }, false);
+
+    // ---------- Set the Ajax Timer for Callbacks ---------- //
+</script> 
+
+<div id="95804fa4-2589-42e2-ae0f-162b566a6261" style="width: 100%; display: block">
+    <input id="95804fa4-2589-42e2-ae0f-162b566a6261-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="95804fa4-2589-42e2-ae0f-162b566a6261-tiles" style="display: inline-block;">
+    </div>
+</div>
+
+<script>
+    // ---------- Searching Functionality ---------- //
+    (function($) {
+        jQuery.expr[':'].Contains = function(a, i, m) {
+            return (a.textContent || a.innerText || "").toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
+        };
+
+        function listFilter() {
+            $('#b7f644d3-0ab0-4f82-b32a-5ad75fe26439-search').change(function () {
+                var filter = $(this).val();
+                if (filter) {
+                    $('#b7f644d3-0ab0-4f82-b32a-5ad75fe26439-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+                    $('#b7f644d3-0ab0-4f82-b32a-5ad75fe26439-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+                }
+                else {
+                    $('#b7f644d3-0ab0-4f82-b32a-5ad75fe26439-tiles .tile').css('display', 'block');
+                }
+                return false;
+            }).keyup(function () { $(this).change(); });
+        }
+
+        $(function() {
+            listFilter();
+        });
+    }(jQuery));
+
+    // ---------- Pageshow Event Handler (to restore previous pages search text on Back button) ---------- //
+    window.addEventListener("pageshow", function(evt){
+        var filter = $('#b7f644d3-0ab0-4f82-b32a-5ad75fe26439-search').val();
+        if (filter) {
+            $('#b7f644d3-0ab0-4f82-b32a-5ad75fe26439-tiles').children(".tile:not(:Contains(" + filter + "))").css('display', 'none');
+            $('#b7f644d3-0ab0-4f82-b32a-5ad75fe26439-tiles').children(".tile:Contains(" + filter + ")").css('display', 'block');
+        }
+        else {
+            $('#b7f644d3-0ab0-4f82-b32a-5ad75fe26439-tiles .tile').css('display', 'block');
+        }
+    }, false);
+
+    // ---------- Set the Ajax Timer for Callbacks ---------- //
+</script> 
+
+<div id="b7f644d3-0ab0-4f82-b32a-5ad75fe26439" style="width: 100%; display: block">
+    <input id="b7f644d3-0ab0-4f82-b32a-5ad75fe26439-search" type="text" placeholder="Search" style="width: 260px; display: none">
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="b7f644d3-0ab0-4f82-b32a-5ad75fe26439-tiles" style="display: inline-block;">
+    </div>
+</div>
+                
+		 <style>
+		// bullet chart
+		.bullet {
+			font: 12px sans-serif;
+		  }
+		  .bullet .marker {
+			stroke: #000;
+			stroke-width: 2px;
+		  }
+		  .bullet .tick line {
+			stroke: #666;
+			stroke-width: 0.5px;
+		  }
+		  .bullet .range {
+			fill: #ddd;
+		  }
+		  .bullet .measure {
+			fill: steelblue; /* Changed to blue */
+			opacity: 0.8;
+		  }
+		  .tooltip {
+			position: absolute;
+			background: #333;
+			color: #fff;
+			padding: 5px;
+			font-size: 12px;
+			border-radius: 4px;
+			display: none;
+		  }
+		  .axis path,
+		  .axis line {
+			stroke: #000;
+			shape-rendering: crispEdges;
+		  }
+		  .title {
+			font-size: 14px;
+			font-weight: bold;
+			text-anchor: end;
+		  }
+		  .graph-title{
+			font-size: 18px;
+			color: #333333;
+			text-align: center;
+		  }
+
+		  // bar chart
+		    .tooltip {
+				position: absolute;
+				background: #fff;
+				padding: 8px;
+				border: 1px solid #ccc;
+				border-radius: 5px;
+				pointer-events: none;
+				display: none;
+			}
+			.bar {
+				fill: steelblue;
+			}
+			.bar:hover {
+				fill: orange;
+			}
+		</style>
+
+		<!-- line chart -->
+		<div id="pour-speed-chart" style="width: 100%; height: 250px;" data-highcharts-chart="1"><div class="highcharts-container" id="highcharts-2" style="position: relative; overflow: hidden; width: 724px; height: 250px; text-align: left; line-height: normal; z-index: 0; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); touch-action: none;"><svg version="1.1" style="font-family:&quot;Lucida Grande&quot;, &quot;Lucida Sans Unicode&quot;, Arial, Helvetica, sans-serif;font-size:12px;" xmlns="http://www.w3.org/2000/svg" width="724" height="250"><desc>Created with Highcharts 4.1.9</desc><defs><clippath id="highcharts-3"><rect x="0" y="0" width="668" height="103"></rect></clippath></defs><rect x="0" y="0" width="724" height="250" strokeWidth="0" fill="#FFFFFF" class=" highcharts-background"></rect><g class="highcharts-grid" zIndex="1"></g><g class="highcharts-grid" zIndex="1"><path fill="none" d="M 46 174.5 L 714 174.5" stroke="#D8D8D8" stroke-width="1" zIndex="1" opacity="1"></path><path fill="none" d="M 46 123.5 L 714 123.5" stroke="#D8D8D8" stroke-width="1" zIndex="1" opacity="1"></path><path fill="none" d="M 46 70.5 L 714 70.5" stroke="#D8D8D8" stroke-width="1" zIndex="1" opacity="1"></path></g><g class="highcharts-axis" zIndex="2"><path fill="none" d="M 45.5 174 L 45.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 88.5 174 L 88.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 131.5 174 L 131.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 173.5 174 L 173.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 216.5 174 L 216.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 259.5 174 L 259.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 302.5 174 L 302.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 345.5 174 L 345.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 387.5 174 L 387.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 430.5 174 L 430.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 473.5 174 L 473.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 516.5 174 L 516.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 559.5 174 L 559.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 601.5 174 L 601.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 644.5 174 L 644.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 706.5 174 L 706.5 184" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 46 174.5 L 714 174.5" stroke="#C0D0E0" stroke-width="1" zIndex="7" visibility="visible"></path></g><g class="highcharts-axis" zIndex="2"></g><g class="highcharts-series-group" zIndex="3"><path fill="rgba(67,67,72,0.25)" d="M 0 0"></path><path fill="rgba(124,181,236,0.25)" d="M 0 0"></path><path fill="rgba(144,237,125,0.25)" d="M 0 0"></path><g class="highcharts-series highcharts-series-0" visibility="visible" zIndex="0.1" transform="translate(46,71) scale(1 1)" clip-path="url(#highcharts-3)"><path fill="none" d="M 6.549019607843137 58.71 C 6.549019607843137 58.71 12.54158656926823 36.565 16.536631210218292 36.565 C 18.81951386218976 36.565 19.96095518817549 36.565 22.243837840146952 36.565 C 26.80960314408988 36.565 29.092485796061347 37.9555 33.65825110000427 37.9555 C 35.37041308898287 37.9555 36.22649408347217 36.565 37.93865607245077 36.565 C 48.78234866931522 36.565 54.20419496774745 58.6276 65.0478875646119 58.6276 C 65.61860822760477 58.6276 65.9039685591012 51.376400000000004 66.47468922209407 51.376400000000004 C 69.89901320005126 51.376400000000004 71.61117518902986 51.793549999999996 75.03549916698705 51.7987 C 78.45982314494424 51.80385 80.17198513392285 51.7987 83.59630911188005 51.80385 C 108.13729762057328 51.809 120.40779187491992 71.36355 144.94878038361315 71.36355 C 150.08526635054895 71.36355 152.65350933401683 71.05455 157.78999530095263 70.95155 C 162.9264812678884 70.84855 165.49472425135633 70.95155 170.6312102182921 70.84854999999999 C 171.77265154427784 70.74554999999998 172.3433722072707 68.63405 173.48481353325644 68.63405 C 179.76274082617797 68.63405 182.90170447263873 69.2778 189.17963176556026 69.2778 C 189.17963176556026 69.2778 189.17963176556026 66.86760000000001 189.17963176556026 66.86760000000001 C 198.31116237344608 66.86760000000001 202.87692767738903 68.79885 212.00845828527488 68.79885 C 216.00350292622497 68.79885 218.00102524669995 68.23235 221.99606988765004 68.23235 C 227.7032765175787 68.23235 230.55687983254302 68.23235 236.2640864624717 68.48984999999999 C 256.239309667222 68.74734999999998 266.22692126959714 71.49889561403509 286.20214447434745 73.02185 C 298.75799906019046 73.97913561403509 305.0359263531121 74.58333 317.5917809389551 74.69045 C 317.5917809389551 74.69045 317.5917809389551 74.05184999999999 317.5917809389551 73.28965 C 320.4453842539194 72.52745 321.8721859114016 72.52745 324.7257892263659 72.52745 C 333.2865991712589 72.52745 337.56700414370545 72.9034 346.1278140885984 73.19695 C 356.9715066854629 73.56877999999999 362.39335298389506 74.1909 373.2370455807595 74.1909 C 374.37848690674525 74.1909 376.09064889572386 73.1506 376.09064889572386 73.1506" stroke="#434348" stroke-width="2" zIndex="1" stroke-linejoin="round" stroke-linecap="round"></path><path fill="none" d="M -3.450980392156863 58.71 L 6.549019607843137 58.71 C 6.549019607843137 58.71 12.54158656926823 36.565 16.536631210218292 36.565 C 18.81951386218976 36.565 19.96095518817549 36.565 22.243837840146952 36.565 C 26.80960314408988 36.565 29.092485796061347 37.9555 33.65825110000427 37.9555 C 35.37041308898287 37.9555 36.22649408347217 36.565 37.93865607245077 36.565 C 48.78234866931522 36.565 54.20419496774745 58.6276 65.0478875646119 58.6276 C 65.61860822760477 58.6276 65.9039685591012 51.376400000000004 66.47468922209407 51.376400000000004 C 69.89901320005126 51.376400000000004 71.61117518902986 51.793549999999996 75.03549916698705 51.7987 C 78.45982314494424 51.80385 80.17198513392285 51.7987 83.59630911188005 51.80385 C 108.13729762057328 51.809 120.40779187491992 71.36355 144.94878038361315 71.36355 C 150.08526635054895 71.36355 152.65350933401683 71.05455 157.78999530095263 70.95155 C 162.9264812678884 70.84855 165.49472425135633 70.95155 170.6312102182921 70.84854999999999 C 171.77265154427784 70.74554999999998 172.3433722072707 68.63405 173.48481353325644 68.63405 C 179.76274082617797 68.63405 182.90170447263873 69.2778 189.17963176556026 69.2778 C 189.17963176556026 69.2778 189.17963176556026 66.86760000000001 189.17963176556026 66.86760000000001 C 198.31116237344608 66.86760000000001 202.87692767738903 68.79885 212.00845828527488 68.79885 C 216.00350292622497 68.79885 218.00102524669995 68.23235 221.99606988765004 68.23235 C 227.7032765175787 68.23235 230.55687983254302 68.23235 236.2640864624717 68.48984999999999 C 256.239309667222 68.74734999999998 266.22692126959714 71.49889561403509 286.20214447434745 73.02185 C 298.75799906019046 73.97913561403509 305.0359263531121 74.58333 317.5917809389551 74.69045 C 317.5917809389551 74.69045 317.5917809389551 74.05184999999999 317.5917809389551 73.28965 C 320.4453842539194 72.52745 321.8721859114016 72.52745 324.7257892263659 72.52745 C 333.2865991712589 72.52745 337.56700414370545 72.9034 346.1278140885984 73.19695 C 356.9715066854629 73.56877999999999 362.39335298389506 74.1909 373.2370455807595 74.1909 C 374.37848690674525 74.1909 376.09064889572386 73.1506 376.09064889572386 73.1506 L 386.09064889572386 73.1506" stroke-linejoin="round" visibility="visible" stroke="rgba(192,192,192,0.0001)" stroke-width="22" zIndex="2" class=" highcharts-tracker" style=""></path></g><g class="highcharts-markers highcharts-series-0 highcharts-tracker" visibility="visible" zIndex="0.1" transform="translate(46,71) scale(1 1)" clip-path="url(#highcharts-4)" style=""><path fill="#434348" d="M 376 69.1506 C 381.328 69.1506 381.328 77.1506 376 77.1506 C 370.672 77.1506 370.672 69.1506 376 69.1506 Z"></path><path fill="#434348" d="M 373 70.1909 C 378.328 70.1909 378.328 78.1909 373 78.1909 C 367.672 78.1909 367.672 70.1909 373 70.1909 Z"></path><path fill="#434348" d="M 346 69.19695 C 351.328 69.19695 351.328 77.19695 346 77.19695 C 340.672 77.19695 340.672 69.19695 346 69.19695 Z"></path><path fill="#434348" d="M 324 68.52745 C 329.328 68.52745 329.328 76.52745 324 76.52745 C 318.672 76.52745 318.672 68.52745 324 68.52745 Z"></path><path fill="#434348" d="M 317 69.28965 C 322.328 69.28965 322.328 77.28965 317 77.28965 C 311.672 77.28965 311.672 69.28965 317 69.28965 Z"></path><path fill="#434348" d="M 317 70.69045 C 322.328 70.69045 322.328 78.69045 317 78.69045 C 311.672 78.69045 311.672 70.69045 317 70.69045 Z"></path><path fill="#434348" d="M 286 69.02185 C 291.328 69.02185 291.328 77.02185 286 77.02185 C 280.672 77.02185 280.672 69.02185 286 69.02185 Z"></path><path fill="#434348" d="M 236 64.48984999999999 C 241.328 64.48984999999999 241.328 72.48984999999999 236 72.48984999999999 C 230.672 72.48984999999999 230.672 64.48984999999999 236 64.48984999999999 Z"></path><path fill="#434348" d="M 221 64.23235 C 226.328 64.23235 226.328 72.23235 221 72.23235 C 215.672 72.23235 215.672 64.23235 221 64.23235 Z"></path><path fill="#434348" d="M 212 64.79885 C 217.328 64.79885 217.328 72.79885 212 72.79885 C 206.672 72.79885 206.672 64.79885 212 64.79885 Z"></path><path fill="#434348" d="M 189 62.86760000000001 C 194.328 62.86760000000001 194.328 70.86760000000001 189 70.86760000000001 C 183.672 70.86760000000001 183.672 62.86760000000001 189 62.86760000000001 Z"></path><path fill="#434348" d="M 189 65.2778 C 194.328 65.2778 194.328 73.2778 189 73.2778 C 183.672 73.2778 183.672 65.2778 189 65.2778 Z"></path><path fill="#434348" d="M 173 64.63405 C 178.328 64.63405 178.328 72.63405 173 72.63405 C 167.672 72.63405 167.672 64.63405 173 64.63405 Z"></path><path fill="#434348" d="M 170 66.84854999999999 C 175.328 66.84854999999999 175.328 74.84854999999999 170 74.84854999999999 C 164.672 74.84854999999999 164.672 66.84854999999999 170 66.84854999999999 Z"></path><path fill="#434348" d="M 157 66.95155 C 162.328 66.95155 162.328 74.95155 157 74.95155 C 151.672 74.95155 151.672 66.95155 157 66.95155 Z"></path><path fill="#434348" d="M 144 67.36355 C 149.328 67.36355 149.328 75.36355 144 75.36355 C 138.672 75.36355 138.672 67.36355 144 67.36355 Z"></path><path fill="#434348" d="M 83 47.80385 C 88.328 47.80385 88.328 55.80385 83 55.80385 C 77.672 55.80385 77.672 47.80385 83 47.80385 Z"></path><path fill="#434348" d="M 75 47.7987 C 80.328 47.7987 80.328 55.7987 75 55.7987 C 69.672 55.7987 69.672 47.7987 75 47.7987 Z"></path><path fill="#434348" d="M 66 47.376400000000004 C 71.328 47.376400000000004 71.328 55.376400000000004 66 55.376400000000004 C 60.672 55.376400000000004 60.672 47.376400000000004 66 47.376400000000004 Z"></path><path fill="#434348" d="M 65 54.6276 C 70.328 54.6276 70.328 62.6276 65 62.6276 C 59.672 62.6276 59.672 54.6276 65 54.6276 Z"></path><path fill="#434348" d="M 37 32.565 C 42.328 32.565 42.328 40.565 37 40.565 C 31.672 40.565 31.672 32.565 37 32.565 Z"></path><path fill="#434348" d="M 33 33.9555 C 38.328 33.9555 38.328 41.9555 33 41.9555 C 27.672 41.9555 27.672 33.9555 33 33.9555 Z"></path><path fill="#434348" d="M 22 32.565 C 27.328 32.565 27.328 40.565 22 40.565 C 16.672 40.565 16.672 32.565 22 32.565 Z"></path><path fill="#434348" d="M 16 32.565 C 21.328 32.565 21.328 40.565 16 40.565 C 10.672 40.565 10.672 32.565 16 32.565 Z"></path><path fill="#434348" d="M 6 54.71 C 11.328 54.71 11.328 62.71 6 62.71 C 0.6719999999999999 62.71 0.6719999999999999 54.71 6 54.71 Z" stroke-width="1"></path></g><g class="highcharts-series highcharts-series-1" visibility="visible" zIndex="0.1" transform="translate(46,71) scale(1 1)" clip-path="url(#highcharts-3)"><path fill="none" d="M 25.097441155111284 36.565 C 25.097441155111284 36.565 40.506899055918666 72.7077 50.779870989790254 72.7077 C 55.345636293733186 72.7077 57.62851894570465 72.7077 62.19428424964757 70.43655000000001 C 63.3357255756333 68.16540000000002 63.90644623862617 62.562200000000004 65.0478875646119 62.562200000000004 C 71.8965355205263 62.562200000000004 75.32085949848349 66.14145 82.16950745439789 66.14145 C 85.59383143235507 66.14145 87.30599342133368 65.34732 90.73031739929087 64.7355 C 94.15464137724807 64.12368 95.86680336622666 64.35955000000001 99.29112734418386 63.08235 C 101.00328933316246 62.44375 101.85937032765176 59.946000000000005 103.57153231663035 59.946000000000005 C 114.98594557648767 59.946000000000005 120.69315220641633 64.83494181818182 132.10756546627366 67.0942 C 152.08278867102396 71.04790181818181 162.07040027339912 72.9001574074074 182.04562347814942 75.4784 C 192.88931607501388 76.8780174074074 198.3111623734461 77.03885 209.15485497031057 77.03885 C 211.43773762228201 77.03885 212.57917894826778 76.684942 214.86206160023923 75.52475 C 215.4327822632321 75.234702 215.71814259472853 74.22386000000003 216.2888632577214 73.41325 C 216.85958392071424 72.60264000000002 217.14494425221068 71.4717 217.71566491520355 71.4717 C 223.99359220812508 71.4717 227.13255585458583 71.66225 233.41048314750736 71.66225 C 235.6933657994788 71.66225 236.83480712546458 70.56530000000001 239.11768977743603 70.56530000000001 C 244.82489640736466 70.56530000000001 247.67849972232904 70.56530000000001 253.38570635225767 70.6683 C 267.0830022640865 70.7713 273.93165022000085 72.10644485714286 287.62894613182965 73.07335 C 313.88209662950146 74.92658485714287 327.0086718783374 77.71865 353.2618223760092 77.71865 C 354.9739843649878 77.71865 355.8300653594771 77.185316 357.5422273484557 76.6835 C 358.68366867444144 76.348956 359.25438933743436 75.87975666666665 360.39583066342004 75.62774999999999 C 362.6787133153915 75.12373666666666 363.82015464137726 74.79344999999999 366.10303729334873 74.79344999999999 C 372.38096458627024 74.79344999999999 375.51992823273105 74.82435 381.79785552565255 74.82435 C 382.9392968516383 74.82435 384.65145884061684 73.8716 384.65145884061684 73.8716" stroke="#90ed7d" stroke-width="2" zIndex="1" stroke-linejoin="round" stroke-linecap="round"></path><path fill="none" d="M 15.097441155111284 36.565 L 25.097441155111284 36.565 C 25.097441155111284 36.565 40.506899055918666 72.7077 50.779870989790254 72.7077 C 55.345636293733186 72.7077 57.62851894570465 72.7077 62.19428424964757 70.43655000000001 C 63.3357255756333 68.16540000000002 63.90644623862617 62.562200000000004 65.0478875646119 62.562200000000004 C 71.8965355205263 62.562200000000004 75.32085949848349 66.14145 82.16950745439789 66.14145 C 85.59383143235507 66.14145 87.30599342133368 65.34732 90.73031739929087 64.7355 C 94.15464137724807 64.12368 95.86680336622666 64.35955000000001 99.29112734418386 63.08235 C 101.00328933316246 62.44375 101.85937032765176 59.946000000000005 103.57153231663035 59.946000000000005 C 114.98594557648767 59.946000000000005 120.69315220641633 64.83494181818182 132.10756546627366 67.0942 C 152.08278867102396 71.04790181818181 162.07040027339912 72.9001574074074 182.04562347814942 75.4784 C 192.88931607501388 76.8780174074074 198.3111623734461 77.03885 209.15485497031057 77.03885 C 211.43773762228201 77.03885 212.57917894826778 76.684942 214.86206160023923 75.52475 C 215.4327822632321 75.234702 215.71814259472853 74.22386000000003 216.2888632577214 73.41325 C 216.85958392071424 72.60264000000002 217.14494425221068 71.4717 217.71566491520355 71.4717 C 223.99359220812508 71.4717 227.13255585458583 71.66225 233.41048314750736 71.66225 C 235.6933657994788 71.66225 236.83480712546458 70.56530000000001 239.11768977743603 70.56530000000001 C 244.82489640736466 70.56530000000001 247.67849972232904 70.56530000000001 253.38570635225767 70.6683 C 267.0830022640865 70.7713 273.93165022000085 72.10644485714286 287.62894613182965 73.07335 C 313.88209662950146 74.92658485714287 327.0086718783374 77.71865 353.2618223760092 77.71865 C 354.9739843649878 77.71865 355.8300653594771 77.185316 357.5422273484557 76.6835 C 358.68366867444144 76.348956 359.25438933743436 75.87975666666665 360.39583066342004 75.62774999999999 C 362.6787133153915 75.12373666666666 363.82015464137726 74.79344999999999 366.10303729334873 74.79344999999999 C 372.38096458627024 74.79344999999999 375.51992823273105 74.82435 381.79785552565255 74.82435 C 382.9392968516383 74.82435 384.65145884061684 73.8716 384.65145884061684 73.8716 L 394.65145884061684 73.8716" stroke-linejoin="round" visibility="visible" stroke="rgba(192,192,192,0.0001)" stroke-width="22" zIndex="2" class=" highcharts-tracker" style=""></path></g><g class="highcharts-markers highcharts-series-1 highcharts-tracker" visibility="visible" zIndex="0.1" transform="translate(46,71) scale(1 1)" clip-path="url(#highcharts-4)" style=""><path fill="#90ed7d" d="M 384 69.8716 L 388 73.8716 384 77.8716 380 73.8716 Z"></path><path fill="#90ed7d" d="M 381 70.82435 L 385 74.82435 381 78.82435 377 74.82435 Z"></path><path fill="#90ed7d" d="M 366 70.79344999999999 L 370 74.79344999999999 366 78.79344999999999 362 74.79344999999999 Z"></path><path fill="#90ed7d" d="M 360 71.62774999999999 L 364 75.62774999999999 360 79.62774999999999 356 75.62774999999999 Z"></path><path fill="#90ed7d" d="M 357 72.6835 L 361 76.6835 357 80.6835 353 76.6835 Z"></path><path fill="#90ed7d" d="M 353 73.71865 L 357 77.71865 353 81.71865 349 77.71865 Z"></path><path fill="#90ed7d" d="M 287 69.07335 L 291 73.07335 287 77.07335 283 73.07335 Z"></path><path fill="#90ed7d" d="M 253 66.6683 L 257 70.6683 253 74.6683 249 70.6683 Z"></path><path fill="#90ed7d" d="M 239 66.56530000000001 L 243 70.56530000000001 239 74.56530000000001 235 70.56530000000001 Z" stroke-width="1"></path><path fill="#90ed7d" d="M 233 67.66225 L 237 71.66225 233 75.66225 229 71.66225 Z"></path><path fill="#90ed7d" d="M 217 67.4717 L 221 71.4717 217 75.4717 213 71.4717 Z"></path><path fill="#90ed7d" d="M 216 69.41325 L 220 73.41325 216 77.41325 212 73.41325 Z"></path><path fill="#90ed7d" d="M 214 71.52475 L 218 75.52475 214 79.52475 210 75.52475 Z"></path><path fill="#90ed7d" d="M 209 73.03885 L 213 77.03885 209 81.03885 205 77.03885 Z"></path><path fill="#90ed7d" d="M 182 71.4784 L 186 75.4784 182 79.4784 178 75.4784 Z"></path><path fill="#90ed7d" d="M 132 63.0942 L 136 67.0942 132 71.0942 128 67.0942 Z"></path><path fill="#90ed7d" d="M 103 55.946000000000005 L 107 59.946000000000005 103 63.946000000000005 99 59.946000000000005 Z"></path><path fill="#90ed7d" d="M 99 59.08235 L 103 63.08235 99 67.08234999999999 95 63.08235 Z"></path><path fill="#90ed7d" d="M 90 60.7355 L 94 64.7355 90 68.7355 86 64.7355 Z"></path><path fill="#90ed7d" d="M 82 62.141450000000006 L 86 66.14145 82 70.14145 78 66.14145 Z"></path><path fill="#90ed7d" d="M 65 58.562200000000004 L 69 62.562200000000004 65 66.5622 61 62.562200000000004 Z"></path><path fill="#90ed7d" d="M 62 66.43655000000001 L 66 70.43655000000001 62 74.43655000000001 58 70.43655000000001 Z"></path><path fill="#90ed7d" d="M 50 68.7077 L 54 72.7077 50 76.7077 46 72.7077 Z" stroke-width="1"></path><path fill="#90ed7d" d="M 25 32.565 L 29 36.565 25 40.565 21 36.565 Z"></path></g><g class="highcharts-series highcharts-series-3" visibility="hidden" zIndex="0.1" transform="translate(46,71) scale(1 1)" clip-path="url(#highcharts-3)"><path fill="none" d="M 6.549019607843137 99.91 C 6.549019607843137 99.91 12.54158656926823 99.91 16.536631210218292 99.91 C 17.678072536204024 99.91 18.24879319919689 99.91 19.39023452518262 99.91 C 20.53167585116835 99.91 21.10239651416122 99.91 22.243837840146952 99.91 C 23.385279166132683 99.91 23.955999829125552 99.91 25.097441155111284 99.91 C 26.238882481097015 99.91 26.80960314408988 99.91 27.95104447007561 99.91 C 30.233927122047078 99.91 31.37536844803281 99.91 33.65825110000427 99.91 C 35.37041308898287 99.91 36.22649408347217 99.91 37.93865607245077 99.91 C 37.93865607245077 99.91 37.93865607245077 99.91 37.93865607245077 99.91 C 41.93370071340083 99.91 43.93122303387587 99.91 47.92626767482592 99.91 C 49.06770900081166 99.91 49.63842966380452 99.91 50.779870989790254 99.91 C 53.63347430475458 99.91 55.060275962236744 99.91 57.913879277201076 99.91 C 59.626041266179676 99.91 60.48212226066897 99.91 62.19428424964757 99.91 C 63.3357255756333 99.91 63.90644623862617 99.91 65.0478875646119 99.91 C 65.0478875646119 99.91 65.0478875646119 99.91 65.0478875646119 99.91 C 65.61860822760477 99.91 65.9039685591012 99.91 66.47468922209407 99.91 C 67.04540988508693 99.91 67.33077021658337 99.91 67.90149087957623 99.91 C 70.75509419454056 99.91 72.18189585202272 99.91 75.03549916698705 99.91 C 76.17694049297279 99.91 76.74766115596564 99.91 77.88910248195138 99.91 C 79.60126447092998 99.91 80.45734546541928 99.91 82.16950745439789 99.91 C 82.74022811739076 99.91 83.02558844888719 99.91 83.59630911188005 99.91 C 85.30847110085865 99.91 86.16455209534794 99.91 87.87671408432654 99.91 C 89.01815541031227 99.91 89.58887607330514 99.91 90.73031739929087 99.91 C 93.58392071425519 99.91 95.01072237173736 99.91 97.86432568670169 99.91 C 98.43504634969456 99.91 98.72040668119101 99.91 99.29112734418386 99.91 C 101.00328933316246 99.91 101.85937032765176 99.91 103.57153231663035 99.91 C 105.28369430560898 99.91 106.13977530009825 99.91 107.85193728907686 99.91 C 111.84698193002691 99.91 113.84450425050196 99.91 117.83954889145201 99.91 C 121.83459353240207 99.91 123.83211585287711 99.91 127.82716049382717 99.91 C 129.53932248280574 99.91 130.39540347729508 99.91 132.10756546627366 99.91 C 134.39044811824513 99.91 135.53188944423087 99.91 137.81477209620232 99.91 C 140.66837541116666 99.91 142.0951770686488 99.91 144.94878038361315 99.91 C 146.0902217095989 99.91 146.66094237259173 99.91 147.80238369857747 99.91 C 151.79742833952753 99.91 153.79495066000257 99.91 157.78999530095263 99.91 C 157.78999530095263 99.91 157.78999530095263 99.91 157.78999530095263 99.91 C 161.78503994190268 99.91 163.78256226237772 99.91 167.77760690332778 99.91 C 168.91904822931352 99.91 169.48976889230636 99.91 170.6312102182921 99.91 C 171.77265154427784 99.91 172.3433722072707 99.91 173.48481353325644 99.91 C 175.19697552223505 99.91 176.05305651672433 99.91 177.76521850570293 99.91 C 179.47738049468154 99.91 180.33346148917082 99.91 182.04562347814942 99.91 C 184.32850613012087 99.91 185.4699474561066 99.91 187.7528301080781 99.91 C 188.32355077107096 99.91 188.6089111025674 99.91 189.17963176556026 99.91 C 189.17963176556026 99.91 189.17963176556026 99.91 189.17963176556026 99.91 C 192.60395574351745 99.91 194.31611773249602 99.91 197.74044171045324 99.91 C 201.73548635140327 99.91 203.73300867187834 99.91 207.7280533128284 99.91 C 208.29877397582126 99.91 208.5841343073177 99.91 209.15485497031057 99.91 C 210.2962962962963 99.91 210.86701695928915 99.91 212.00845828527488 99.91 C 213.14989961126062 99.91 213.7206202742535 99.91 214.86206160023923 99.91 C 215.4327822632321 99.91 215.71814259472853 99.91 216.2888632577214 99.91 C 216.85958392071424 99.91 217.14494425221068 99.91 217.71566491520355 99.91 C 217.71566491520352 99.91 217.71566491520352 99.91 217.71566491520355 99.91 C 219.42782690418215 99.91 220.28390789867143 99.91 221.99606988765004 99.91 C 224.2789525396215 99.91 225.42039386560722 99.91 227.7032765175787 99.91 C 229.98615916955015 99.91 231.1276004955359 99.91 233.41048314750736 99.91 C 234.5519244734931 99.91 235.12264513648597 99.91 236.2640864624717 99.91 C 236.83480712546458 99.91 237.120167456961 99.91 237.69088811995385 99.91 C 238.26160878294672 99.91 238.54696911444316 99.91 239.11768977743603 99.91 C 242.54201375539324 99.91 244.25417574437182 99.91 247.678499722329 99.91 C 249.9613823743005 99.91 251.10282370028622 99.91 253.38570635225767 99.91 C 255.09786834123625 99.91 255.95394933572555 99.91 257.66611132470416 99.91 C 261.66115596565425 99.91 263.65867828612926 99.91 267.65372292707934 99.91 C 271.6487675680294 99.91 273.6462898885044 99.91 277.64133452945447 99.91 C 281.0656585074116 99.91 282.7778204963903 99.91 286.20214447434745 99.91 C 286.7728651373403 99.91 287.0582254688367 99.91 287.62894613182965 99.91 C 287.6289461318296 99.91 287.6289461318296 99.91 287.62894613182965 99.91 C 291.6239907727797 99.91 293.62151309325475 99.91 297.6165577342048 99.91 C 301.61160237515486 99.91 303.60912469562993 99.91 307.60416933657996 99.91 C 311.59921397753 99.91 313.59673629800506 99.91 317.5917809389551 99.91 C 317.5917809389551 99.91 317.5917809389551 99.91 317.5917809389551 99.91 C 317.5917809389551 99.91 317.5917809389551 99.91 317.5917809389551 99.91 C 320.4453842539194 99.91 321.8721859114016 99.91 324.7257892263659 99.91 C 325.86723055235166 99.91 326.4379512153445 99.91 327.57939254133026 99.91 C 331.57443718228035 99.91 333.57195950275536 99.91 337.5670041437054 99.91 C 340.9913281216626 99.91 342.7034901106412 99.91 346.1278140885984 99.91 C 346.6985347515913 99.91 346.98389508308776 99.91 347.5546157460806 99.91 C 349.83749839805205 99.91 350.9789397240378 99.91 353.2618223760092 99.91 C 354.9739843649878 99.91 355.8300653594771 99.91 357.5422273484557 99.91 C 357.5422273484557 99.91 357.5422273484557 99.91 357.5422273484557 99.91 C 358.68366867444144 99.91 359.25438933743436 99.91 360.39583066342004 99.91 C 362.6787133153915 99.91 363.82015464137726 99.91 366.10303729334873 99.91 C 366.6737579563416 99.91 366.959118287838 99.91 367.5298389508309 99.91 C 369.8127216028023 99.91 370.9541629287881 99.91 373.2370455807595 99.91 C 374.37848690674525 99.91 374.9492075697381 99.91 376.09064889572386 99.91 C 376.66136955871673 99.91 376.9467298902132 99.91 377.51745055320606 99.91 C 379.2296125421846 99.91 380.085693536674 99.91 381.79785552565255 99.91 C 382.9392968516383 99.91 383.5100175146311 99.91 384.65145884061684 99.91 C 385.7929001666026 99.91 386.3636208295955 99.91 387.5050621555812 99.91 C 391.50010679653127 99.91 393.49762911700634 99.91 397.49267375795637 99.91 C 401.4877183989064 99.91 403.48524071938147 99.91 407.4802853603315 99.91 C 411.4753300012816 99.91 413.47285232175665 99.91 417.4678969627067 99.91 C 421.4629416036567 99.91 423.4604639241317 99.91 427.4555085650818 99.91 C 431.4505532060319 99.91 433.4480755265069 99.91 437.443120167457 99.91 C 440.8674441454142 99.91 442.5796061343928 99.91 446.00393011234996 99.91 C 449.9989747533 99.91 451.996497073775 99.91 455.9915417147251 99.91 C 459.9865863556752 99.91 461.9841086761502 99.91 465.97915331710027 99.91 C 469.97419795805035 99.91 471.97172027852537 99.91 475.9667649194754 99.91 C 479.96180956042554 99.91 481.95933188090055 99.91 485.9543765218506 99.91 C 489.9494211628006 99.91 491.9469434832757 99.91 495.9419881242257 99.91 C 499.9370327651758 99.91 501.93455508565086 99.91 505.9295997266009 99.91 C 568.1381519928233 99.91 661.4509803921569 99.91 661.4509803921569 99.91" stroke="#ff0000" stroke-width="2" zIndex="1" stroke-linejoin="round" stroke-linecap="round"></path><path fill="none" d="M -3.450980392156863 99.91 L 6.549019607843137 99.91 C 6.549019607843137 99.91 12.54158656926823 99.91 16.536631210218292 99.91 C 17.678072536204024 99.91 18.24879319919689 99.91 19.39023452518262 99.91 C 20.53167585116835 99.91 21.10239651416122 99.91 22.243837840146952 99.91 C 23.385279166132683 99.91 23.955999829125552 99.91 25.097441155111284 99.91 C 26.238882481097015 99.91 26.80960314408988 99.91 27.95104447007561 99.91 C 30.233927122047078 99.91 31.37536844803281 99.91 33.65825110000427 99.91 C 35.37041308898287 99.91 36.22649408347217 99.91 37.93865607245077 99.91 C 37.93865607245077 99.91 37.93865607245077 99.91 37.93865607245077 99.91 C 41.93370071340083 99.91 43.93122303387587 99.91 47.92626767482592 99.91 C 49.06770900081166 99.91 49.63842966380452 99.91 50.779870989790254 99.91 C 53.63347430475458 99.91 55.060275962236744 99.91 57.913879277201076 99.91 C 59.626041266179676 99.91 60.48212226066897 99.91 62.19428424964757 99.91 C 63.3357255756333 99.91 63.90644623862617 99.91 65.0478875646119 99.91 C 65.0478875646119 99.91 65.0478875646119 99.91 65.0478875646119 99.91 C 65.61860822760477 99.91 65.9039685591012 99.91 66.47468922209407 99.91 C 67.04540988508693 99.91 67.33077021658337 99.91 67.90149087957623 99.91 C 70.75509419454056 99.91 72.18189585202272 99.91 75.03549916698705 99.91 C 76.17694049297279 99.91 76.74766115596564 99.91 77.88910248195138 99.91 C 79.60126447092998 99.91 80.45734546541928 99.91 82.16950745439789 99.91 C 82.74022811739076 99.91 83.02558844888719 99.91 83.59630911188005 99.91 C 85.30847110085865 99.91 86.16455209534794 99.91 87.87671408432654 99.91 C 89.01815541031227 99.91 89.58887607330514 99.91 90.73031739929087 99.91 C 93.58392071425519 99.91 95.01072237173736 99.91 97.86432568670169 99.91 C 98.43504634969456 99.91 98.72040668119101 99.91 99.29112734418386 99.91 C 101.00328933316246 99.91 101.85937032765176 99.91 103.57153231663035 99.91 C 105.28369430560898 99.91 106.13977530009825 99.91 107.85193728907686 99.91 C 111.84698193002691 99.91 113.84450425050196 99.91 117.83954889145201 99.91 C 121.83459353240207 99.91 123.83211585287711 99.91 127.82716049382717 99.91 C 129.53932248280574 99.91 130.39540347729508 99.91 132.10756546627366 99.91 C 134.39044811824513 99.91 135.53188944423087 99.91 137.81477209620232 99.91 C 140.66837541116666 99.91 142.0951770686488 99.91 144.94878038361315 99.91 C 146.0902217095989 99.91 146.66094237259173 99.91 147.80238369857747 99.91 C 151.79742833952753 99.91 153.79495066000257 99.91 157.78999530095263 99.91 C 157.78999530095263 99.91 157.78999530095263 99.91 157.78999530095263 99.91 C 161.78503994190268 99.91 163.78256226237772 99.91 167.77760690332778 99.91 C 168.91904822931352 99.91 169.48976889230636 99.91 170.6312102182921 99.91 C 171.77265154427784 99.91 172.3433722072707 99.91 173.48481353325644 99.91 C 175.19697552223505 99.91 176.05305651672433 99.91 177.76521850570293 99.91 C 179.47738049468154 99.91 180.33346148917082 99.91 182.04562347814942 99.91 C 184.32850613012087 99.91 185.4699474561066 99.91 187.7528301080781 99.91 C 188.32355077107096 99.91 188.6089111025674 99.91 189.17963176556026 99.91 C 189.17963176556026 99.91 189.17963176556026 99.91 189.17963176556026 99.91 C 192.60395574351745 99.91 194.31611773249602 99.91 197.74044171045324 99.91 C 201.73548635140327 99.91 203.73300867187834 99.91 207.7280533128284 99.91 C 208.29877397582126 99.91 208.5841343073177 99.91 209.15485497031057 99.91 C 210.2962962962963 99.91 210.86701695928915 99.91 212.00845828527488 99.91 C 213.14989961126062 99.91 213.7206202742535 99.91 214.86206160023923 99.91 C 215.4327822632321 99.91 215.71814259472853 99.91 216.2888632577214 99.91 C 216.85958392071424 99.91 217.14494425221068 99.91 217.71566491520355 99.91 C 217.71566491520352 99.91 217.71566491520352 99.91 217.71566491520355 99.91 C 219.42782690418215 99.91 220.28390789867143 99.91 221.99606988765004 99.91 C 224.2789525396215 99.91 225.42039386560722 99.91 227.7032765175787 99.91 C 229.98615916955015 99.91 231.1276004955359 99.91 233.41048314750736 99.91 C 234.5519244734931 99.91 235.12264513648597 99.91 236.2640864624717 99.91 C 236.83480712546458 99.91 237.120167456961 99.91 237.69088811995385 99.91 C 238.26160878294672 99.91 238.54696911444316 99.91 239.11768977743603 99.91 C 242.54201375539324 99.91 244.25417574437182 99.91 247.678499722329 99.91 C 249.9613823743005 99.91 251.10282370028622 99.91 253.38570635225767 99.91 C 255.09786834123625 99.91 255.95394933572555 99.91 257.66611132470416 99.91 C 261.66115596565425 99.91 263.65867828612926 99.91 267.65372292707934 99.91 C 271.6487675680294 99.91 273.6462898885044 99.91 277.64133452945447 99.91 C 281.0656585074116 99.91 282.7778204963903 99.91 286.20214447434745 99.91 C 286.7728651373403 99.91 287.0582254688367 99.91 287.62894613182965 99.91 C 287.6289461318296 99.91 287.6289461318296 99.91 287.62894613182965 99.91 C 291.6239907727797 99.91 293.62151309325475 99.91 297.6165577342048 99.91 C 301.61160237515486 99.91 303.60912469562993 99.91 307.60416933657996 99.91 C 311.59921397753 99.91 313.59673629800506 99.91 317.5917809389551 99.91 C 317.5917809389551 99.91 317.5917809389551 99.91 317.5917809389551 99.91 C 317.5917809389551 99.91 317.5917809389551 99.91 317.5917809389551 99.91 C 320.4453842539194 99.91 321.8721859114016 99.91 324.7257892263659 99.91 C 325.86723055235166 99.91 326.4379512153445 99.91 327.57939254133026 99.91 C 331.57443718228035 99.91 333.57195950275536 99.91 337.5670041437054 99.91 C 340.9913281216626 99.91 342.7034901106412 99.91 346.1278140885984 99.91 C 346.6985347515913 99.91 346.98389508308776 99.91 347.5546157460806 99.91 C 349.83749839805205 99.91 350.9789397240378 99.91 353.2618223760092 99.91 C 354.9739843649878 99.91 355.8300653594771 99.91 357.5422273484557 99.91 C 357.5422273484557 99.91 357.5422273484557 99.91 357.5422273484557 99.91 C 358.68366867444144 99.91 359.25438933743436 99.91 360.39583066342004 99.91 C 362.6787133153915 99.91 363.82015464137726 99.91 366.10303729334873 99.91 C 366.6737579563416 99.91 366.959118287838 99.91 367.5298389508309 99.91 C 369.8127216028023 99.91 370.9541629287881 99.91 373.2370455807595 99.91 C 374.37848690674525 99.91 374.9492075697381 99.91 376.09064889572386 99.91 C 376.66136955871673 99.91 376.9467298902132 99.91 377.51745055320606 99.91 C 379.2296125421846 99.91 380.085693536674 99.91 381.79785552565255 99.91 C 382.9392968516383 99.91 383.5100175146311 99.91 384.65145884061684 99.91 C 385.7929001666026 99.91 386.3636208295955 99.91 387.5050621555812 99.91 C 391.50010679653127 99.91 393.49762911700634 99.91 397.49267375795637 99.91 C 401.4877183989064 99.91 403.48524071938147 99.91 407.4802853603315 99.91 C 411.4753300012816 99.91 413.47285232175665 99.91 417.4678969627067 99.91 C 421.4629416036567 99.91 423.4604639241317 99.91 427.4555085650818 99.91 C 431.4505532060319 99.91 433.4480755265069 99.91 437.443120167457 99.91 C 440.8674441454142 99.91 442.5796061343928 99.91 446.00393011234996 99.91 C 449.9989747533 99.91 451.996497073775 99.91 455.9915417147251 99.91 C 459.9865863556752 99.91 461.9841086761502 99.91 465.97915331710027 99.91 C 469.97419795805035 99.91 471.97172027852537 99.91 475.9667649194754 99.91 C 479.96180956042554 99.91 481.95933188090055 99.91 485.9543765218506 99.91 C 489.9494211628006 99.91 491.9469434832757 99.91 495.9419881242257 99.91 C 499.9370327651758 99.91 501.93455508565086 99.91 505.9295997266009 99.91 C 568.1381519928233 99.91 661.4509803921569 99.91 661.4509803921569 99.91 L 671.4509803921569 99.91" stroke-linejoin="round" visibility="hidden" stroke="rgba(192,192,192,0.0001)" stroke-width="22" zIndex="2" class=" highcharts-tracker" style=""></path></g><g class="highcharts-markers highcharts-series-3 highcharts-tracker" visibility="hidden" zIndex="0.1" transform="translate(46,71) scale(1 1)" clip-path="url(#highcharts-4)" style=""></g><g class="highcharts-series highcharts-series-2" visibility="visible" zIndex="10" transform="translate(46,71) scale(1 1)" clip-path="url(#highcharts-3)"><path fill="none" d="M 19.39023452518262 58.71 C 19.39023452518262 58.71 24.526720492118415 58.71 27.95104447007561 58.71 C 31.946089111025675 58.71 33.943611431500706 58.71 37.93865607245077 58.71 C 41.93370071340083 58.71 43.93122303387587 58.71 47.92626767482592 58.71 C 51.92131231577598 58.71 53.91883463625102 58.71 57.913879277201076 58.71 C 61.90892391815114 58.71 63.906446238626174 58.71 67.90149087957623 58.71 C 71.8965355205263 58.71 73.89405784100131 58.71 77.88910248195138 58.71 C 81.88414712290144 58.71 83.88166944337647 58.71 87.87671408432654 58.71 C 91.87175872527659 58.71 93.86928104575163 58.71 97.86432568670169 58.71 C 101.85937032765176 58.71 103.85689264812679 58.71 107.85193728907686 58.71 C 111.84698193002691 58.71 113.84450425050196 58.71 117.83954889145201 58.71 C 121.83459353240207 58.71 123.83211585287711 58.71 127.82716049382717 58.71 C 131.82220513477722 58.71 133.81972745525226 58.71 137.81477209620232 58.71 C 141.80981673715237 58.71 143.80733905762742 58.71 147.80238369857747 58.71 C 151.79742833952753 58.71 153.79495066000257 58.71 157.78999530095263 58.71 C 161.78503994190268 58.71 163.78256226237772 58.71 167.77760690332778 58.71 C 171.77265154427784 58.71 173.77017386475285 58.71 177.76521850570293 58.71 C 181.76026314665302 58.71 183.75778546712803 58.71 187.7528301080781 58.71 C 191.74787474902814 58.71 193.74539706950318 58.71 197.74044171045324 58.71 C 201.73548635140327 58.71 203.73300867187834 58.71 207.7280533128284 58.71 C 211.72309795377845 58.71 213.7206202742535 58.71 217.71566491520355 58.71 C 221.7107095561536 58.71 223.70823187662864 58.71 227.7032765175787 58.71 C 231.69832115852878 58.71 233.69584347900383 58.71 237.69088811995385 58.71 C 241.6859327609039 58.71 243.68345508137895 58.71 247.678499722329 58.71 C 251.67354436327906 58.71 253.67106668375408 58.71 257.66611132470416 58.71 C 261.66115596565425 58.71 263.65867828612926 58.71 267.65372292707934 58.71 C 271.6487675680294 58.71 273.6462898885044 58.71 277.64133452945447 58.71 C 281.6363791704045 58.71 283.63390149087957 58.71 287.62894613182965 58.71 C 291.6239907727797 58.71 293.62151309325475 58.71 297.6165577342048 58.71 C 301.61160237515486 58.71 303.60912469562993 58.71 307.60416933657996 58.71 C 311.59921397753 58.71 313.59673629800506 58.71 317.5917809389551 58.71 C 321.58682557990517 58.71 323.5843479003802 58.71 327.57939254133026 58.71 C 331.57443718228035 58.71 333.57195950275536 58.71 337.5670041437054 58.71 C 341.5620487846555 58.71 343.5595711051305 58.71 347.5546157460806 58.71 C 351.5496603870306 58.71 353.5471827075056 58.71 357.5422273484557 58.71 C 361.5372719894058 58.71 363.5347943098808 58.71 367.5298389508309 58.71 C 371.52488359178096 58.71 373.522405912256 58.71 377.51745055320606 58.71 C 381.5124951941561 58.71 383.51001751463116 58.71 387.5050621555812 58.71 C 391.50010679653127 58.71 393.49762911700634 58.71 397.49267375795637 58.71 C 401.4877183989064 58.71 403.48524071938147 58.71 407.4802853603315 58.71 C 411.4753300012816 58.71 413.47285232175665 58.71 417.4678969627067 58.71 C 421.4629416036567 58.71 423.4604639241317 58.71 427.4555085650818 58.71 C 431.4505532060319 58.71 433.4480755265069 58.71 437.443120167457 58.71 C 440.8674441454142 58.71 442.5796061343928 58.71 446.00393011234996 58.71 C 449.9989747533 58.71 451.996497073775 58.71 455.9915417147251 58.71 C 459.9865863556752 58.71 461.9841086761502 58.71 465.97915331710027 58.71 C 469.97419795805035 58.71 471.97172027852537 58.71 475.9667649194754 58.71 C 479.96180956042554 58.71 481.95933188090055 58.71 485.9543765218506 58.71 C 489.9494211628006 58.71 491.9469434832757 58.71 495.9419881242257 58.71 C 499.9370327651758 58.71 505.9295997266009 58.71 505.9295997266009 58.71" stroke="#7cb5ec" stroke-width="2" zIndex="1" stroke-linejoin="round" stroke-linecap="round"></path><path fill="none" d="M 9.39023452518262 58.71 L 19.39023452518262 58.71 C 19.39023452518262 58.71 24.526720492118415 58.71 27.95104447007561 58.71 C 31.946089111025675 58.71 33.943611431500706 58.71 37.93865607245077 58.71 C 41.93370071340083 58.71 43.93122303387587 58.71 47.92626767482592 58.71 C 51.92131231577598 58.71 53.91883463625102 58.71 57.913879277201076 58.71 C 61.90892391815114 58.71 63.906446238626174 58.71 67.90149087957623 58.71 C 71.8965355205263 58.71 73.89405784100131 58.71 77.88910248195138 58.71 C 81.88414712290144 58.71 83.88166944337647 58.71 87.87671408432654 58.71 C 91.87175872527659 58.71 93.86928104575163 58.71 97.86432568670169 58.71 C 101.85937032765176 58.71 103.85689264812679 58.71 107.85193728907686 58.71 C 111.84698193002691 58.71 113.84450425050196 58.71 117.83954889145201 58.71 C 121.83459353240207 58.71 123.83211585287711 58.71 127.82716049382717 58.71 C 131.82220513477722 58.71 133.81972745525226 58.71 137.81477209620232 58.71 C 141.80981673715237 58.71 143.80733905762742 58.71 147.80238369857747 58.71 C 151.79742833952753 58.71 153.79495066000257 58.71 157.78999530095263 58.71 C 161.78503994190268 58.71 163.78256226237772 58.71 167.77760690332778 58.71 C 171.77265154427784 58.71 173.77017386475285 58.71 177.76521850570293 58.71 C 181.76026314665302 58.71 183.75778546712803 58.71 187.7528301080781 58.71 C 191.74787474902814 58.71 193.74539706950318 58.71 197.74044171045324 58.71 C 201.73548635140327 58.71 203.73300867187834 58.71 207.7280533128284 58.71 C 211.72309795377845 58.71 213.7206202742535 58.71 217.71566491520355 58.71 C 221.7107095561536 58.71 223.70823187662864 58.71 227.7032765175787 58.71 C 231.69832115852878 58.71 233.69584347900383 58.71 237.69088811995385 58.71 C 241.6859327609039 58.71 243.68345508137895 58.71 247.678499722329 58.71 C 251.67354436327906 58.71 253.67106668375408 58.71 257.66611132470416 58.71 C 261.66115596565425 58.71 263.65867828612926 58.71 267.65372292707934 58.71 C 271.6487675680294 58.71 273.6462898885044 58.71 277.64133452945447 58.71 C 281.6363791704045 58.71 283.63390149087957 58.71 287.62894613182965 58.71 C 291.6239907727797 58.71 293.62151309325475 58.71 297.6165577342048 58.71 C 301.61160237515486 58.71 303.60912469562993 58.71 307.60416933657996 58.71 C 311.59921397753 58.71 313.59673629800506 58.71 317.5917809389551 58.71 C 321.58682557990517 58.71 323.5843479003802 58.71 327.57939254133026 58.71 C 331.57443718228035 58.71 333.57195950275536 58.71 337.5670041437054 58.71 C 341.5620487846555 58.71 343.5595711051305 58.71 347.5546157460806 58.71 C 351.5496603870306 58.71 353.5471827075056 58.71 357.5422273484557 58.71 C 361.5372719894058 58.71 363.5347943098808 58.71 367.5298389508309 58.71 C 371.52488359178096 58.71 373.522405912256 58.71 377.51745055320606 58.71 C 381.5124951941561 58.71 383.51001751463116 58.71 387.5050621555812 58.71 C 391.50010679653127 58.71 393.49762911700634 58.71 397.49267375795637 58.71 C 401.4877183989064 58.71 403.48524071938147 58.71 407.4802853603315 58.71 C 411.4753300012816 58.71 413.47285232175665 58.71 417.4678969627067 58.71 C 421.4629416036567 58.71 423.4604639241317 58.71 427.4555085650818 58.71 C 431.4505532060319 58.71 433.4480755265069 58.71 437.443120167457 58.71 C 440.8674441454142 58.71 442.5796061343928 58.71 446.00393011234996 58.71 C 449.9989747533 58.71 451.996497073775 58.71 455.9915417147251 58.71 C 459.9865863556752 58.71 461.9841086761502 58.71 465.97915331710027 58.71 C 469.97419795805035 58.71 471.97172027852537 58.71 475.9667649194754 58.71 C 479.96180956042554 58.71 481.95933188090055 58.71 485.9543765218506 58.71 C 489.9494211628006 58.71 491.9469434832757 58.71 495.9419881242257 58.71 C 499.9370327651758 58.71 505.9295997266009 58.71 505.9295997266009 58.71 L 515.9295997266008 58.71" stroke-linejoin="round" visibility="visible" stroke="rgba(192,192,192,0.0001)" stroke-width="22" zIndex="2" class=" highcharts-tracker" style=""></path></g><g class="highcharts-markers highcharts-series-2 highcharts-tracker" visibility="visible" zIndex="10" transform="translate(46,71) scale(1 1)" clip-path="url(#highcharts-4)" style=""><path fill="#7cb5ec" d="M 501 54.71 L 509 54.71 509 62.71 501 62.71 Z"></path><path fill="#7cb5ec" d="M 491 54.71 L 499 54.71 499 62.71 491 62.71 Z"></path><path fill="#7cb5ec" d="M 481 54.71 L 489 54.71 489 62.71 481 62.71 Z"></path><path fill="#7cb5ec" d="M 471 54.71 L 479 54.71 479 62.71 471 62.71 Z"></path><path fill="#7cb5ec" d="M 461 54.71 L 469 54.71 469 62.71 461 62.71 Z"></path><path fill="#7cb5ec" d="M 451 54.71 L 459 54.71 459 62.71 451 62.71 Z"></path><path fill="#7cb5ec" d="M 442 54.71 L 450 54.71 450 62.71 442 62.71 Z"></path><path fill="#7cb5ec" d="M 433 54.71 L 441 54.71 441 62.71 433 62.71 Z"></path><path fill="#7cb5ec" d="M 423 54.71 L 431 54.71 431 62.71 423 62.71 Z"></path><path fill="#7cb5ec" d="M 413 54.71 L 421 54.71 421 62.71 413 62.71 Z"></path><path fill="#7cb5ec" d="M 403 54.71 L 411 54.71 411 62.71 403 62.71 Z"></path><path fill="#7cb5ec" d="M 393 54.71 L 401 54.71 401 62.71 393 62.71 Z"></path><path fill="#7cb5ec" d="M 383 54.71 L 391 54.71 391 62.71 383 62.71 Z"></path><path fill="#7cb5ec" d="M 373 54.71 L 381 54.71 381 62.71 373 62.71 Z"></path><path fill="#7cb5ec" d="M 363 54.71 L 371 54.71 371 62.71 363 62.71 Z"></path><path fill="#7cb5ec" d="M 353 54.71 L 361 54.71 361 62.71 353 62.71 Z"></path><path fill="#7cb5ec" d="M 343 54.71 L 351 54.71 351 62.71 343 62.71 Z"></path><path fill="#7cb5ec" d="M 333 54.71 L 341 54.71 341 62.71 333 62.71 Z"></path><path fill="#7cb5ec" d="M 323 54.71 L 331 54.71 331 62.71 323 62.71 Z"></path><path fill="#7cb5ec" d="M 313 54.71 L 321 54.71 321 62.71 313 62.71 Z"></path><path fill="#7cb5ec" d="M 303 54.71 L 311 54.71 311 62.71 303 62.71 Z"></path><path fill="#7cb5ec" d="M 293 54.71 L 301 54.71 301 62.71 293 62.71 Z"></path><path fill="#7cb5ec" d="M 283 54.71 L 291 54.71 291 62.71 283 62.71 Z"></path><path fill="#7cb5ec" d="M 273 54.71 L 281 54.71 281 62.71 273 62.71 Z"></path><path fill="#7cb5ec" d="M 263 54.71 L 271 54.71 271 62.71 263 62.71 Z"></path><path fill="#7cb5ec" d="M 253 54.71 L 261 54.71 261 62.71 253 62.71 Z"></path><path fill="#7cb5ec" d="M 243 54.71 L 251 54.71 251 62.71 243 62.71 Z" stroke-width="1"></path><path fill="#7cb5ec" d="M 233 54.71 L 241 54.71 241 62.71 233 62.71 Z" stroke-width="1"></path><path fill="#7cb5ec" d="M 223 54.71 L 231 54.71 231 62.71 223 62.71 Z"></path><path fill="#7cb5ec" d="M 213 54.71 L 221 54.71 221 62.71 213 62.71 Z"></path><path fill="#7cb5ec" d="M 203 54.71 L 211 54.71 211 62.71 203 62.71 Z" stroke-width="1"></path><path fill="#7cb5ec" d="M 193 54.71 L 201 54.71 201 62.71 193 62.71 Z" stroke-width="1"></path><path fill="#7cb5ec" d="M 183 54.71 L 191 54.71 191 62.71 183 62.71 Z"></path><path fill="#7cb5ec" d="M 173 54.71 L 181 54.71 181 62.71 173 62.71 Z" stroke-width="1"></path><path fill="#7cb5ec" d="M 163 54.71 L 171 54.71 171 62.71 163 62.71 Z"></path><path fill="#7cb5ec" d="M 153 54.71 L 161 54.71 161 62.71 153 62.71 Z"></path><path fill="#7cb5ec" d="M 143 54.71 L 151 54.71 151 62.71 143 62.71 Z"></path><path fill="#7cb5ec" d="M 133 54.71 L 141 54.71 141 62.71 133 62.71 Z"></path><path fill="#7cb5ec" d="M 123 54.71 L 131 54.71 131 62.71 123 62.71 Z"></path><path fill="#7cb5ec" d="M 113 54.71 L 121 54.71 121 62.71 113 62.71 Z"></path><path fill="#7cb5ec" d="M 103 54.71 L 111 54.71 111 62.71 103 62.71 Z"></path><path fill="#7cb5ec" d="M 93 54.71 L 101 54.71 101 62.71 93 62.71 Z"></path><path fill="#7cb5ec" d="M 83 54.71 L 91 54.71 91 62.71 83 62.71 Z"></path><path fill="#7cb5ec" d="M 73 54.71 L 81 54.71 81 62.71 73 62.71 Z"></path><path fill="#7cb5ec" d="M 63 54.71 L 71 54.71 71 62.71 63 62.71 Z"></path><path fill="#7cb5ec" d="M 53 54.71 L 61 54.71 61 62.71 53 62.71 Z"></path><path fill="#7cb5ec" d="M 43 54.71 L 51 54.71 51 62.71 43 62.71 Z"></path><path fill="#7cb5ec" d="M 33 54.71 L 41 54.71 41 62.71 33 62.71 Z"></path><path fill="#7cb5ec" d="M 23 54.71 L 31 54.71 31 62.71 23 62.71 Z"></path><path fill="#7cb5ec" d="M 15 54.71 L 23 54.71 23 62.71 15 62.71 Z" stroke-width="1"></path></g></g><text x="362" text-anchor="middle" class="highcharts-title" zIndex="4" style="color:#333333;font-size:18px;fill:#333333;width:660px;" y="24"><tspan>Pour Speed (CY/HR)</tspan></text><text x="362" text-anchor="middle" class="highcharts-subtitle" zIndex="4" style="color:#555555;fill:#555555;width:660px;" y="52"><tspan>Click and drag in the plot area to zoom in</tspan></text><path fill="none" d="M 707 71 L 707 174" stroke="red" stroke-width="2" stroke-dasharray="8,6" zIndex="5"></path><g class="highcharts-legend" zIndex="7" transform="translate(229,211)"><g zIndex="1"><g><g class="highcharts-legend-item" zIndex="1" transform="translate(8,3)"><path fill="none" d="M 0 11 L 16 11" stroke="#434348" stroke-width="2"></path><path fill="#434348" d="M 8 7 C 13.328 7 13.328 15 8 15 C 2.6719999999999997 15 2.6719999999999997 7 8 7 Z"></path><text x="21" style="color:#333333;font-size:12px;font-weight:bold;cursor:pointer;fill:#333333;" text-anchor="start" zIndex="2" y="15">Delivered</text></g><g class="highcharts-legend-item" zIndex="1" transform="translate(105.103515625,3)"><path fill="none" d="M 0 11 L 16 11" stroke="#90ed7d" stroke-width="2"></path><path fill="#90ed7d" d="M 8 7 L 12 11 8 15 4 11 Z"></path><text x="21" y="15" style="color:#333333;font-size:12px;font-weight:bold;cursor:pointer;fill:#333333;" text-anchor="start" zIndex="2">Poured</text></g><g class="highcharts-legend-item" zIndex="1" transform="translate(188.150390625,3)"><path fill="none" d="M 0 11 L 16 11" stroke="#7cb5ec" stroke-width="2"></path><path fill="#7cb5ec" d="M 4 7 L 12 7 12 15 4 15 Z"></path><text x="21" y="15" style="color:#333333;font-size:12px;font-weight:bold;cursor:pointer;fill:#333333;" text-anchor="start" zIndex="2">Ordered</text></g></g></g></g><g class="highcharts-axis-labels highcharts-xaxis-labels" zIndex="7"><text x="46" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">02:06</text><text x="88.80404972446496" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">02:36</text><text x="131.60809944892992" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">03:06</text><text x="174.41214917339485" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">03:36</text><text x="217.2161988978598" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">04:06</text><text x="260.02024862232474" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">04:36</text><text x="302.8242983467897" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">05:06</text><text x="345.62834807125466" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">05:36</text><text x="388.4323977957196" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">06:06</text><text x="431.2364475201845" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">06:36</text><text x="474.0404972446495" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">07:06</text><text x="516.8445469691144" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">07:36</text><text x="559.6485966935794" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">08:06</text><text x="602.4526464180443" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">08:36</text><text x="645.2566961425093" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:35px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1">09:06</text><text x="699.5921568627451" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:28.81568627450976;text-overflow:ellipsis;" text-anchor="middle" transform="translate(0,0)" y="193" opacity="1"><tspan style="fill:red">09…</tspan><title>09:50</title></text></g><g class="highcharts-axis-labels highcharts-yaxis-labels" zIndex="7"><text x="31" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:229px;text-overflow:clip;" text-anchor="end" transform="translate(0,0)" y="177" opacity="1">0</text><text x="31" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:229px;text-overflow:clip;" text-anchor="end" transform="translate(0,0)" y="125" opacity="1">100</text><text x="31" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:229px;text-overflow:clip;" text-anchor="end" transform="translate(0,0)" y="74" opacity="1">200</text></g><g class="highcharts-tooltip" zIndex="8" style="cursor:default;padding:0;pointer-events:none;white-space:nowrap;" transform="translate(172,-9999)" opacity="0" visibility="visible"><path fill="none" d="M 3.5 0.5 L 162.5 0.5 C 165.5 0.5 165.5 0.5 165.5 3.5 L 165.5 67.5 C 165.5 70.5 165.5 70.5 162.5 70.5 L 87.5 70.5 81.5 76.5 75.5 70.5 3.5 70.5 C 0.5 70.5 0.5 70.5 0.5 67.5 L 0.5 3.5 C 0.5 0.5 0.5 0.5 3.5 0.5" isShadow="true" stroke="black" stroke-opacity="0.049999999999999996" stroke-width="5" transform="translate(1, 1)" width="165" height="70"></path><path fill="none" d="M 3.5 0.5 L 162.5 0.5 C 165.5 0.5 165.5 0.5 165.5 3.5 L 165.5 67.5 C 165.5 70.5 165.5 70.5 162.5 70.5 L 87.5 70.5 81.5 76.5 75.5 70.5 3.5 70.5 C 0.5 70.5 0.5 70.5 0.5 67.5 L 0.5 3.5 C 0.5 0.5 0.5 0.5 3.5 0.5" isShadow="true" stroke="black" stroke-opacity="0.09999999999999999" stroke-width="3" transform="translate(1, 1)" width="165" height="70"></path><path fill="none" d="M 3.5 0.5 L 162.5 0.5 C 165.5 0.5 165.5 0.5 165.5 3.5 L 165.5 67.5 C 165.5 70.5 165.5 70.5 162.5 70.5 L 87.5 70.5 81.5 76.5 75.5 70.5 3.5 70.5 C 0.5 70.5 0.5 70.5 0.5 67.5 L 0.5 3.5 C 0.5 0.5 0.5 0.5 3.5 0.5" isShadow="true" stroke="black" stroke-opacity="0.15" stroke-width="1" transform="translate(1, 1)" width="165" height="70"></path><path fill="rgba(249, 249, 249, .85)" d="M 3.5 0.5 L 162.5 0.5 C 165.5 0.5 165.5 0.5 165.5 3.5 L 165.5 67.5 C 165.5 70.5 165.5 70.5 162.5 70.5 L 87.5 70.5 81.5 76.5 75.5 70.5 3.5 70.5 C 0.5 70.5 0.5 70.5 0.5 67.5 L 0.5 3.5 C 0.5 0.5 0.5 0.5 3.5 0.5" stroke="#7cb5ec" stroke-width="1"></path></g></svg><div class="highcharts-tooltip" style="position: absolute; left: 172px; top: -9999px; opacity: 0; visibility: visible;"><span style="position: absolute; font-family: &quot;Lucida Grande&quot;, &quot;Lucida Sans Unicode&quot;, Arial, Helvetica, sans-serif; font-size: 12px; white-space: nowrap; color: rgb(51, 51, 51); margin-left: 0px; margin-top: 0px; left: 8px; top: 8px;" zindex="1"><b>22 Jul 2026, 04:32</b><br>
+                                    <span style="color:#7cb5ec">●</span> <b>Ordered</b>: 86 CY/HR<br>
+                                    <span style="color:#7cb5ec">●</span> <b>Spacing Minutes</b>: 6 min<br></span></div></div></div>
+		<script>
+	$(function () {
+    // Load CSV data from the given URL
+    $.get("https://d3.truckast.com/dd/v1/sunrise/D3TKVolumePerHourPoured_PlannedLoadsCSVV2?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&format=csv", function (csv) {
+        
+        // Extract headers and find index of Date and Estimated columns
+        var lines = csv.trim().split("\n");
+        var headers = lines[0].replace(/"/g, "").split(",");
+        var dateIndex = headers.indexOf("DateAndTime");
+        var estimatedIndex = headers.indexOf("Estimated");
+
+        let estimatedTimestamp = null;
+
+        // Extract the last DateAndTime value from the CSV
+		let lastDateTimeTimestamp = null;
+
+		for (let i = lines.length - 1; i > 0; i--) {
+			let row = lines[i].replace(/"/g, "").split(",");
+			let dateStr = row[dateIndex]?.trim();
+
+			if (dateStr) {
+				let dateObj = new Date(dateStr);
+				lastDateTimeTimestamp = dateObj.getTime(); // in ms
+				break;
+			}
+		}
+
+        // Set Highcharts to use UTC time
+        Highcharts.setOptions({
+            global: {
+                useUTC: true,
+                timezoneOffset: 0
+            }
+        });
+
+        // Parse CSV and render Highcharts
+        Highcharts.data({
+            csv: csv,
+            complete: function (data) {
+                if (!data?.series?.length) return;
+
+                let spacingMinutesData = {};
+                let estimatedTimeSeries = null;
+
+                // Clean up series names
+                data.series.forEach(series => {
+                    series.name = series.name.replaceAll("\"", "");
+                });
+
+                // Hide ActualSpacingMinutes series from view
+                data.series.forEach(series => {
+                    if (series.name === "ActualSpacingMinutes") {
+                        series.visible = false;
+                        series.showInLegend = false;
+                    }
+                });
+
+                // Extract SpacingMinutes data and remove series
+                if (data.series.length > 3) {
+                    let spacingSeries = data.series.find(s => s.name === "SpacingMinutes");
+                    if (spacingSeries) {
+                        spacingSeries.data.forEach(point => {
+                            if (Array.isArray(point)) {
+                                spacingMinutesData[point[0]] = point[1];
+                            }
+                        });
+                        data.series = data.series.filter(s => s.name !== "SpacingMinutes");
+                    }
+                }
+
+                // Extract and remove EstimatedTime series
+                estimatedTimeSeries = data.series.find(s => s.name === "Estimated");
+                if (estimatedTimeSeries?.data.length) {
+                    data.series = data.series.filter(s => s.name !== "Estimated");
+                }
+
+                // Extract Ordered and Poured series
+                let orderedSeries = data.series.find(s => s.name === "Ordered");
+                let pouredSeries = data.series.find(s => s.name === "Poured");
+
+                // Helper to get last valid point from a series
+                function getLastValidPoint(series) {
+                    if (!series?.data?.length) return null;
+                    for (let i = series.data.length - 1; i >= 0; i--) {
+                        let point = series.data[i];
+                        if (Array.isArray(point) && point[1] != null) return point;
+                    }
+                    return null;
+                }
+
+                let lastOrderedValidPoint = getLastValidPoint(orderedSeries);
+                let lastPouredValidPoint = getLastValidPoint(pouredSeries);
+
+                let redDotPoints = [];
+                let lastEstimatedPoint = null;
+                let xAxisTicks = [];
+
+                let lastOrderedPointY = orderedSeries?.data[orderedSeries.data.length - 1]?.[1] ?? 0;
+
+                // Find maximum X from all data
+                let allXValues = [];
+                data.series.forEach(series => {
+                    series.data.forEach(point => {
+                        if (Array.isArray(point)) allXValues.push(point[0]);
+                        else if (typeof point === "object" && point.x !== undefined) allXValues.push(point.x);
+                    });
+                });
+
+                let lastXInSeries = Math.max(...allXValues);
+				console.log("All series names:", data.series.map(s => s.name));
+				console.log("EstimatedTimeSeries:", estimatedTimeSeries);
+
+				let estimatedTimestamp = lastEstimatedPoint?.x;
+                // Handle EstimatedTimeSeries parsing if available
+             if (estimatedTimeSeries?.data.length) {
+					estimatedTimeSeries.data.forEach(entry => {
+						let baseTimestamp = entry[0];
+
+						// Use value only as a flag
+						let timeStr = String(entry[1]).replace(/"/g, "");
+						if (!timeStr || timeStr === "null") return; // ? Exit early if timeStr is empty or "null"
+						console.log("timeStr before: ", timeStr);
+
+						// Take hours & minutes from the DateAndTime column
+						let baseDate = new Date(baseTimestamp);
+						console.log("baseDate:", baseDate);
+						let hours = baseDate.getUTCHours();
+						let minutes = baseDate.getUTCMinutes();
+						let formattedtimeStr = `${hours}:${minutes.toString().padStart(2, "0")}`;
+						console.log("formattedtimeStr: ", formattedtimeStr);
+						console.log("timeStr after: ", formattedtimeStr);
+
+						// This sets the full UTC time using baseDate
+						baseDate.setUTCHours(hours, minutes, 0, 0);
+
+						estimatedTimestamp = baseDate.getTime();
+						console.log("estimatedTimestamp: ", estimatedTimestamp);
+
+						if (estimatedTimestamp > lastXInSeries && lastOrderedPointY != null && !isNaN(lastOrderedPointY)) {
+							redDotPoints.push({ x: estimatedTimestamp, y: lastOrderedPointY });
+							lastEstimatedPoint = { x: estimatedTimestamp, y: lastOrderedPointY };
+						} 
+						if (!lastEstimatedPoint) {
+								console.log("?? No valid estimated data found â€” red plotline wont be shown.");
+							}
+
+					});
+				} else if (lastPouredValidPoint && lastOrderedPointY != null && !isNaN(lastOrderedPointY)) {
+                    // fallback to last poured time
+                    estimatedTimestamp = lastPouredValidPoint[0];
+                    redDotPoints.push({ x: estimatedTimestamp, y: lastOrderedPointY });
+                    lastEstimatedPoint = { x: estimatedTimestamp, y: lastOrderedPointY };
+                }
+
+                // Update X axis max if needed
+                let maxX = Math.max(lastXInSeries, estimatedTimestamp || 0);
+                if (estimatedTimestamp > lastXInSeries) {
+                    xAxisTicks.push(estimatedTimestamp);
+                }
+
+                // Ensure red dot is drawn if its not already
+                if (
+                    estimatedTimestamp >= lastXInSeries &&
+                    lastOrderedValidPoint &&
+                    lastOrderedValidPoint[1] > 0 &&
+                    !redDotPoints.some(p => p.x === estimatedTimestamp && p.y === lastOrderedValidPoint[1])
+                ) {
+                    redDotPoints.push({ x: estimatedTimestamp, y: lastOrderedValidPoint[1] });
+                }
+
+                // Modify Estimated series to hide first marker
+                data.series.forEach(series => {
+                    if (series.name === "Estimated") {
+                        series.visible = false;
+						series.showInLegend = false;
+						series.enableMouseTracking = false;
+						series.marker = { enabled: false };
+                    }
+
+                    // Layer control for Ordered
+                    if (series.name === "Ordered") {
+                        series.zIndex = 10;
+                    }
+                });
+					console.log("estimatedTimestamp2: ", estimatedTimestamp);
+				
+                // Build chart
+                $("#pour-speed-chart").highcharts({
+                    chart: {
+                        type: "spline",
+                        zoomType: "x",
+                        spacing: [10, 10, 10, 10]
+                    },
+                    colors: ["#434348", "#90ed7d", "#7cb5ec", "#ff0000", "#8085e9", "#f15c80"],
+                    title: { text: "Pour Speed (CY/HR)" },
+                    subtitle: {
+                        text: document.ontouchstart === undefined
+                            ? "Click and drag in the plot area to zoom in"
+                            : "Drag your finger over the plot to zoom in"
+                    },
+					xAxis: {
+						type: "datetime",
+						minRange: 6000,
+						max: estimatedTimestamp > lastXInSeries ? estimatedTimestamp + 1800000 : undefined,
+
+						plotLines: estimatedTimestamp ? [{
+							color: "red",
+							dashStyle: "Dash",
+							width: 2,
+							value: estimatedTimestamp,
+							label: {
+								rotation: 90,
+								style: { color: "red", fontWeight: "bold" }
+							},
+							zIndex: 5
+						}] : [],
+
+						tickPositioner: function () {
+							const interval = 1800000; // 30 minutes
+							const range = this.max - this.min;
+							const count = Math.floor(range / interval);
+							let positions = [];
+
+							for (let i = 0; i <= count; i++) {
+								positions.push(this.min + i * interval);
+							}
+
+							// Always add estimated timestamp
+							if (estimatedTimestamp && !positions.includes(estimatedTimestamp)) {
+								positions.push(estimatedTimestamp);
+							}
+
+							// Remove ticks too close to estimatedTimestamp
+							if (estimatedTimestamp) {
+								positions = positions.filter(tick => {
+									const diff = Math.abs(tick - estimatedTimestamp);
+									return diff > 900000 || tick === estimatedTimestamp; // 15 min buffer
+								});
+							}
+
+							return positions.sort((a, b) => a - b);
+						},
+						labels: {
+							formatter: function () {
+								if (estimatedTimestamp && this.value === estimatedTimestamp) {
+									return `<span style="color:red">${Highcharts.dateFormat("%H:%M", this.value)}</span>`;
+								}
+								return Highcharts.dateFormat("%H:%M", this.value);
+							}
+						},
+
+						title: { text: null }
+					},
+                    yAxis: {
+                        min: 0,
+                        title: { text: "" }
+                    },
+                    tooltip: {
+                        useHTML: true,
+                        shared: false,
+                        formatter: function () {
+                            let spacingMinutes = spacingMinutesData[this.x] || "N/A";
+                            let formattedDate = Highcharts.dateFormat("%d %b %Y, %H:%M", this.x);
+
+                            if (this.series.name === "Poured") {
+                                return `<b>${formattedDate}</b><br>
+                                    <span style="color:${this.series.color}">\u25CF</span> <b>${this.series.name}</b>: ${this.y} CY/HR<br>
+                                    <span style="color:${this.series.color}">\u25CF</span> <b>Pour Out</b>: ${spacingMinutes} min<br>`;
+                            }
+
+                            if (["Ordered", "Delivered"].includes(this.series.name)) {
+                                return `<b>${formattedDate}</b><br>
+                                    <span style="color:${this.series.color}">\u25CF</span> <b>${this.series.name}</b>: ${this.y} CY/HR<br>
+                                    <span style="color:${this.series.color}">\u25CF</span> <b>Spacing Minutes</b>: ${spacingMinutes} min<br>`;
+                            }
+
+                            return `<b>${formattedDate}</b><br>
+                                <span style="color:${this.series.color}">\u25CF</span> <b>${this.series.name}</b>: ${this.y}<br>`;
+                        }
+                    },
+                    legend: { enabled: true },
+                    credits: { enabled: false },
+                    plotOptions: {
+                        spline: { marker: { enabled: true } },
+                        area: {
+                            lineWidth: 1,
+                            marker: { symbol: "circle" },
+                            shadow: false,
+                            states: { hover: { lineWidth: 1 } },
+                            threshold: null
+                        },
+                        series: { connectNulls: true }
+                    },
+                    series: data.series
+                });
+            }
+        });
+    });
+});
+</script>
+	
+
+
+<div id="job-inventory-chart1" style="width: 100%; height: 300px; margin: 0 auto; display: block; float:left; padding-top:5px; padding-bottom:5px" data-highcharts-chart="2"><div class="highcharts-container" id="highcharts-6" style="position: relative; overflow: hidden; width: 724px; height: 300px; text-align: left; line-height: normal; z-index: 0; -webkit-tap-highlight-color: rgba(0, 0, 0, 0); touch-action: none;"><svg version="1.1" style="font-family:&quot;Lucida Grande&quot;, &quot;Lucida Sans Unicode&quot;, Arial, Helvetica, sans-serif;font-size:12px;" xmlns="http://www.w3.org/2000/svg" width="724" height="300"><desc>Created with Highcharts 4.1.9</desc><defs><clippath id="highcharts-7"><rect x="0" y="0" width="672" height="153"></rect></clippath></defs><rect x="0" y="0" width="724" height="300" strokeWidth="0" fill="#FFFFFF" class=" highcharts-background"></rect><g class="highcharts-grid" zIndex="1"></g><g class="highcharts-grid" zIndex="1"><path fill="none" d="M 42 224.5 L 714 224.5" stroke="#D8D8D8" stroke-width="1" zIndex="1" opacity="1"></path><path fill="none" d="M 42 173.5 L 714 173.5" stroke="#D8D8D8" stroke-width="1" zIndex="1" opacity="1"></path><path fill="none" d="M 42 122.5 L 714 122.5" stroke="#D8D8D8" stroke-width="1" zIndex="1" opacity="1"></path><path fill="none" d="M 42 70.5 L 714 70.5" stroke="#D8D8D8" stroke-width="1" zIndex="1" opacity="1"></path></g><g class="highcharts-axis" zIndex="2"><path fill="none" d="M 92.5 224 L 92.5 234" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 164.5 224 L 164.5 234" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 235.5 224 L 235.5 234" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 307.5 224 L 307.5 234" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 379.5 224 L 379.5 234" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 450.5 224 L 450.5 234" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 522.5 224 L 522.5 234" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 593.5 224 L 593.5 234" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 665.5 224 L 665.5 234" stroke="#C0D0E0" stroke-width="1" opacity="1"></path><path fill="none" d="M 42 224.5 L 714 224.5" stroke="#C0D0E0" stroke-width="1" zIndex="7" visibility="visible"></path></g><g class="highcharts-axis" zIndex="2"></g><g class="highcharts-series-group" zIndex="3"><path fill="rgba(67,67,72,0.25)" d="M 0 0"></path><path fill="rgba(144,237,125,0.25)" d="M 0 0"></path><g class="highcharts-series highcharts-series-0" visibility="visible" zIndex="0.1" transform="translate(42,71) scale(1 1)" clip-path="url(#highcharts-7)"><path fill="rgba(67,67,72,0.75)" d="M 6.588235294117647 132.6 L 21.65091959447711 153 L 24.035513415114494 112.2 L 30.71237611289916 153 L 33.09696993353654 91.80000000000001 L 34.88541529901458 153 L 37.27000911965196 112.2 L 49.51092406559052 112.2 L 51.89551788622791 91.80000000000001 L 57.896745668165316 91.80000000000001 L 60.2813394888027 71.4 L 77.01323946360833 153 L 79.35809005390176 71.4 L 79.3978332842457 71.4 L 81.74268387453914 91.80000000000001 L 98.59381354037664 91.80000000000001 L 100.97840736101402 112.2 L 103.60146056371514 112.2 L 103.83991994577887 132.6 L 104.11812255818657 153 L 105.98605438435253 132.6 L 106.22451376641627 112.2 L 106.50271637882396 91.80000000000001 L 119.33977977992186 91.80000000000001 L 121.72437360055925 71.4 L 130.66660042794942 153 L 133.0511942485868 91.80000000000001 L 133.72682916443406 91.80000000000001 L 136.11142298507144 71.4 L 146.24594672278033 153 L 148.6305405434177 91.80000000000001 L 159.8381315004134 91.80000000000001 L 159.9176179611013 91.80000000000001 L 162.22272532105077 91.80000000000001 L 162.3022117817387 112.2 L 167.62780464782884 112.2 L 170.01239846846624 132.6 L 215.39916752126442 132.6 L 217.7837613419018 153 L 237.0989712890646 153 L 239.48356510970197 132.6 L 246.4783736502383 132.6 L 248.86296747087567 132.6 L 257.0898161520746 132.6 L 259.474409972712 112.2 L 279.2267954536583 153 L 281.61138927429573 91.80000000000001 L 282.92291587564625 153 L 285.30750969628366 71.4 L 298.4227757097893 153 L 300.8073695304266 91.80000000000001 L 310.10728543091244 91.80000000000001 L 312.4918792515498 51 L 324.5340780457686 51 L 326.918671866406 51 L 342.89545046467646 51 L 345.2800442853138 71.4 L 348.8966782466138 71.4 L 351.2812720672512 51 L 352.55305543825784 153 L 354.46073049476774 71.4 L 354.9376492588952 71.4 L 356.8453243154051 91.80000000000001 L 357.87864830434796 91.80000000000001 L 360.26324212498537 112.2 L 364.47602454144476 112.2 L 366.8606183620821 91.80000000000001 L 383.4335454155119 153 L 385.8181392361493 112.2 L 388.5206788995383 112.2 L 390.90527272017573 91.80000000000001 L 394.20396083872413 91.80000000000001 L 396.5885546593615 112.2 L 418.1293855057858 112.2 L 420.5139793264232 132.6 L 471.18659801496756 132.6 L 473.57119183560496 112.2 L 473.8493944480127 153 L 473.9288809087006 112.2 L 476.23398826865 112.2 L 476.31347472933794 132.6 L 524.8002157489648 132.6 L 525.0386751310284 112.2 L 527.1848095696021 112.2 L 527.4232689516658 91.80000000000001 L 536.1667796273363 91.80000000000001 L 538.5513734479737 71.4 L 572.8895244651519 153 L 575.2741182857893 51 L 579.248441320185 51 L 581.6330351408224 51 L 584.4548044952433 51 L 586.8393983158807 71.4 L 590.6547484289005 51 L 593.0393422495378 71.4 L 595.9008548343027 91.80000000000001 L 596.0200845253345 91.80000000000001 L 598.2854486549401 91.80000000000001 L 598.4046783459719 112.2 L 605.3994868865083 112.2 L 607.7840807071457 132.6 L 618.0378341358863 132.6 L 620.4224279565237 112.2 L 621.3365222544347 112.2 L 623.7211160750721 91.80000000000001 L 625.8275072833018 91.80000000000001 L 628.2121011039392 91.80000000000001 L 632.1466809079909 91.80000000000001 L 634.5312747286282 112.2 L 665.4117647058823 112.2 665.4117647058823 132.6 634.5312747286282 132.6 632.1466809079909 112.2 628.2121011039392 112.2 625.8275072833018 132.6 623.7211160750721 132.6 621.3365222544347 132.6 620.4224279565237 132.6 618.0378341358863 132.6 607.7840807071457 132.6 605.3994868865083 112.2 598.4046783459719 112.2 598.2854486549401 91.80000000000001 596.0200845253345 91.80000000000001 595.9008548343027 112.2 593.0393422495378 91.80000000000001 590.6547484289005 91.80000000000001 586.8393983158807 112.2 584.4548044952433 91.80000000000001 581.6330351408224 91.80000000000001 579.248441320185 112.2 575.2741182857893 112.2 572.8895244651519 153 538.5513734479737 112.2 536.1667796273363 132.6 527.4232689516658 132.6 527.1848095696021 132.6 525.0386751310284 132.6 524.8002157489648 132.6 476.31347472933794 132.6 476.23398826865 112.2 473.9288809087006 112.2 473.8493944480127 153 473.57119183560496 132.6 471.18659801496756 153 420.5139793264232 153 418.1293855057858 132.6 396.5885546593615 132.6 394.20396083872413 112.2 390.90527272017573 112.2 388.5206788995383 112.2 385.8181392361493 112.2 383.4335454155119 153 366.8606183620821 91.80000000000001 364.47602454144476 112.2 360.26324212498537 112.2 357.87864830434796 91.80000000000001 356.8453243154051 91.80000000000001 354.9376492588952 71.4 354.46073049476774 71.4 352.55305543825784 153 351.2812720672512 51 348.8966782466138 71.4 345.2800442853138 71.4 342.89545046467646 51 326.918671866406 51 324.5340780457686 71.4 312.4918792515498 71.4 310.10728543091244 91.80000000000001 300.8073695304266 91.80000000000001 298.4227757097893 153 285.30750969628366 71.4 282.92291587564625 153 281.61138927429573 91.80000000000001 279.2267954536583 153 259.474409972712 112.2 257.0898161520746 132.6 248.86296747087567 132.6 246.4783736502383 153 239.48356510970197 153 237.0989712890646 153 217.7837613419018 153 215.39916752126442 132.6 170.01239846846624 132.6 167.62780464782884 112.2 162.3022117817387 112.2 162.22272532105077 91.80000000000001 159.9176179611013 91.80000000000001 159.8381315004134 112.2 148.6305405434177 112.2 146.24594672278033 153 136.11142298507144 91.80000000000001 133.72682916443406 112.2 133.0511942485868 112.2 130.66660042794942 153 121.72437360055925 91.80000000000001 119.33977977992186 112.2 106.50271637882396 112.2 106.22451376641627 112.2 105.98605438435253 132.6 104.11812255818657 153 103.83991994577887 132.6 103.60146056371514 112.2 100.97840736101402 112.2 98.59381354037664 91.80000000000001 81.74268387453914 91.80000000000001 79.3978332842457 71.4 79.35809005390176 71.4 77.01323946360833 153 60.2813394888027 91.80000000000001 57.896745668165316 112.2 51.89551788622791 112.2 49.51092406559052 112.2 37.27000911965196 112.2 34.88541529901458 153 33.09696993353654 91.80000000000001 30.71237611289916 153 24.035513415114494 112.2 21.65091959447711 153 6.588235294117647 132.6" zIndex="0"></path><path fill="none" d="M 6.588235294117647 132.6 L 21.65091959447711 153 L 24.035513415114494 112.2 L 30.71237611289916 153 L 33.09696993353654 91.80000000000001 L 34.88541529901458 153 L 37.27000911965196 112.2 L 49.51092406559052 112.2 L 51.89551788622791 91.80000000000001 L 57.896745668165316 91.80000000000001 L 60.2813394888027 71.4 L 77.01323946360833 153 L 79.35809005390176 71.4 L 79.3978332842457 71.4 L 81.74268387453914 91.80000000000001 L 98.59381354037664 91.80000000000001 L 100.97840736101402 112.2 L 103.60146056371514 112.2 L 103.83991994577887 132.6 L 104.11812255818657 153 L 105.98605438435253 132.6 L 106.22451376641627 112.2 L 106.50271637882396 91.80000000000001 L 119.33977977992186 91.80000000000001 L 121.72437360055925 71.4 L 130.66660042794942 153 L 133.0511942485868 91.80000000000001 L 133.72682916443406 91.80000000000001 L 136.11142298507144 71.4 L 146.24594672278033 153 L 148.6305405434177 91.80000000000001 L 159.8381315004134 91.80000000000001 L 159.9176179611013 91.80000000000001 L 162.22272532105077 91.80000000000001 L 162.3022117817387 112.2 L 167.62780464782884 112.2 L 170.01239846846624 132.6 L 215.39916752126442 132.6 L 217.7837613419018 153 L 237.0989712890646 153 L 239.48356510970197 132.6 L 246.4783736502383 132.6 L 248.86296747087567 132.6 L 257.0898161520746 132.6 L 259.474409972712 112.2 L 279.2267954536583 153 L 281.61138927429573 91.80000000000001 L 282.92291587564625 153 L 285.30750969628366 71.4 L 298.4227757097893 153 L 300.8073695304266 91.80000000000001 L 310.10728543091244 91.80000000000001 L 312.4918792515498 51 L 324.5340780457686 51 L 326.918671866406 51 L 342.89545046467646 51 L 345.2800442853138 71.4 L 348.8966782466138 71.4 L 351.2812720672512 51 L 352.55305543825784 153 L 354.46073049476774 71.4 L 354.9376492588952 71.4 L 356.8453243154051 91.80000000000001 L 357.87864830434796 91.80000000000001 L 360.26324212498537 112.2 L 364.47602454144476 112.2 L 366.8606183620821 91.80000000000001 L 383.4335454155119 153 L 385.8181392361493 112.2 L 388.5206788995383 112.2 L 390.90527272017573 91.80000000000001 L 394.20396083872413 91.80000000000001 L 396.5885546593615 112.2 L 418.1293855057858 112.2 L 420.5139793264232 132.6 L 471.18659801496756 132.6 L 473.57119183560496 112.2 L 473.8493944480127 153 L 473.9288809087006 112.2 L 476.23398826865 112.2 L 476.31347472933794 132.6 L 524.8002157489648 132.6 L 525.0386751310284 112.2 L 527.1848095696021 112.2 L 527.4232689516658 91.80000000000001 L 536.1667796273363 91.80000000000001 L 538.5513734479737 71.4 L 572.8895244651519 153 L 575.2741182857893 51 L 579.248441320185 51 L 581.6330351408224 51 L 584.4548044952433 51 L 586.8393983158807 71.4 L 590.6547484289005 51 L 593.0393422495378 71.4 L 595.9008548343027 91.80000000000001 L 596.0200845253345 91.80000000000001 L 598.2854486549401 91.80000000000001 L 598.4046783459719 112.2 L 605.3994868865083 112.2 L 607.7840807071457 132.6 L 618.0378341358863 132.6 L 620.4224279565237 112.2 L 621.3365222544347 112.2 L 623.7211160750721 91.80000000000001 L 625.8275072833018 91.80000000000001 L 628.2121011039392 91.80000000000001 L 632.1466809079909 91.80000000000001 L 634.5312747286282 112.2 L 665.4117647058823 112.2" stroke="#434348" stroke-width="1" zIndex="1" stroke-linejoin="round" stroke-linecap="round"></path><path fill="none" d="M -3.4117647058823533 132.6 L 6.588235294117647 132.6 L 21.65091959447711 153 L 24.035513415114494 112.2 L 30.71237611289916 153 L 33.09696993353654 91.80000000000001 L 34.88541529901458 153 L 37.27000911965196 112.2 L 49.51092406559052 112.2 L 51.89551788622791 91.80000000000001 L 57.896745668165316 91.80000000000001 L 60.2813394888027 71.4 L 77.01323946360833 153 L 79.35809005390176 71.4 L 79.3978332842457 71.4 L 81.74268387453914 91.80000000000001 L 98.59381354037664 91.80000000000001 L 100.97840736101402 112.2 L 103.60146056371514 112.2 L 103.83991994577887 132.6 L 104.11812255818657 153 L 105.98605438435253 132.6 L 106.22451376641627 112.2 L 106.50271637882396 91.80000000000001 L 119.33977977992186 91.80000000000001 L 121.72437360055925 71.4 L 130.66660042794942 153 L 133.0511942485868 91.80000000000001 L 133.72682916443406 91.80000000000001 L 136.11142298507144 71.4 L 146.24594672278033 153 L 148.6305405434177 91.80000000000001 L 159.8381315004134 91.80000000000001 L 159.9176179611013 91.80000000000001 L 162.22272532105077 91.80000000000001 L 162.3022117817387 112.2 L 167.62780464782884 112.2 L 170.01239846846624 132.6 L 215.39916752126442 132.6 L 217.7837613419018 153 L 237.0989712890646 153 L 239.48356510970197 132.6 L 246.4783736502383 132.6 L 248.86296747087567 132.6 L 257.0898161520746 132.6 L 259.474409972712 112.2 L 279.2267954536583 153 L 281.61138927429573 91.80000000000001 L 282.92291587564625 153 L 285.30750969628366 71.4 L 298.4227757097893 153 L 300.8073695304266 91.80000000000001 L 310.10728543091244 91.80000000000001 L 312.4918792515498 51 L 324.5340780457686 51 L 326.918671866406 51 L 342.89545046467646 51 L 345.2800442853138 71.4 L 348.8966782466138 71.4 L 351.2812720672512 51 L 352.55305543825784 153 L 354.46073049476774 71.4 L 354.9376492588952 71.4 L 356.8453243154051 91.80000000000001 L 357.87864830434796 91.80000000000001 L 360.26324212498537 112.2 L 364.47602454144476 112.2 L 366.8606183620821 91.80000000000001 L 383.4335454155119 153 L 385.8181392361493 112.2 L 388.5206788995383 112.2 L 390.90527272017573 91.80000000000001 L 394.20396083872413 91.80000000000001 L 396.5885546593615 112.2 L 418.1293855057858 112.2 L 420.5139793264232 132.6 L 471.18659801496756 132.6 L 473.57119183560496 112.2 L 473.8493944480127 153 L 473.9288809087006 112.2 L 476.23398826865 112.2 L 476.31347472933794 132.6 L 524.8002157489648 132.6 L 525.0386751310284 112.2 L 527.1848095696021 112.2 L 527.4232689516658 91.80000000000001 L 536.1667796273363 91.80000000000001 L 538.5513734479737 71.4 L 572.8895244651519 153 L 575.2741182857893 51 L 579.248441320185 51 L 581.6330351408224 51 L 584.4548044952433 51 L 586.8393983158807 71.4 L 590.6547484289005 51 L 593.0393422495378 71.4 L 595.9008548343027 91.80000000000001 L 596.0200845253345 91.80000000000001 L 598.2854486549401 91.80000000000001 L 598.4046783459719 112.2 L 605.3994868865083 112.2 L 607.7840807071457 132.6 L 618.0378341358863 132.6 L 620.4224279565237 112.2 L 621.3365222544347 112.2 L 623.7211160750721 91.80000000000001 L 625.8275072833018 91.80000000000001 L 628.2121011039392 91.80000000000001 L 632.1466809079909 91.80000000000001 L 634.5312747286282 112.2 L 665.4117647058823 112.2 L 675.4117647058823 112.2" stroke-linejoin="round" visibility="visible" stroke="rgba(192,192,192,0.0001)" stroke-width="21" zIndex="2" class=" highcharts-tracker" style=""></path></g><g class="highcharts-markers highcharts-series-0 highcharts-tracker" visibility="visible" zIndex="0.1" transform="translate(42,71) scale(1 1)" clip-path="url(#highcharts-8)" style=""><path fill="#434348" d="M 246 126.6 C 253.992 126.6 253.992 138.6 246 138.6 C 238.008 138.6 238.008 126.6 246 126.6 Z" stroke="#FFFFFF" stroke-width="1" visibility="hidden"></path></g><g class="highcharts-series highcharts-series-1" visibility="visible" zIndex="0.1" transform="translate(42,71) scale(1 1)" clip-path="url(#highcharts-7)"><path fill="rgba(144,237,125,0.75)" d="M 6.588235294117647 132.6 L 21.65091959447711 153 L 24.035513415114494 112.2 L 30.71237611289916 153 L 33.09696993353654 91.80000000000001 L 34.88541529901458 153 L 37.27000911965196 112.2 L 49.51092406559052 112.2 L 51.89551788622791 112.2 L 57.896745668165316 112.2 L 60.2813394888027 91.80000000000001 L 77.01323946360833 153 L 79.35809005390176 71.4 L 79.3978332842457 71.4 L 81.74268387453914 91.80000000000001 L 98.59381354037664 91.80000000000001 L 100.97840736101402 112.2 L 103.60146056371514 112.2 L 103.83991994577887 132.6 L 104.11812255818657 153 L 105.98605438435253 132.6 L 106.22451376641627 112.2 L 106.50271637882396 112.2 L 119.33977977992186 112.2 L 121.72437360055925 91.80000000000001 L 130.66660042794942 153 L 133.0511942485868 112.2 L 133.72682916443406 112.2 L 136.11142298507144 91.80000000000001 L 146.24594672278033 153 L 148.6305405434177 112.2 L 159.8381315004134 112.2 L 159.9176179611013 91.80000000000001 L 162.22272532105077 91.80000000000001 L 162.3022117817387 112.2 L 167.62780464782884 112.2 L 170.01239846846624 132.6 L 215.39916752126442 132.6 L 217.7837613419018 153 L 237.0989712890646 153 L 239.48356510970197 153 L 246.4783736502383 153 L 248.86296747087567 132.6 L 257.0898161520746 132.6 L 259.474409972712 112.2 L 279.2267954536583 153 L 281.61138927429573 91.80000000000001 L 282.92291587564625 153 L 285.30750969628366 71.4 L 298.4227757097893 153 L 300.8073695304266 91.80000000000001 L 310.10728543091244 91.80000000000001 L 312.4918792515498 71.4 L 324.5340780457686 71.4 L 326.918671866406 51 L 342.89545046467646 51 L 345.2800442853138 71.4 L 348.8966782466138 71.4 L 351.2812720672512 51 L 352.55305543825784 153 L 354.46073049476774 71.4 L 354.9376492588952 71.4 L 356.8453243154051 91.80000000000001 L 357.87864830434796 91.80000000000001 L 360.26324212498537 112.2 L 364.47602454144476 112.2 L 366.8606183620821 91.80000000000001 L 383.4335454155119 153 L 385.8181392361493 112.2 L 388.5206788995383 112.2 L 390.90527272017573 112.2 L 394.20396083872413 112.2 L 396.5885546593615 132.6 L 418.1293855057858 132.6 L 420.5139793264232 153 L 471.18659801496756 153 L 473.57119183560496 132.6 L 473.8493944480127 153 L 473.9288809087006 112.2 L 476.23398826865 112.2 L 476.31347472933794 132.6 L 524.8002157489648 132.6 L 525.0386751310284 132.6 L 527.1848095696021 132.6 L 527.4232689516658 132.6 L 536.1667796273363 132.6 L 538.5513734479737 112.2 L 572.8895244651519 153 L 575.2741182857893 112.2 L 579.248441320185 112.2 L 581.6330351408224 91.80000000000001 L 584.4548044952433 91.80000000000001 L 586.8393983158807 112.2 L 590.6547484289005 91.80000000000001 L 593.0393422495378 91.80000000000001 L 595.9008548343027 112.2 L 596.0200845253345 91.80000000000001 L 598.2854486549401 91.80000000000001 L 598.4046783459719 112.2 L 605.3994868865083 112.2 L 607.7840807071457 132.6 L 618.0378341358863 132.6 L 620.4224279565237 132.6 L 621.3365222544347 132.6 L 623.7211160750721 132.6 L 625.8275072833018 132.6 L 628.2121011039392 112.2 L 632.1466809079909 112.2 L 634.5312747286282 132.6 L 665.4117647058823 132.6 665.4117647058823 153 634.5312747286282 153 632.1466809079909 153 628.2121011039392 153 625.8275072833018 153 623.7211160750721 153 621.3365222544347 153 620.4224279565237 153 618.0378341358863 153 607.7840807071457 153 605.3994868865083 153 598.4046783459719 153 598.2854486549401 153 596.0200845253345 153 595.9008548343027 153 593.0393422495378 153 590.6547484289005 153 586.8393983158807 153 584.4548044952433 153 581.6330351408224 153 579.248441320185 153 575.2741182857893 153 572.8895244651519 153 538.5513734479737 153 536.1667796273363 153 527.4232689516658 153 527.1848095696021 153 525.0386751310284 153 524.8002157489648 153 476.31347472933794 153 476.23398826865 153 473.9288809087006 153 473.8493944480127 153 473.57119183560496 153 471.18659801496756 153 420.5139793264232 153 418.1293855057858 153 396.5885546593615 153 394.20396083872413 153 390.90527272017573 153 388.5206788995383 153 385.8181392361493 153 383.4335454155119 153 366.8606183620821 153 364.47602454144476 153 360.26324212498537 153 357.87864830434796 153 356.8453243154051 153 354.9376492588952 153 354.46073049476774 153 352.55305543825784 153 351.2812720672512 153 348.8966782466138 153 345.2800442853138 153 342.89545046467646 153 326.918671866406 153 324.5340780457686 153 312.4918792515498 153 310.10728543091244 153 300.8073695304266 153 298.4227757097893 153 285.30750969628366 153 282.92291587564625 153 281.61138927429573 153 279.2267954536583 153 259.474409972712 153 257.0898161520746 153 248.86296747087567 153 246.4783736502383 153 239.48356510970197 153 237.0989712890646 153 217.7837613419018 153 215.39916752126442 153 170.01239846846624 153 167.62780464782884 153 162.3022117817387 153 162.22272532105077 153 159.9176179611013 153 159.8381315004134 153 148.6305405434177 153 146.24594672278033 153 136.11142298507144 153 133.72682916443406 153 133.0511942485868 153 130.66660042794942 153 121.72437360055925 153 119.33977977992186 153 106.50271637882396 153 106.22451376641627 153 105.98605438435253 153 104.11812255818657 153 103.83991994577887 153 103.60146056371514 153 100.97840736101402 153 98.59381354037664 153 81.74268387453914 153 79.3978332842457 153 79.35809005390176 153 77.01323946360833 153 60.2813394888027 153 57.896745668165316 153 51.89551788622791 153 49.51092406559052 153 37.27000911965196 153 34.88541529901458 153 33.09696993353654 153 30.71237611289916 153 24.035513415114494 153 21.65091959447711 153 6.588235294117647 153" zIndex="0"></path><path fill="none" d="M 6.588235294117647 132.6 L 21.65091959447711 153 L 24.035513415114494 112.2 L 30.71237611289916 153 L 33.09696993353654 91.80000000000001 L 34.88541529901458 153 L 37.27000911965196 112.2 L 49.51092406559052 112.2 L 51.89551788622791 112.2 L 57.896745668165316 112.2 L 60.2813394888027 91.80000000000001 L 77.01323946360833 153 L 79.35809005390176 71.4 L 79.3978332842457 71.4 L 81.74268387453914 91.80000000000001 L 98.59381354037664 91.80000000000001 L 100.97840736101402 112.2 L 103.60146056371514 112.2 L 103.83991994577887 132.6 L 104.11812255818657 153 L 105.98605438435253 132.6 L 106.22451376641627 112.2 L 106.50271637882396 112.2 L 119.33977977992186 112.2 L 121.72437360055925 91.80000000000001 L 130.66660042794942 153 L 133.0511942485868 112.2 L 133.72682916443406 112.2 L 136.11142298507144 91.80000000000001 L 146.24594672278033 153 L 148.6305405434177 112.2 L 159.8381315004134 112.2 L 159.9176179611013 91.80000000000001 L 162.22272532105077 91.80000000000001 L 162.3022117817387 112.2 L 167.62780464782884 112.2 L 170.01239846846624 132.6 L 215.39916752126442 132.6 L 217.7837613419018 153 L 237.0989712890646 153 L 239.48356510970197 153 L 246.4783736502383 153 L 248.86296747087567 132.6 L 257.0898161520746 132.6 L 259.474409972712 112.2 L 279.2267954536583 153 L 281.61138927429573 91.80000000000001 L 282.92291587564625 153 L 285.30750969628366 71.4 L 298.4227757097893 153 L 300.8073695304266 91.80000000000001 L 310.10728543091244 91.80000000000001 L 312.4918792515498 71.4 L 324.5340780457686 71.4 L 326.918671866406 51 L 342.89545046467646 51 L 345.2800442853138 71.4 L 348.8966782466138 71.4 L 351.2812720672512 51 L 352.55305543825784 153 L 354.46073049476774 71.4 L 354.9376492588952 71.4 L 356.8453243154051 91.80000000000001 L 357.87864830434796 91.80000000000001 L 360.26324212498537 112.2 L 364.47602454144476 112.2 L 366.8606183620821 91.80000000000001 L 383.4335454155119 153 L 385.8181392361493 112.2 L 388.5206788995383 112.2 L 390.90527272017573 112.2 L 394.20396083872413 112.2 L 396.5885546593615 132.6 L 418.1293855057858 132.6 L 420.5139793264232 153 L 471.18659801496756 153 L 473.57119183560496 132.6 L 473.8493944480127 153 L 473.9288809087006 112.2 L 476.23398826865 112.2 L 476.31347472933794 132.6 L 524.8002157489648 132.6 L 525.0386751310284 132.6 L 527.1848095696021 132.6 L 527.4232689516658 132.6 L 536.1667796273363 132.6 L 538.5513734479737 112.2 L 572.8895244651519 153 L 575.2741182857893 112.2 L 579.248441320185 112.2 L 581.6330351408224 91.80000000000001 L 584.4548044952433 91.80000000000001 L 586.8393983158807 112.2 L 590.6547484289005 91.80000000000001 L 593.0393422495378 91.80000000000001 L 595.9008548343027 112.2 L 596.0200845253345 91.80000000000001 L 598.2854486549401 91.80000000000001 L 598.4046783459719 112.2 L 605.3994868865083 112.2 L 607.7840807071457 132.6 L 618.0378341358863 132.6 L 620.4224279565237 132.6 L 621.3365222544347 132.6 L 623.7211160750721 132.6 L 625.8275072833018 132.6 L 628.2121011039392 112.2 L 632.1466809079909 112.2 L 634.5312747286282 132.6 L 665.4117647058823 132.6" stroke="#90ed7d" stroke-width="1" zIndex="1" stroke-linejoin="round" stroke-linecap="round"></path><path fill="none" d="M -3.4117647058823533 132.6 L 6.588235294117647 132.6 L 21.65091959447711 153 L 24.035513415114494 112.2 L 30.71237611289916 153 L 33.09696993353654 91.80000000000001 L 34.88541529901458 153 L 37.27000911965196 112.2 L 49.51092406559052 112.2 L 51.89551788622791 112.2 L 57.896745668165316 112.2 L 60.2813394888027 91.80000000000001 L 77.01323946360833 153 L 79.35809005390176 71.4 L 79.3978332842457 71.4 L 81.74268387453914 91.80000000000001 L 98.59381354037664 91.80000000000001 L 100.97840736101402 112.2 L 103.60146056371514 112.2 L 103.83991994577887 132.6 L 104.11812255818657 153 L 105.98605438435253 132.6 L 106.22451376641627 112.2 L 106.50271637882396 112.2 L 119.33977977992186 112.2 L 121.72437360055925 91.80000000000001 L 130.66660042794942 153 L 133.0511942485868 112.2 L 133.72682916443406 112.2 L 136.11142298507144 91.80000000000001 L 146.24594672278033 153 L 148.6305405434177 112.2 L 159.8381315004134 112.2 L 159.9176179611013 91.80000000000001 L 162.22272532105077 91.80000000000001 L 162.3022117817387 112.2 L 167.62780464782884 112.2 L 170.01239846846624 132.6 L 215.39916752126442 132.6 L 217.7837613419018 153 L 237.0989712890646 153 L 239.48356510970197 153 L 246.4783736502383 153 L 248.86296747087567 132.6 L 257.0898161520746 132.6 L 259.474409972712 112.2 L 279.2267954536583 153 L 281.61138927429573 91.80000000000001 L 282.92291587564625 153 L 285.30750969628366 71.4 L 298.4227757097893 153 L 300.8073695304266 91.80000000000001 L 310.10728543091244 91.80000000000001 L 312.4918792515498 71.4 L 324.5340780457686 71.4 L 326.918671866406 51 L 342.89545046467646 51 L 345.2800442853138 71.4 L 348.8966782466138 71.4 L 351.2812720672512 51 L 352.55305543825784 153 L 354.46073049476774 71.4 L 354.9376492588952 71.4 L 356.8453243154051 91.80000000000001 L 357.87864830434796 91.80000000000001 L 360.26324212498537 112.2 L 364.47602454144476 112.2 L 366.8606183620821 91.80000000000001 L 383.4335454155119 153 L 385.8181392361493 112.2 L 388.5206788995383 112.2 L 390.90527272017573 112.2 L 394.20396083872413 112.2 L 396.5885546593615 132.6 L 418.1293855057858 132.6 L 420.5139793264232 153 L 471.18659801496756 153 L 473.57119183560496 132.6 L 473.8493944480127 153 L 473.9288809087006 112.2 L 476.23398826865 112.2 L 476.31347472933794 132.6 L 524.8002157489648 132.6 L 525.0386751310284 132.6 L 527.1848095696021 132.6 L 527.4232689516658 132.6 L 536.1667796273363 132.6 L 538.5513734479737 112.2 L 572.8895244651519 153 L 575.2741182857893 112.2 L 579.248441320185 112.2 L 581.6330351408224 91.80000000000001 L 584.4548044952433 91.80000000000001 L 586.8393983158807 112.2 L 590.6547484289005 91.80000000000001 L 593.0393422495378 91.80000000000001 L 595.9008548343027 112.2 L 596.0200845253345 91.80000000000001 L 598.2854486549401 91.80000000000001 L 598.4046783459719 112.2 L 605.3994868865083 112.2 L 607.7840807071457 132.6 L 618.0378341358863 132.6 L 620.4224279565237 132.6 L 621.3365222544347 132.6 L 623.7211160750721 132.6 L 625.8275072833018 132.6 L 628.2121011039392 112.2 L 632.1466809079909 112.2 L 634.5312747286282 132.6 L 665.4117647058823 132.6 L 675.4117647058823 132.6" stroke-linejoin="round" visibility="visible" stroke="rgba(192,192,192,0.0001)" stroke-width="21" zIndex="2" class=" highcharts-tracker" style=""></path></g><g class="highcharts-markers highcharts-series-1 highcharts-tracker" visibility="visible" zIndex="0.1" transform="translate(42,71) scale(1 1)" clip-path="url(#highcharts-8)" style=""><path fill="#90ed7d" d="M 60 85.80000000000001 L 66 91.80000000000001 60 97.80000000000001 54 91.80000000000001 Z" stroke="#FFFFFF" stroke-width="1" visibility="hidden"></path></g></g><text x="362" text-anchor="middle" class="highcharts-title" zIndex="4" style="color:#333333;font-size:18px;fill:#333333;width:660px;" y="24"><tspan>Trucks on the Job</tspan></text><text x="362" text-anchor="middle" class="highcharts-subtitle" zIndex="4" style="color:#555555;fill:#555555;width:660px;" y="52"><tspan>Click and drag in the plot area to zoom in</tspan></text><g class="highcharts-legend" zIndex="7" transform="translate(268,261)"><g zIndex="1"><g><g class="highcharts-legend-item" zIndex="1" transform="translate(8,3)"><text x="21" style="color:#333333;font-size:12px;font-weight:bold;cursor:pointer;fill:#333333;" text-anchor="start" zIndex="2" y="15">"Waiting"</text><rect x="0" y="4" width="16" height="12" zIndex="3" fill="#434348"></rect></g><g class="highcharts-legend-item" zIndex="1" transform="translate(103.73046875,3)"><text x="21" y="15" style="color:#333333;font-size:12px;font-weight:bold;cursor:pointer;fill:#333333;" text-anchor="start" zIndex="2">"Pouring"</text><rect x="0" y="4" width="16" height="12" zIndex="3" fill="#90ed7d"></rect></g></g></g></g><g class="highcharts-axis-labels highcharts-xaxis-labels" zIndex="7"><text x="93.41859912210043" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:78px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="243" opacity="1">02:30</text><text x="164.9564137412219" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:78px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="243" opacity="1">03:00</text><text x="236.49422836034336" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:78px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="243" opacity="1">03:30</text><text x="308.0320429794648" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:78px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="243" opacity="1">04:00</text><text x="379.5698575985863" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:78px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="243" opacity="1">04:30</text><text x="451.1076722177077" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:78px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="243" opacity="1">05:00</text><text x="522.6454868368291" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:78px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="243" opacity="1">05:30</text><text x="594.1833014559506" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:78px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="243" opacity="1">06:00</text><text x="665.7211160750721" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:78px;text-overflow:clip;" text-anchor="middle" transform="translate(0,0)" y="243" opacity="1">06:30</text></g><g class="highcharts-axis-labels highcharts-yaxis-labels" zIndex="7"><text x="27" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:229px;text-overflow:clip;" text-anchor="end" transform="translate(0,0)" y="227" opacity="1">0</text><text x="27" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:229px;text-overflow:clip;" text-anchor="end" transform="translate(0,0)" y="176" opacity="1">2.5</text><text x="27" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:229px;text-overflow:clip;" text-anchor="end" transform="translate(0,0)" y="125" opacity="1">5</text><text x="27" style="color:#606060;cursor:default;font-size:11px;fill:#606060;width:229px;text-overflow:clip;" text-anchor="end" transform="translate(0,0)" y="74" opacity="1">7.5</text></g><g class="highcharts-tooltip" zIndex="8" style="cursor:default;padding:0;pointer-events:none;white-space:nowrap;" transform="translate(210,-9999)" opacity="0" visibility="visible"><path fill="none" d="M 3.5 0.5 L 153.5 0.5 C 156.5 0.5 156.5 0.5 156.5 3.5 L 156.5 44.5 C 156.5 47.5 156.5 47.5 153.5 47.5 L 83.5 47.5 77.5 53.5 71.5 47.5 3.5 47.5 C 0.5 47.5 0.5 47.5 0.5 44.5 L 0.5 3.5 C 0.5 0.5 0.5 0.5 3.5 0.5" isShadow="true" stroke="black" stroke-opacity="0.049999999999999996" stroke-width="5" transform="translate(1, 1)" width="156" height="47"></path><path fill="none" d="M 3.5 0.5 L 153.5 0.5 C 156.5 0.5 156.5 0.5 156.5 3.5 L 156.5 44.5 C 156.5 47.5 156.5 47.5 153.5 47.5 L 83.5 47.5 77.5 53.5 71.5 47.5 3.5 47.5 C 0.5 47.5 0.5 47.5 0.5 44.5 L 0.5 3.5 C 0.5 0.5 0.5 0.5 3.5 0.5" isShadow="true" stroke="black" stroke-opacity="0.09999999999999999" stroke-width="3" transform="translate(1, 1)" width="156" height="47"></path><path fill="none" d="M 3.5 0.5 L 153.5 0.5 C 156.5 0.5 156.5 0.5 156.5 3.5 L 156.5 44.5 C 156.5 47.5 156.5 47.5 153.5 47.5 L 83.5 47.5 77.5 53.5 71.5 47.5 3.5 47.5 C 0.5 47.5 0.5 47.5 0.5 44.5 L 0.5 3.5 C 0.5 0.5 0.5 0.5 3.5 0.5" isShadow="true" stroke="black" stroke-opacity="0.15" stroke-width="1" transform="translate(1, 1)" width="156" height="47"></path><path fill="rgba(249, 249, 249, .85)" d="M 3.5 0.5 L 153.5 0.5 C 156.5 0.5 156.5 0.5 156.5 3.5 L 156.5 44.5 C 156.5 47.5 156.5 47.5 153.5 47.5 L 83.5 47.5 77.5 53.5 71.5 47.5 3.5 47.5 C 0.5 47.5 0.5 47.5 0.5 44.5 L 0.5 3.5 C 0.5 0.5 0.5 0.5 3.5 0.5" stroke="#434348" stroke-width="1"></path><text x="8" zIndex="1" style="font-size:12px;color:#333333;fill:#333333;" y="20"><tspan style="font-size: 10px">Wednesday, Jul 22, 03:51:48</tspan><tspan style="fill:#434348" x="8" dy="15">●</tspan><tspan dx="0"> "Waiting": </tspan><tspan style="font-weight:bold" dx="0">1</tspan></text></g></svg></div></div>
+<script>
+    $(function () {
+        Highcharts.setOptions({  
+            global : {
+                useUTC : true,
+                timezoneOffset : 0
+            }
+        });
+        $('#job-inventory-chart1').highcharts({
+            chart: {
+                //events: {
+                //    load: function(){
+                //        this.showLoading();
+                //},
+                type: 'area',
+                zoomType: 'x',
+                spacingRight: 10,
+                spacingLeft: 10,
+                spacingTop: 10,
+                spacingBottom: 10 
+                },
+            colors: ['#434348', '#90ed7d', '#7cb5ec',  '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1'],
+            title: {
+                text: 'Trucks on the Job'
+            },
+            subtitle: {
+                    text: document.ontouchstart === undefined ? 'Click and drag in the plot area to zoom in' : 'Drag your finger over the plot to zoom in'
+    },
+        xAxis: {
+        type: 'datetime',
+        minRange: 60000,
+        title: {
+                    text: null
+        }
+        },
+    yAxis: {
+        min: 0,
+            title: {
+                text: ''
+            }//,
+            //endOnTick: false
+    },
+    tooltip: {
+            shared: false
+    },
+    legend: {
+            enabled: true
+            },
+    credits: {
+            enabled: false
+    },
+    plotOptions: {
+            spline: {
+                    marker: {
+                        enabled: true
+                    }
+            },
+            area: {
+                    stacking: 'normal',
+                lineWidth: 1,
+                marker: {
+                    enabled: false
+                },
+                shadow: false,
+                states: {
+                    hover: {
+                            lineWidth: 1
+                    }
+                },
+                threshold: null
+            }
+    },
+
+    series: [
+
+    ]
+    });
+        
+            var chart = $('#job-inventory-chart1').highcharts();
+            chart.showLoading();
+        
+    });
+
+
+
+    
+
+    
+    $(function () {
+        $.get('https://d3.truckast.com/dd/v1/sunrise/D3TKPourInventoryTrucksCSV?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&format=csv', function(csv) {
+            Highcharts.setOptions({  
+                global : {
+                    useUTC : true,
+                    timezoneOffset : 0
+                }
+            });
+            $('#job-inventory-chart1').highcharts({
+
+                chart: {
+                    type: 'area',
+                    zoomType: 'x',
+                    spacingRight: 10,
+                    spacingLeft: 10,
+                    spacingTop: 10,
+                    spacingBottom: 10
+                    },
+                colors: ['#434348', '#90ed7d', '#7cb5ec',  '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1'],
+                title: {
+                    text: 'Trucks on the Job'
+                },
+                subtitle: {
+                        text: document.ontouchstart === undefined ? 'Click and drag in the plot area to zoom in' : 'Drag your finger over the plot to zoom in'
+        },
+            xAxis: {
+            type: 'datetime',
+            minRange: 60000,
+            title: {
+                    text: null
+            }
+            },
+        yAxis: {
+            min: 0,
+            title: {
+                    text: ''
+            }//,
+            //endOnTick: false
+        },
+        tooltip: {
+            shared: false
+        },
+        legend: {
+            enabled: true
+                },
+        credits: {
+            enabled: false
+        },
+        plotOptions: {
+            spline: {
+                marker: {
+                    enabled: true
+                }
+            },
+            area: {
+                            stacking: 'normal',
+                    lineWidth: 1,
+                    marker: {
+                    enabled: false
+                    },
+                shadow: false,
+                states: {
+                    hover: {
+                            lineWidth: 1
+                    }
+                },
+                threshold: null
+            },
+            series: {
+                connectNulls: true
+            }
+        },
+        data: {
+            csv: csv
+        }
+    });
+    });
+    });
+    
+</script>
+                <div id="f0c699da-a31d-4b4f-a68b-33d77120a824" class="d3-label" style="width: 100%;display: none;"><h4>Delay Overview</h4></div>
+
+
+        <div style="display: none; width: 100%">
+        <div id="0d19d996-939c-4401-bab5-804b4ead58fb_wrapper" class="dataTables_wrapper form-inline" role="grid"><div class="row"><div class="span6"></div><div class="span6"></div></div><table cellpadding="0" cellspacing="0" border="0" class="table table-striped dataTable" id="0d19d996-939c-4401-bab5-804b4ead58fb" style="width: 100%; ">
+            <thead><tr role="row"><th class="sorting_asc" role="columnheader" tabindex="0" aria-controls="0d19d996-939c-4401-bab5-804b4ead58fb" rowspan="1" colspan="1" aria-sort="ascending" aria-label="Load Order: activate to sort column descending" style="width: 0px;">Load Order</th><th class="sorting" role="columnheader" tabindex="0" aria-controls="0d19d996-939c-4401-bab5-804b4ead58fb" rowspan="1" colspan="1" aria-label="Truck: activate to sort column ascending" style="width: 0px;">Truck</th><th class="sorting" role="columnheader" tabindex="0" aria-controls="0d19d996-939c-4401-bab5-804b4ead58fb" rowspan="1" colspan="1" aria-label="Prod Delay: activate to sort column ascending" style="width: 0px;">Prod Delay</th><th class="sorting" role="columnheader" tabindex="0" aria-controls="0d19d996-939c-4401-bab5-804b4ead58fb" rowspan="1" colspan="1" aria-label="Wait To Pour: activate to sort column ascending" style="width: 0px;">Wait To Pour</th><th class="sorting" role="columnheader" tabindex="0" aria-controls="0d19d996-939c-4401-bab5-804b4ead58fb" rowspan="1" colspan="1" aria-label="Contractor Delay: activate to sort column ascending" style="width: 0px;">Contractor Delay</th></tr></thead>
+        
+        <tbody role="alert" aria-live="polite" aria-relevant="all"><tr class="gradeA odd">
+                <td style="border-top:0" class="  sorting_1">1</td>
+                <td style="border-top:0" class=" ">2411SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">25</font></td>
+            </tr><tr class="gradeA even">
+                <td style="border-top:0" class="  sorting_1">2</td>
+                <td style="border-top:0" class=" ">2467SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">25</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">3</td>
+                <td style="border-top:0" class=" ">2334SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="green">-4</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">4</td>
+                <td style="border-top:0" class=" ">2330SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">1</td>
+                <td style="border-top:0" class=" "><font color="red">5</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">5</td>
+                <td style="border-top:0" class=" ">2327SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">24</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">6</td>
+                <td style="border-top:0" class=" ">2454SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">11</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">7</td>
+                <td style="border-top:0" class=" ">2465SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">22</td>
+                <td style="border-top:0" class=" "><font color="red">16</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">8</td>
+                <td style="border-top:0" class=" ">2328SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">13</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">9</td>
+                <td style="border-top:0" class=" ">2455SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">27</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">10</td>
+                <td style="border-top:0" class=" ">2409SR</td>
+                <td style="border-top:0" class=" "><font color="red">9</font></td>
+                <td style="border-top:0" class=" ">4</td>
+                <td style="border-top:0" class=" "><font color="red">19</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">11</td>
+                <td style="border-top:0" class=" ">2411SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">29</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">12</td>
+                <td style="border-top:0" class=" ">2467SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">24</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">13</td>
+                <td style="border-top:0" class=" ">2334SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">23</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">14</td>
+                <td style="border-top:0" class=" ">2327SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">24</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">15</td>
+                <td style="border-top:0" class=" ">2330SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">6</td>
+                <td style="border-top:0" class=" "><font color="red">13</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">16</td>
+                <td style="border-top:0" class=" ">2328SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">12</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">17</td>
+                <td style="border-top:0" class=" ">2454SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">16</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">18</td>
+                <td style="border-top:0" class=" ">2465SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">36</td>
+                <td style="border-top:0" class=" "><font color="red">30</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">19</td>
+                <td style="border-top:0" class=" ">2455SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">41</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">20</td>
+                <td style="border-top:0" class=" ">2411SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">30</td>
+                <td style="border-top:0" class=" "><font color="red">24</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">21</td>
+                <td style="border-top:0" class=" ">2334SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">28</td>
+                <td style="border-top:0" class=" "><font color="red">22</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">22</td>
+                <td style="border-top:0" class=" ">2467SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">33</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">23</td>
+                <td style="border-top:0" class=" ">2409SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">3</td>
+                <td style="border-top:0" class=" "><font color="red">7</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">24</td>
+                <td style="border-top:0" class=" ">2330SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">3</td>
+                <td style="border-top:0" class=" "><font color="red">2</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">25</td>
+                <td style="border-top:0" class=" ">2327SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">18</font></td>
+            </tr><tr class="odd gradeA even">
+                <td style="border-top:0" class="  sorting_1">26</td>
+                <td style="border-top:0" class=" ">2321SR</td>
+                <td style="border-top:0" class=" "><font color="red">18</font></td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">13</font></td>
+            </tr><tr class="even gradeA odd">
+                <td style="border-top:0" class="  sorting_1">27</td>
+                <td style="border-top:0" class=" ">2411SR</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" ">0</td>
+                <td style="border-top:0" class=" "><font color="red">13</font></td>
+            </tr></tbody></table><div class="row"><div class="span6"></div><div class="span6"></div></div></div>
+        </div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table {  margin-bottom: 8px; }
+</style>
+<script>
+            $(document).ready(function () {
+                $('#0d19d996-939c-4401-bab5-804b4ead58fb').dataTable({
+                    "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'><'span6'p>>",
+                    "sPaginationType": "bootstrap",
+                    "bPaginate": false,
+                    "bFilter": false,
+                    "bSort": true,
+                    "oLanguage": {
+                        "sLengthMenu": "_MENU_ records per page"
+                    }
+                });
+            });
+
+</script>
+            <a id="3520f543-19ff-4e63-b2b8-6ba95a7a788b" href="https://d3.truckast.com/dv/v1/sunrise/truckast/TicketStatusDetails?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254&amp;ShowDetail=1" class="btn btn-success " style="width: 100px; display: none">Delay Details</a>
+
+        <br>
+        <br>
+
+
+
+            <a id="54bd0b64-7e0e-48a3-96eb-af8d239be4f7" href="https://d3.truckast.com/dv/v1/sunrise/truckast/homebuilder?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254" class="btn btn-success " style="width: 100px; display: none">POUR LOG</a>
+
+        <br>
+        <br>
+
+
+
+            <a id="qc" href="https://d3.truckast.com/dv/v1/sunrise/Truckast/QCTest?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254" class="btn btn-danger " style="width: 63px; display: none">QC Test</a>
+
+
+
+<div id="social-table" style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 10%">
+            <div id="d457f55a-7711-498c-8089-f384d3e447e8" class="d3-label" style="width: 100%;"><a href="https://d3.truckast.com/dv/v1/d3/features/photo?tenant=sunrise&amp;topicid=AppID%3D000-00000-0000-0001,OrderID%3D8BABD2AC-6E7C-F111-82CC-9F6F49760254,UserID%3DD4E3FA38-E744-E411-BE57-A5D86181E080"><img src="./Order_files/photography-camera@2x.png" alt="Photo"></a></div>
+
+            </td>
+            <td style="vertical-align: middle; width: 80%">
+        <input id="messagedetails" name="messagedetails" value="" style="margin-bottom: 0; width: 95%; display: block; " type="text" placeholder="Enter your message">
+
+            </td>
+            <td style="vertical-align: middle; width: 10%">
+        <button id="messagetxtbtn" class="btn btn-primary " type="button" onclick="onSubmit_order()" style="width: 75px">Send</button>
+
+            </td>
+        </tr>
+
+    </tbody>
+</table>
+</div>                
+	<script>
+	$("#messagetxtbtn").click(function(){
+	    $(this).attr("disabled", "disabled");
+	});
+	</script>
+	
+
+
+<div id="chat1" class="chat-list" style="width:100%; display: block">
+        <div class="chat-list-bubble-container" style="margin:8px; width:100%">
+            <div class="chat-list-bubble">
+                <table style="padding:10px; width:100%">
+                    <tbody><tr>
+                            <td style="background-color: #d7e4ed; padding: 12px">
+                                <div class="chat-list-content" style="width: 100%">Truck 2411SR is heading to 1144 Robson Ranch Rd and is expected to arrive at 02:15</div>
+                                <div class="chat-list-label" style="font-size: small; font-weight: bold"><img src="./Order_files/truckast_40.png" alt="TRUCKAST" width="40" height="40"> - Jul 22 @ 1:41AM CST<br><a href="https://d3.truckast.com/dv/v1/sunrise/Truckast/Order?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254" onclick="showLoadingIndicator(); window.location.href=&#39;https://d3.truckast.com/dv/v1/sunrise/Truckast/Comment?PostID=5133AB6A-9885-F111-82CC-9F6F49760254&#39;;return false;" <span="" style="font-size: x-small">Comment</a></div>
+                            </td>
+                            <td style="width: 15px; vertical-align: top; border: 0; padding: 0"><img src="./Order_files/chat-list-callout-author.png" style="border: 0"></td>
+                    </tr>
+                </tbody></table>
+            </div>
+        </div>
+        <div class="chat-list-bubble-container" style="margin:8px; width:100%">
+            <div class="chat-list-bubble">
+                <table style="padding:10px; width:100%">
+                    <tbody><tr>
+                            <td style="background-color: #d7e4ed; padding: 12px">
+                                <div class="chat-list-content" style="width: 100%">On Job Time changed from JUL 22 @ 2:00AM to JUL 22 @ 2:20AM</div>
+                                <div class="chat-list-label" style="font-size: small; font-weight: bold"><img src="./Order_files/truckast_40.png" alt="TRUCKAST" width="40" height="40"> - Jul 22 @ 1:23AM CST<br><a href="https://d3.truckast.com/dv/v1/sunrise/Truckast/Order?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254" onclick="showLoadingIndicator(); window.location.href=&#39;https://d3.truckast.com/dv/v1/sunrise/Truckast/Comment?PostID=65BFB0D6-9585-F111-82CC-9F6F49760254&#39;;return false;" <span="" style="font-size: x-small">Comment</a></div>
+                            </td>
+                            <td style="width: 15px; vertical-align: top; border: 0; padding: 0"><img src="./Order_files/chat-list-callout-author.png" style="border: 0"></td>
+                    </tr>
+                </tbody></table>
+            </div>
+        </div>
+        <div class="chat-list-bubble-container" style="margin:8px; width:100%">
+            <div class="chat-list-bubble">
+                <table style="padding:10px; width:100%">
+                    <tbody><tr>
+                            <td style="background-color: #d7e4ed; padding: 12px">
+                                <div class="chat-list-content" style="width: 100%">Order Number:  2000 <br>Order Status:  Firm <br>Plant: PONDER <br>Scheduled Time on Job:  Jul 22 2026  2:00AM <br>Spacing: 7 minutes <br>Purchase Order:  n/a <br>Instructions:  n/a <br>Ordered By: GUILLERMO 972-658-6952 <br> <br>PRODUCTS <br>Product Name: 5441 <br>Product Description: 5441- 4000 PSI 1in AE FA <br>Quantity: 500.00 Cubic Yards <br>Slump: 5 <br>Usage: 2 PAVING <br></div>
+                                <div class="chat-list-label" style="font-size: small; font-weight: bold"><img src="./Order_files/truckast_40.png" alt="TRUCKAST" width="40" height="40"> - Jul 10 @ 9:50AM CST<br><a href="https://d3.truckast.com/dv/v1/sunrise/Truckast/Order?OrderID=8BABD2AC-6E7C-F111-82CC-9F6F49760254" onclick="showLoadingIndicator(); window.location.href=&#39;https://d3.truckast.com/dv/v1/sunrise/Truckast/Comment?PostID=AEACD2AC-6E7C-F111-82CC-9F6F49760254&#39;;return false;" <span="" style="font-size: x-small">Comment</a></div>
+                            </td>
+                            <td style="width: 15px; vertical-align: top; border: 0; padding: 0"><img src="./Order_files/chat-list-callout-author.png" style="border: 0"></td>
+                    </tr>
+                </tbody></table>
+            </div>
+        </div>
+          
+</div>
+
+</form>
+
+<script>
+    function onValidate__order() {
+        // these are necessary instantiations, do not remove
+        var message = "";
+        var regex;
+        var input;
+
+        return message;
+    }
+    function onSubmit_order() {
+   
+        // validate the form content
+        var validationMessage = onValidate__order();
+        if (validationMessage != null && validationMessage.length > 0) {
+            $('#error-box').css('display', 'block');
+            $('#error-title').html('One or more fields were not properly filled out');
+            $('#error-text').html(validationMessage);
+            goToByScroll('error-box');
+            return;
+        }
+
+        // If there is a CodeScript component in this form, we need to url encode the values
+        if ($('#CodeScript').length > 0 && $('#ActualScript').length > 0) {
+            if (codeMirrorEditor != null)
+                codeMirrorEditor.save();
+            var origtext = $('#CodeScript').val();
+            var enctext = $('<div/>').text(origtext).html();
+            $('#ActualScript').val(enctext);
+            $('#CodeScript').remove();
+        }
+        // if there is an ORGANIZATION control on the page, grab its value for postback
+        if (typeof generateValueForComponent_ORGANIZATION == 'function') {
+            var orglist = generateValueForComponent_ORGANIZATION();
+            if (orglist != null) {
+                var form = document.forms['order'];
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'organization';
+                input.value = orglist;
+                form.appendChild(input);
+            }
+        }
+
+        // create a hidden form field to hold the postback type
+        var docform = document.forms['order'];
+        var typeInput = document.createElement('input');
+        typeInput.type = 'hidden';
+        typeInput.name = 'd3-form-type';
+        typeInput.value = 'Normal';
+        docform.appendChild(typeInput);
+
+        // save the login info (if at the login screen)
+        saveLogin();
+        
+        // gray out the screen while the postback occurs...
+        showLoadingIndicator();
+        
+        // submit the specified form now
+        $('#order').submit();
+    }
+</script>                </div>
+
+</div>
+<script type="text/javascript">
+
+
+
+</script>
+
+    
+
+</body></html>
