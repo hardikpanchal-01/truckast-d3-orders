@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<!-- Analytics - Customer Orders - D3 exact match -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no">
+    <title>Analytics - Customer Orders</title>
+
+    <script src="./MarketSummary_files/d3_complete_nohc.js"></script>
+    <link href="./MarketSummary_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+    <script src="./MarketSummary_files/highcharts.js"></script>
+    <script src="./MarketSummary_files/highcharts-more.js"></script>
+    <script src="./MarketSummary_files/data.js"></script>
+
+    <script src="./MarketSummary_files/jquery.rateit.min.js"></script>
+    <link href="./MarketSummary_files/rateit.css" rel="stylesheet" type="text/css">
+    <script src="./MarketSummary_files/hopscotch.min.js"></script>
+    <link href="./MarketSummary_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+    <script src="./MarketSummary_files/chardinjs.min.js"></script>
+    <link href="./MarketSummary_files/chardinjs.css" rel="stylesheet" type="text/css">
+
+    <link href="./MarketSummary_files/bootstrap2-toggle.min.css" rel="stylesheet">
+    <script src="./MarketSummary_files/bootstrap2-toggle.min.js"></script>
+
+    <style media="print" type="text/css">
+        a:after { content: ''; }
+        a[href]:after { content: none !important; }
+    </style>
+    <style>
+        .dataTables_filter label { float: right }
+        .dataTables_paginate ul { float: right }
+        .pagination { margin: 0px 0; }
+        .table { margin-bottom: 8px; }
+    </style>
+</head>
+
+<body>
+    <script>
+        $(document).ready(function () {
+            hideLoadingIndicator();
+            loadLogin();
+        });
+        $(window).unload(function () {
+            hideLoadingIndicator();
+            saveLogin();
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var errormsg = getParameterByName("pageerror");
+            if (errormsg != null && errormsg.length > 0) {
+                displayError('ERROR', trimString(errormsg));
+            }
+            Highcharts.setOptions({
+                colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+            });
+        });
+    </script>
+    <div class="d3-page">
+
+        <!-- Analytics Navbar -->
+        <div class="navbar navbar-fixed-top navbar-inverse">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+
+                    <a class="brand" href="#">ANALYTICS</a>
+
+                    <div class="nav-collapse collapse">
+                        <ul class="nav">
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dashboard <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/analytics-dashboard.html">Dashboard</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Producer <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/analytics-samedayordercancellations.html">Same Day Cancellations</a></li>
+                                    <li><a href="/d3-static/analytics-dailycancelledorders.html">Analytics Daily Cancelled Orders</a></li>
+                                    <li><a href="/d3-static/analytics-totalcancelledorders.html">Analytics Total Cancelled Orders</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contractor <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/analytics-customersearch.html">Contractor Search</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Users <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/user-notifications.html">User Notifications</a></li>
+                                    <li><a href="/d3-static/user-search.html">User Search</a></li>
+                                    <li><a href="/d3-static/analytics.html">User Dashboard</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Apps <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/analytics-dashboard.html">Analytics</a></li>
+                                    <li><a href="/">Truckast</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Help <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/analytics-help.html">Help</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Logout <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/logout">Logout</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="error-box" class="alert alert-error" style="display: none">
+                <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                <p id="error-text"></p>
+            </div>
+            <div id="warning-box" class="alert alert-block" style="display: none">
+                <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                <p id="warning-text"></p>
+            </div>
+            <div id="success-box" class="alert alert-success" style="display: none">
+                <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                <p id="success-text"></p>
+            </div>
+            <div id="information-box" class="alert alert-info" style="display: none">
+                <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                <p id="information-text"></p>
+            </div>
+
+            <form id="analyticscustomerorders" method="POST">
+
+                <!-- Title Bar -->
+                <div class="navbar">
+                    <div class="navbar-inner">
+                        <div class="container">
+                            <table style="width:100%">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:38px">
+                                            <a onclick="history.back();hideLoadingIndicator();">
+                                                <img id="titlebar-left-image" width="32" height="32"
+                                                    style="margin-top:5px; margin-bottom:5px"
+                                                    src="./MarketSummary_files/arrow-big-01@2x.png">
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                                                <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                                    <span id="title-customer-name" style="font-size: 16px"><strong>COMPANY ORDERS</strong></span><br>
+                                                    <span id="title-customer-number" style="font-size: 11px; padding: 0"><strong></strong></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="width:38px">
+                                            <a href="" onclick="location.reload();return false;">
+                                                <img id="titlebar-right-image" width="32" height="32"
+                                                    style="margin-top:5px; margin-bottom:5px"
+                                                    src="./MarketSummary_files/arrow-small-27@2x.png">
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <br>
+                <br>
+
+                <!-- Company Info Section -->
+                <div style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 50%">
+                                    <div class="d3-label" style="width: 100%;">Company Name:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 50%">
+                                    <div id="info-company-name" class="d3-label" style="width: 100%;"></div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 50%">
+                                    <div class="d3-label" style="width: 100%;">Account Number:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 50%">
+                                    <div id="info-account-number" class="d3-label" style="width: 100%;"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 50%">
+                                    <div class="d3-label" style="width: 100%;">Region/Business Unit</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 50%">
+                                    <div id="info-region" class="d3-label" style="width: 100%;"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <br>
+
+                <!-- Date Filter Section -->
+                <div style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;">START DATE</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;">END DATE</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;"></div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;"></div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div id="startdate" style="width: 125px; padding-right: 10px; float: left;">
+                                        <input id="startdate-input" name="startdate" style="width: 125px;" type="text">
+                                    </div>
+                                    <script type="text/javascript">
+                                        $(document).ready(function () {
+                                            var startDate = new Date();
+                                            startDate.setDate(1);
+                                            $("#startdate-input").kendoDatePicker({
+                                                format: "M/d/yyyy",
+                                                value: startDate
+                                            });
+                                        });
+                                    </script>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div id="enddate" style="width: 125px; padding-right: 10px; float: left;">
+                                        <input id="enddate-input" name="enddate" style="width: 125px;" type="text">
+                                    </div>
+                                    <script type="text/javascript">
+                                        $(document).ready(function () {
+                                            var endDate = new Date();
+                                            endDate.setDate(endDate.getDate() - 1);
+                                            $("#enddate-input").kendoDatePicker({
+                                                format: "M/d/yyyy",
+                                                value: endDate
+                                            });
+                                        });
+                                    </script>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <button id="submit-button" class="btn btn-success" type="button" onclick="onSubmit()" style="width: 150px">SUBMIT</button>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <br>
+
+                <!-- Customer Title -->
+                <div id="customer-orders-title" class="d3-label" style="width: 100%;"><h4>COMPANY ORDERS</h4></div>
+                <br>
+
+                <!-- Stats Section -->
+                <div style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;">TOTAL ORDERS:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div id="stat-total-orders" class="d3-label" style="width: 100%;">0</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;">TOTAL ORDERS (CY)</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div id="stat-total-volume" class="d3-label" style="width: 100%;">0</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;">COMPLETED ORDERS:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div id="stat-completed-orders" class="d3-label" style="width: 100%;">0</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;">COMPLETED ORDERS (CY):</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div id="stat-completed-volume" class="d3-label" style="width: 100%;">0</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;">CANCELLED ORDERS:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div id="stat-cancelled-orders" class="d3-label" style="width: 100%;">0</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;">CANCELLED ORDERS (CY):</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div id="stat-cancelled-volume" class="d3-label" style="width: 100%;">0</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;">COMPLETED ORDERS %:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div id="stat-completed-pct" class="d3-label" style="width: 100%;">0</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;">COMPLETED ORDERS (CY) %:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div id="stat-completed-volume-pct" class="d3-label" style="width: 100%;">0</div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;">CANCELLED ORDERS %:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div id="stat-cancelled-pct" class="d3-label" style="width: 100%;">0</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div class="d3-label" style="width: 100%;">CANCELLED ORDERS (CY) %:</div>
+                                </td>
+                                <td style="vertical-align: middle; width: 25%">
+                                    <div id="stat-cancelled-volume-pct" class="d3-label" style="width: 100%;">0</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <br>
+
+                <!-- Pie Charts Section -->
+                <div style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 50%">
+                                    <div id="pieStatesOrder" style="min-width: 100%; height: 400px; max-width: 100%; margin: 0 auto;"></div>
+                                </td>
+                                <td style="vertical-align: middle; width: 50%">
+                                    <div id="pieStatesVolume" style="min-width: 100%; height: 400px; max-width: 100%; margin: 0 auto;"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Area Charts Section -->
+                <div id="totalusage" style="width: 50%; height: 400px; margin: 0 auto; display: block; float:left; padding-top:5px; padding-bottom:5px"></div>
+                <div id="producervolume" style="width: 50%; height: 400px; margin: 0 auto; display: block; float:left; padding-top:5px; padding-bottom:5px"></div>
+                <br>
+                <br>
+                <br>
+
+                <!-- Completed and Cancelled Orders Table -->
+                <div style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 80%">
+                                    <div class="d3-label" style="width: 100%;"><h4>COMPLETED AND CANCELLED ORDERS</h4></div>
+                                </td>
+                                <td style="vertical-align: middle; width: 20%">
+                                    <div style="float:right;padding:5px;visibility:show">
+                                        <a href="#" id="download-daily-orders"><img alt="Download" src="./MarketSummary_files/excel-xls-icon.48x48pixel.png"></a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display: block; width: 100%">
+                    <table id="daily-orders-table" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered dataTable" style="width: 100%;">
+                        <thead>
+                            <tr role="row">
+                                <th>DATE</th>
+                                <th>TOT</th>
+                                <th>COMP</th>
+                                <th>% COMP</th>
+                                <th>CANC</th>
+                                <th>% CANC</th>
+                                <th>TOT(CY)</th>
+                                <th>COMP(CY)</th>
+                                <th>% COMP(CY)</th>
+                                <th>CANC(CY)</th>
+                                <th>% CANC(CY)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="daily-orders-tbody"></tbody>
+                    </table>
+                </div>
+                <br>
+                <br>
+                <br>
+
+                <!-- Prior Status to Cancel Status Table -->
+                <div style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 80%">
+                                    <div class="d3-label" style="width: 100%;"><h4>PRIOR STATUS TO CANCEL STATUS</h4></div>
+                                </td>
+                                <td style="vertical-align: middle; width: 20%">
+                                    <div style="float:right;padding:5px;visibility:show">
+                                        <a href="#" id="download-cancelled-orders"><img alt="Download" src="./MarketSummary_files/excel-xls-icon.48x48pixel.png"></a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display: block; width: 100%">
+                    <table id="cancelled-orders-table" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered dataTable" style="width: 100%;">
+                        <thead>
+                            <tr role="row">
+                                <th>ORDER</th>
+                                <th>SCHED STATUS</th>
+                                <th>SCHEDULED TIME</th>
+                                <th>CANCEL STATUS</th>
+                                <th>CANCELLED TIME</th>
+                                <th>FINAL</th>
+                                <th>VOLUME(CY)</th>
+                                <th>PROJECT</th>
+                                <th>PROJECT#</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cancelled-orders-tbody"></tbody>
+                    </table>
+                </div>
+                <br>
+                <br>
+                <br>
+
+                <!-- Exception Table -->
+                <div style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 80%">
+                                    <div class="d3-label" style="width: 100%;"><h4>EXCEPTION TABLE</h4></div>
+                                </td>
+                                <td style="vertical-align: middle; width: 20%">
+                                    <div style="float:right;padding:5px;visibility:show">
+                                        <a href="#" id="download-exception-orders"><img alt="Download" src="./MarketSummary_files/excel-xls-icon.48x48pixel.png"></a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display: block; width: 100%">
+                    <table id="exception-orders-table" cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered dataTable" style="width: 100%;">
+                        <thead>
+                            <tr role="row">
+                                <th>ORDER</th>
+                                <th>SCHED STATUS</th>
+                                <th>SCHEDULED TIME</th>
+                                <th>CANCEL STATUS</th>
+                                <th>CANCELLED TIME</th>
+                                <th>FINAL</th>
+                                <th>VOLUME(CY)</th>
+                                <th>PROJECT</th>
+                                <th>PROJECT#</th>
+                            </tr>
+                        </thead>
+                        <tbody id="exception-orders-tbody"></tbody>
+                    </table>
+                </div>
+
+            </form>
+        </div>
+
+    </div>
+
+    <script>
+        var dailyOrdersDataTable;
+        var cancelledOrdersDataTable;
+        var exceptionOrdersDataTable;
+
+        function getUrlParam(param) {
+            var urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        function formatDateDisplay(date) {
+            var d = new Date(date);
+            var month = ('0' + (d.getMonth() + 1)).slice(-2);
+            var day = ('0' + d.getDate()).slice(-2);
+            var year = d.getFullYear();
+            return month + '/' + day + '/' + year;
+        }
+
+        function formatDateAPI(date) {
+            var d = new Date(date);
+            var month = ('0' + (d.getMonth() + 1)).slice(-2);
+            var day = ('0' + d.getDate()).slice(-2);
+            var year = d.getFullYear();
+            return year + '-' + month + '-' + day;
+        }
+
+        function formatDateTime(dateTimeStr) {
+            if (!dateTimeStr) return 'N/A';
+            var d = new Date(dateTimeStr);
+            var hours = d.getHours();
+            var minutes = ('0' + d.getMinutes()).slice(-2);
+            var ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+            var formattedHours = ('0' + hours).slice(-2);
+            var month = ('0' + (d.getMonth() + 1)).slice(-2);
+            var day = ('0' + d.getDate()).slice(-2);
+            var year = d.getFullYear();
+            return formattedHours + ':' + minutes + ' ' + ampm + ' ' + month + '-' + day + '-' + year;
+        }
+
+        $(document).ready(function() {
+            setTimeout(function() {
+                loadData();
+            }, 100);
+        });
+
+        function onSubmit() {
+            showLoadingIndicator();
+            loadData();
+        }
+
+        function loadData() {
+            var customerId = getUrlParam('customerId') || 'customer-0';
+            var startDatePicker = $("#startdate-input").data("kendoDatePicker");
+            var endDatePicker = $("#enddate-input").data("kendoDatePicker");
+
+            var startDate = startDatePicker ? startDatePicker.value() : new Date();
+            var endDate = endDatePicker ? endDatePicker.value() : new Date();
+
+            if (!startDate) {
+                startDate = new Date();
+                startDate.setDate(1);
+            }
+            if (!endDate) {
+                endDate = new Date();
+                endDate.setDate(endDate.getDate() - 1);
+            }
+
+            $.ajax({
+                url: '/api/analytics/customer-orders',
+                type: 'GET',
+                data: {
+                    customerId: customerId,
+                    startDate: formatDateAPI(startDate),
+                    endDate: formatDateAPI(endDate)
+                },
+                dataType: 'json'
+            }).done(function(response) {
+                hideLoadingIndicator();
+                if (response.success) {
+                    renderData(response.data);
+                } else {
+                    displayError('ERROR', response.error || 'Failed to load data');
+                }
+            }).fail(function() {
+                hideLoadingIndicator();
+                displayError('ERROR', 'Failed to connect to server');
+            });
+        }
+
+        function renderData(data) {
+            // Update title and info
+            $('#title-customer-name').html('<strong>' + data.customerName + ' COMPANY ORDERS</strong>');
+            $('#title-customer-number').html('<strong>' + data.customerNumber + '</strong>');
+            $('#info-company-name').text(data.customerName + ' COMPANY ORDERS');
+            $('#info-account-number').text(data.customerNumber);
+            $('#info-region').text(data.region);
+            $('#customer-orders-title').html('<h4>' + data.customerName + ' COMPANY ORDERS</h4>');
+
+            // Update stats
+            $('#stat-total-orders').text(data.stats.totalOrders);
+            $('#stat-total-volume').text(data.stats.totalVolume);
+            $('#stat-completed-orders').text(data.stats.completedOrders);
+            $('#stat-completed-volume').text(data.stats.completedVolume);
+            $('#stat-cancelled-orders').text(data.stats.cancelledOrders);
+            $('#stat-cancelled-volume').text(data.stats.cancelledVolume);
+            $('#stat-completed-pct').text(data.stats.completedPct);
+            $('#stat-completed-volume-pct').text(data.stats.completedVolumePct);
+            $('#stat-cancelled-pct').text(data.stats.cancelledPct);
+            $('#stat-cancelled-volume-pct').text(data.stats.cancelledVolumePct);
+
+            // Render charts
+            renderOrdersPieChart(data.pieDataOrders);
+            renderVolumePieChart(data.pieDataVolume);
+            renderOrderAreaChart(data.areaDataOrders);
+            renderVolumeAreaChart(data.areaDataVolume);
+
+            // Render tables
+            renderDailyOrdersTable(data.dailyOrders);
+            renderCancelledOrdersTable(data.cancelledOrders);
+            renderExceptionOrdersTable(data.exceptionOrders);
+        }
+
+        function renderOrdersPieChart(pieData) {
+            $('#pieStatesOrder').highcharts({
+                chart: {
+                    plotBackgroundColor: null,
+                    plotBorderWidth: null,
+                    plotShadow: false,
+                    type: 'pie'
+                },
+                credits: { enabled: false },
+                title: { text: 'ORDERS' },
+                tooltip: { pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>' },
+                plotOptions: {
+                    pie: {
+                        allowPointSelect: true,
+                        cursor: 'pointer',
+                        dataLabels: { enabled: false },
+                        showInLegend: true
+                    }
+                },
+                legend: { enabled: true, layout: 'vertical', verticalAlign: 'bottom', useHTML: true },
+                series: [{ name: '', colorByPoint: true, data: pieData }]
+            });
+        }
+
+        function renderVolumePieChart(pieData) {
+            $('#pieStatesVolume').highcharts({
+                chart: {
+                    plotBackgroundColor: null,
+                    plotBorderWidth: null,
+                    plotShadow: false,
+                    type: 'pie'
+                },
+                credits: { enabled: false },
+                title: { text: 'VOLUME' },
+                tooltip: { pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>' },
+                plotOptions: {
+                    pie: {
+                        allowPointSelect: true,
+                        cursor: 'pointer',
+                        dataLabels: { enabled: false },
+                        showInLegend: true
+                    }
+                },
+                legend: { enabled: true, layout: 'vertical', verticalAlign: 'bottom', useHTML: true },
+                series: [{ name: '', colorByPoint: true, data: pieData }]
+            });
+        }
+
+        function renderOrderAreaChart(data) {
+            Highcharts.setOptions({
+                global: { useUTC: true, timezoneOffset: 0 }
+            });
+            $('#totalusage').highcharts({
+                chart: {
+                    type: 'area',
+                    zoomType: 'x',
+                    spacingRight: 10,
+                    spacingLeft: 10,
+                    spacingTop: 10,
+                    spacingBottom: 10
+                },
+                colors: ['#86C543', '#000000'],
+                title: { text: 'ORDER' },
+                subtitle: { text: 'Click and drag in the plot area to zoom in' },
+                xAxis: { type: 'datetime', minRange: 518400000, title: { text: null } },
+                yAxis: { min: 0, title: { text: '' } },
+                tooltip: { shared: false },
+                legend: { enabled: false },
+                credits: { enabled: false },
+                plotOptions: {
+                    area: {
+                        stacking: 'normal',
+                        lineWidth: 1,
+                        marker: { enabled: false },
+                        shadow: false,
+                        states: { hover: { lineWidth: 1 } },
+                        threshold: null
+                    }
+                },
+                series: [
+                    { type: 'area', name: 'Completed', connectNulls: true, color: '#86C543', data: data.completed },
+                    { type: 'area', name: 'Cancelled', connectNulls: true, color: '#000000', data: data.cancelled }
+                ]
+            });
+        }
+
+        function renderVolumeAreaChart(data) {
+            $('#producervolume').highcharts({
+                chart: {
+                    type: 'area',
+                    zoomType: 'x',
+                    spacingRight: 10,
+                    spacingLeft: 10,
+                    spacingTop: 10,
+                    spacingBottom: 10
+                },
+                colors: ['#86C543', '#000000'],
+                title: { text: 'VOLUME' },
+                subtitle: { text: 'Click and drag in the plot area to zoom in' },
+                xAxis: { type: 'datetime', minRange: 518400000, title: { text: null } },
+                yAxis: { min: 0, title: { text: '' } },
+                tooltip: { shared: false },
+                legend: { enabled: false },
+                credits: { enabled: false },
+                plotOptions: {
+                    area: {
+                        stacking: 'normal',
+                        lineWidth: 1,
+                        marker: { enabled: false },
+                        shadow: false,
+                        states: { hover: { lineWidth: 1 } },
+                        threshold: null
+                    }
+                },
+                series: [
+                    { type: 'area', name: 'Completed', connectNulls: true, color: '#86C543', data: data.completed },
+                    { type: 'area', name: 'Cancelled', connectNulls: true, color: '#000000', data: data.cancelled }
+                ]
+            });
+        }
+
+        function renderDailyOrdersTable(data) {
+            if (dailyOrdersDataTable) {
+                dailyOrdersDataTable.destroy();
+            }
+
+            var tbody = $('#daily-orders-tbody');
+            tbody.empty();
+
+            data.forEach(function(row) {
+                var tr = $('<tr>');
+                tr.append($('<td>').text(row.date));
+                tr.append($('<td>').text(row.total));
+                tr.append($('<td>').text(row.completed));
+                tr.append($('<td>').text(row.completedPct));
+                tr.append($('<td>').text(row.cancelled));
+                tr.append($('<td>').text(row.cancelledPct));
+                tr.append($('<td>').text(row.totalVolume));
+                tr.append($('<td>').text(row.completedVolume));
+                tr.append($('<td>').text(row.completedVolumePct));
+                tr.append($('<td>').text(row.cancelledVolume));
+                tr.append($('<td>').text(row.cancelledVolumePct));
+                tbody.append(tr);
+            });
+
+            dailyOrdersDataTable = $('#daily-orders-table').DataTable({
+                "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+                "sPaginationType": "bootstrap",
+                "bPaginate": true,
+                "bFilter": true,
+                "bSort": true,
+                "oLanguage": { "sLengthMenu": "_MENU_ records per page" }
+            });
+        }
+
+        function renderCancelledOrdersTable(data) {
+            if (cancelledOrdersDataTable) {
+                cancelledOrdersDataTable.destroy();
+            }
+
+            var tbody = $('#cancelled-orders-tbody');
+            tbody.empty();
+
+            data.forEach(function(row) {
+                var tr = $('<tr>');
+                tr.append($('<td>').html('<a href="/d3-static/order-details.html?orderId=' + row.orderId + '">' + row.orderNumber + '</a>'));
+                tr.append($('<td>').text(row.schedStatus));
+                tr.append($('<td>').text(formatDateTime(row.scheduledTime)));
+                tr.append($('<td>').text(row.cancelStatus));
+                tr.append($('<td>').text(formatDateTime(row.cancelledTime)));
+                tr.append($('<td>').text(row.timeBucket));
+                tr.append($('<td>').text(row.volume));
+                tr.append($('<td>').text(row.project || 'N/A'));
+                tr.append($('<td>').text(row.projectNumber || 'N/A'));
+                tbody.append(tr);
+            });
+
+            cancelledOrdersDataTable = $('#cancelled-orders-table').DataTable({
+                "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+                "sPaginationType": "bootstrap",
+                "bPaginate": true,
+                "bFilter": true,
+                "bSort": true,
+                "oLanguage": { "sLengthMenu": "_MENU_ records per page" }
+            });
+        }
+
+        function renderExceptionOrdersTable(data) {
+            if (exceptionOrdersDataTable) {
+                exceptionOrdersDataTable.destroy();
+            }
+
+            var tbody = $('#exception-orders-tbody');
+            tbody.empty();
+
+            data.forEach(function(row) {
+                var tr = $('<tr>');
+                tr.append($('<td>').html('<a href="/d3-static/order-details.html?orderId=' + row.orderId + '">' + row.orderNumber + '</a>'));
+                tr.append($('<td>').text(row.schedStatus));
+                tr.append($('<td>').text(formatDateTime(row.scheduledTime)));
+                tr.append($('<td>').text(row.cancelStatus));
+                tr.append($('<td>').text(formatDateTime(row.cancelledTime)));
+                tr.append($('<td>').text(row.timeBucket));
+                tr.append($('<td>').text(row.volume));
+                tr.append($('<td>').text(row.project || 'N/A'));
+                tr.append($('<td>').text(row.projectNumber || 'N/A'));
+                tbody.append(tr);
+            });
+
+            exceptionOrdersDataTable = $('#exception-orders-table').DataTable({
+                "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+                "sPaginationType": "bootstrap",
+                "bPaginate": true,
+                "bFilter": true,
+                "bSort": true,
+                "oLanguage": { "sLengthMenu": "_MENU_ records per page" }
+            });
+        }
+    </script>
+</body>
+
+</html>

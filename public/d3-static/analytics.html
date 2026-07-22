@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<!-- Analytics Users Dashboard - D3 exact match -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no">
+    <title>Analytics - Users</title>
+
+    <!-- Required javascript and css all rolled up in one -->
+    <script src="./MarketSummary_files/d3_complete_nohc.js"></script>
+    <link href="./MarketSummary_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+    <!-- Highcharts -->
+    <script src="./MarketSummary_files/highcharts.js"></script>
+    <script src="./MarketSummary_files/highcharts-more.js"></script>
+    <script src="./MarketSummary_files/data.js"></script>
+
+    <!-- need to rollup into d3_complete upon approval -->
+    <script src="./MarketSummary_files/jquery.rateit.min.js"></script>
+    <link href="./MarketSummary_files/rateit.css" rel="stylesheet" type="text/css">
+    <script src="./MarketSummary_files/hopscotch.min.js"></script>
+    <link href="./MarketSummary_files/hopscotch.min.css" rel="stylesheet" type="text/css">
+    <script src="./MarketSummary_files/chardinjs.min.js"></script>
+    <link href="./MarketSummary_files/chardinjs.css" rel="stylesheet" type="text/css">
+
+    <link href="./MarketSummary_files/bootstrap2-toggle.min.css" rel="stylesheet">
+    <script src="./MarketSummary_files/bootstrap2-toggle.min.js"></script>
+
+    <style media="print" type="text/css">
+        a:after { content: ''; }
+        a[href]:after { content: none !important; }
+    </style>
+
+    <style>
+        /* DataTables styling */
+        .dataTables_filter label { float: right }
+        .dataTables_paginate ul { float: right }
+        .pagination { margin: 0px 0; }
+        .table { margin-bottom: 8px; }
+    </style>
+</head>
+
+<body>
+    <script>
+        $(document).ready(function () {
+            hideLoadingIndicator();
+            loadLogin();
+        });
+        $(window).unload(function () {
+            hideLoadingIndicator();
+            saveLogin();
+        });
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            var errormsg = getParameterByName("pageerror");
+            if (errormsg != null && errormsg.length > 0) {
+                displayError('ERROR', trimString(errormsg));
+            }
+            Highcharts.setOptions({
+                colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+            });
+        });
+    </script>
+    <div class="d3-page">
+
+        <!-- Analytics Navbar with Dropdowns -->
+        <div class="navbar navbar-fixed-top navbar-inverse">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+
+                    <a class="brand" href="#">ANALYTICS</a>
+
+                    <div class="nav-collapse collapse">
+                        <ul class="nav">
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dashboard <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/analytics.html">Dashboard</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Producer <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/analytics-samedayordercancellations.html">Same Day Cancellations</a></li>
+                                    <li><a href="/d3-static/analytics-dailycancelledorders.html">Analytics Daily Cancelled Orders</a></li>
+                                    <li><a href="/d3-static/analytics-totalcancelledorders.html">Analytics Total Cancelled Orders</a></li>
+                                    <li><a href="/d3-static/analytics-orderpourrate.html">Overall Scheduled Pour Rate Performance</a></li>
+                                    <li><a href="/d3-static/analytics-plusloadsbymarket.html">Plus Loads By Market</a></li>
+                                    <li><a href="/d3-static/analytics-communication.html">Communications</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contractor <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/analytics-customersearch.html">Contractor Search</a></li>
+                                    <li><a href="/d3-static/analytics-customerperformance.html">Top Customer Performance</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Users <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/user-notifications.html">User Notifications</a></li>
+                                    <li><a href="/d3-static/user-search.html">User Search</a></li>
+                                    <li><a href="/d3-static/analytics.html">User Dashboard</a></li>
+                                    <li><a href="/d3-static/analytics-contractorviewed.html">Analytics Contractor Viewed Volume</a></li>
+                                    <li><a href="/d3-static/analytics-producerviewed.html">Analytics Producer Viewed Volume</a></li>
+                                    <li><a href="/d3-static/analytics-usersessions.html">Analytics User Sessions</a></li>
+                                    <li><a href="/d3-static/analytics-businessunituseractivity.html">Analytics Business Unit User Activity</a></li>
+                                    <li><a href="/d3-static/analytics-usersorders.html">Analytics Users Orders</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Invite <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/rollout-search.html">Invite Dashboard</a></li>
+                                    <li><a href="/d3-static/analytics-pipelinebysalesman.html">Pipeline Dashboard</a></li>
+                                    <li><a href="/d3-static/analytics-needstruckast.html">Needs Truckast</a></li>
+                                    <li><a href="/d3-static/analytics-invitestatus.html">Invite Status</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Logistics <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/first-truck-late.html">First Truck Late</a></li>
+                                    <li><a href="/d3-static/analytics-fltbycustomer.html">First Truck Late By Customer</a></li>
+                                    <li><a href="/d3-static/analytics-truckincorrectstatuses.html">Truck - Incorrect Statuses</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Apps <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/analytics.html">Analytics</a></li>
+                                    <li><a href="/">Truckast</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Help <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/d3-static/analytics-help.html">Help</a></li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">Logout <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    <li><a href="/logout">Logout</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div id="error-box" class="alert alert-error" style="display: none">
+                <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                <p id="error-text"></p>
+            </div>
+            <div id="warning-box" class="alert alert-block" style="display: none">
+                <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                <p id="warning-text"></p>
+            </div>
+            <div id="success-box" class="alert alert-success" style="display: none">
+                <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                <p id="success-text"></p>
+            </div>
+            <div id="information-box" class="alert alert-info" style="display: none">
+                <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                <p id="information-text"></p>
+            </div>
+
+            <form id="users" method="POST">
+
+                <div class="navbar">
+                    <div class="navbar-inner">
+                        <div class="container">
+                            <table style="width:100%">
+                                <tbody>
+                                    <tr>
+                                        <td style="width:38px">
+                                            <a onclick="history.back();hideLoadingIndicator();">
+                                                <img id="titlebar-left-image" width="32" height="32"
+                                                    style="margin-top:5px; margin-bottom:5px"
+                                                    src="./MarketSummary_files/arrow-big-01@2x.png">
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                                                <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                                    <span style="font-size: 16px"><strong>CONCRETE SUPPLY USERS</strong></span><br>
+                                                    <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="width:38px">
+                                            <a href="">
+                                                <img id="titlebar-right-image" width="32" height="32"
+                                                    style="margin-top:5px; margin-bottom:5px"
+                                                    src="./MarketSummary_files/arrow-small-27@2x.png">
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <br/>
+                <br/>
+
+                <!-- Empty table holder for compatibility -->
+                <div style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Stats tiles section -->
+                <div id="stats-tiles-container" style="width: 100%; display: block">
+                    <input type="text" placeholder="Search" style="width: 260px; display: none" />
+                    <div style="width: 100%; height: 1px; clear: both"></div>
+
+                    <div id="stats-tiles" style="display: inline-block;">
+                        <div class="tile" style="position: relative; width: 88px; height: 90px; margin-right:5px; margin-bottom: 5px; background-color: #2f7ed8; float: left; color:white; cursor: default">
+                            <img src="/Images/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: none;" />
+                            <div style="padding:5px">
+                                <div style="text-align: center; font-size: 12px; font-weight: bold">TOTAL</div>
+                                <div id="stat-total-users" style="width:100%; height:40px; line-height: 40px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 24px">0</div>
+                                <div style="text-align: center; font-size: 12px">USER</div>
+                            </div>
+                        </div>
+                        <div class="tile" style="position: relative; width: 88px; height: 90px; margin-right:5px; margin-bottom: 5px; background-color: #2f7ed8; float: left; color:white; cursor: default">
+                            <img src="/Images/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: none;" />
+                            <div style="padding:5px">
+                                <div style="text-align: center; font-size: 12px; font-weight: bold">TOTAL</div>
+                                <div id="stat-total-contractors" style="width:100%; height:40px; line-height: 40px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 24px">0</div>
+                                <div style="text-align: center; font-size: 12px">CONTRACTOR</div>
+                            </div>
+                        </div>
+                        <div class="tile" style="position: relative; width: 88px; height: 90px; margin-right:5px; margin-bottom: 5px; background-color: #2f7ed8; float: left; color:white; cursor: default">
+                            <img src="/Images/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: none;" />
+                            <div style="padding:5px">
+                                <div style="text-align: center; font-size: 12px; font-weight: bold">TOTAL</div>
+                                <div id="stat-total-producers" style="width:100%; height:40px; line-height: 40px; text-align: center; vertical-align: middle; font-weight: bold; font-size: 24px">0</div>
+                                <div style="text-align: center; font-size: 12px">PRODUCER</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Region tiles section -->
+                <div id="region-tiles-container" style="width: 100%; display: block">
+                    <input type="text" placeholder="Search" style="width: 260px; display: none" />
+                    <div style="width: 100%; height: 1px; clear: both"></div>
+                    <div id="region-tiles" style="display: inline-block;">
+                        <!-- Populated via AJAX -->
+                    </div>
+                </div>
+                <br/>
+
+                <!-- Contractor Users Table -->
+                <div style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 80%">
+                                    <div class="d3-label" style="width: 100%;"><h4>Contractor Users</h4></div>
+                                </td>
+                                <td style="vertical-align: middle; width: 20%">
+                                    <div style="float:right;padding:5px;visibility:show">
+                                        <a href="#" onclick="downloadContractorExcel(); return false;">
+                                            <img alt="Download" src="./MarketSummary_files/excel-xls-icon.48x48pixel.png">
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display: block; width: 100%">
+                    <table cellpadding="0" cellspacing="0" border="0" class="table table-striped" id="contractor-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Full Name</th>
+                                <th>Username</th>
+                                <th>Customer</th>
+                                <th>Account</th>
+                                <th>Region</th>
+                                <th>Last Access</th>
+                                <th>InvitedBy</th>
+                                <th>TRUCKAST</th>
+                                <th>ROLLOUT</th>
+                                <th>PUBLISH</th>
+                                <th>PROJECTS</th>
+                                <th>ORDER</th>
+                                <th>ADMIN</th>
+                                <th>ANALYTICS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contractor-tbody">
+                            <!-- Populated via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+                <br/>
+
+                <!-- Producer Users Table -->
+                <div style="display: block; width:100%">
+                    <table class="table table-hover">
+                        <tbody>
+                            <tr>
+                                <td style="vertical-align: middle; width: 80%">
+                                    <div class="d3-label" style="width: 100%;"><h4>Producer Users</h4></div>
+                                </td>
+                                <td style="vertical-align: middle; width: 20%">
+                                    <div style="float:right;padding:5px;visibility:show">
+                                        <a href="#" onclick="downloadProducerExcel(); return false;">
+                                            <img alt="Download" src="./MarketSummary_files/excel-xls-icon.48x48pixel.png">
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display: block; width: 100%">
+                    <table cellpadding="0" cellspacing="0" border="0" class="table table-striped" id="producer-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Username</th>
+                                <th>Truckast Role</th>
+                                <th>Last Access</th>
+                                <th>TRUCKAST</th>
+                                <th>PUBLISH</th>
+                                <th>PROJECTS</th>
+                                <th>ORDER</th>
+                                <th>ADMIN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="producer-tbody">
+                            <!-- Populated via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+                <br/>
+
+            </form>
+        </div>
+
+    </div>
+
+    <script src="/d3-static/analytics-live.js?v=2"></script>
+</body>
+
+</html>
