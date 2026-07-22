@@ -1,6 +1,7 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
-import { getTenantBoardTitle, getSelectedTenant } from "@/actions/tenantActions";
+import { getSelectedTenant } from "@/actions/tenantActions";
+import { applyTenantToUrl } from "@/lib/tenant-url";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,10 @@ export const dynamic = "force-dynamic";
 const DEFAULT_TEMPLATE = join(process.cwd(), "public", "d3-static", "market.html");
 const CONCRETE_SUPPLY_TEMPLATE = join(process.cwd(), "public", "d3-static", "market-concretesupply.html");
 
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
+  const redirect = await applyTenantToUrl(request);
+  if (redirect) return redirect;
+
   // Check if tenant is Concrete Supply
   const selectedTenant = await getSelectedTenant();
   const isConcreteSupply = selectedTenant?.toLowerCase().includes("concrete");
@@ -25,11 +29,11 @@ export async function GET(): Promise<Response> {
     html = await readFile(CONCRETE_SUPPLY_TEMPLATE, "utf8");
     html = html.split("./MarketSummary_files/").join("/d3-static/MarketSummary_files/");
   } else {
-    // Serve the default template with tenant-specific title
+    // Serve the default template. D3's market landing is titled "MARKETS" (the
+    // /orders board keeps the tenant title, e.g. "Sunrise Orders").
     html = await readFile(DEFAULT_TEMPLATE, "utf8");
     html = html.split("./MarketSummary_files/").join("/d3-static/MarketSummary_files/");
-    const title = await getTenantBoardTitle();
-    html = html.replace(/<strong>\s*Dolese\s+Orders\s*<\/strong>/g, `<strong>${title}</strong>`);
+    html = html.replace(/<strong>\s*Dolese\s+Orders\s*<\/strong>/g, `<strong>MARKETS</strong>`);
   }
 
   return new Response(html, {

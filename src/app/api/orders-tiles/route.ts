@@ -13,8 +13,9 @@ export async function GET(request: Request): Promise<Response> {
   const today = new Date().toISOString().slice(0, 10);
   const dateStr = searchParams.get("date") || today;
   const dateToStr = searchParams.get("dateTo") || undefined; // range end (Last 7 / month / Future / …)
+  const plant = searchParams.get("plant") || undefined; // plant/market code (D3 dropdown); empty = all
 
-  const [orders, announcement] = await Promise.all([getDoleseOrders(dateStr, dateToStr), getActiveAnnouncement()]);
+  const [orders, announcement] = await Promise.all([getDoleseOrders(dateStr, dateToStr, plant), getActiveAnnouncement()]);
   const html = renderTiles(orders, announcement);
 
   return new Response(html, {

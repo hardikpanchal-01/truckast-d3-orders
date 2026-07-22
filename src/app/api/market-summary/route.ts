@@ -1,4 +1,4 @@
-import { getDoleseSummary } from "@/actions/orderActions";
+import { getMarketByPlant } from "@/actions/orderActions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export async function GET(request: Request): Promise<Response> {
   const dateStr = searchParams.get("date") || today;
   const dateToStr = searchParams.get("dateTo") || undefined; // optional range end
 
-  const summary = await getDoleseSummary(dateStr, dateToStr);
+  const summary = await getMarketByPlant(dateStr, dateToStr);
   // Round CY to the nearest 0.50 (concrete is half-yard increments) to match D3.
   const round2 = (n: number) => Math.round(n * 2) / 2;
 
@@ -25,6 +25,19 @@ export async function GET(request: Request): Promise<Response> {
       totalOrders: summary.totalOrders,
       activeOrders: summary.activeOrders,
       cancelledOrders: summary.cancelledOrders,
+      // Whether the MARKET page renders the per-plant tiles (Sunrise yes, Dolese no).
+      // The board plant dropdown uses `plants` regardless.
+      showPlants: summary.showPlants,
+      // Per-plant market cards (D3's "1 - NEW FAIRVIEW", "2 - PONDER", …), code-sorted.
+      plants: summary.plants.map((p) => ({
+        code: p.code,
+        name: p.name,
+        usedCY: round2(p.usedCY),
+        totalCY: round2(p.totalCY),
+        totalOrders: p.totalOrders,
+        activeOrders: p.activeOrders,
+        cancelledOrders: p.cancelledOrders,
+      })),
     },
     { headers: { "cache-control": "no-store" } },
   );

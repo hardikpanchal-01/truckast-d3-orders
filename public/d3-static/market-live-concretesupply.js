@@ -102,6 +102,15 @@
     );
   }
 
+  // D3 abbreviates the count labels once a number is 3+ digits (else it won't fit):
+  // "Total 12, Active 10, Cancelled 2" but "Tot 385, Act 275, Can 110".
+  function countsLine(s) {
+    var t = s.totalOrders || 0, a = s.activeOrders || 0, c = s.cancelledOrders || 0;
+    var big = String(t).length > 2 || String(a).length > 2 || String(c).length > 2;
+    return big
+      ? "Tot " + t + ", Act " + a + ", Can " + c
+      : "Total " + t + ", Active " + a + ", Cancelled " + c;
+  }
   // ---- CONCRETE SUPPLY summary tile (pie + used-of-total + counts) ----
   function summaryTile(s) {
     var used = Number(s.usedCY || 0);
@@ -116,7 +125,7 @@
       '<div class="tileInfoSection"><div class="tileCell">' +
       '<div class="tileSuperTitle">CONCRETE SUPPLY</div>' +
       '<div class="tileTitle">' + comma(used) + " OF " + comma(total) + " CY</div>" +
-      '<div class="tileSubTitle">Tot ' + (s.totalOrders || 0) + ", Act " + (s.activeOrders || 0) + ", Can " + (s.cancelledOrders || 0) + "</div>" +
+      '<div class="tileSubTitle">' + countsLine(s) + "</div>" +
       "</div></div></div></div>"
     );
   }

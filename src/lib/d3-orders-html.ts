@@ -1,7 +1,6 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type { DoleseOrderListItem, OrderStatus, DoleseAnnouncement } from "@/actions/orderActions";
-import { getTenantBoardTitle, getTenants, getSelectedTenantDisplayName } from "@/actions/tenantActions";
 
 /* ------------------------------------------------------------------ */
 /*  Hybrid renderer: takes the EXACT D3 export (public/d3-static/       */
@@ -46,13 +45,13 @@ function tileColor(o: DoleseOrderListItem): string {
   // Pre-Pour: a FIRM (committed) order is green; a WILL-CALL order is yellow.
   // "Active" is a firm/confirmed state too, so it's green alongside "Firm".
   if (o.status === "PRE_POUR") return ds === "Firm" || ds === "Active" ? TILE_GREEN : TILE_YELLOW;
-  // In-Process AND Complete: colour by poured speed as a % of the planned delivery rate
-  // (o.pour_pct). Before any load has poured out there's no speed yet → on-track (green).
-  const pct = o.pour_pct;
-  if (pct == null) return TILE_GREEN;
-  if (pct >= 90) return TILE_GREEN;
-  if (pct >= 60) return TILE_YELLOW;
-  return TILE_RED;
+  // In-Process AND Complete: GREEN. Verified against the live D3 Sunrise board
+  // (JobsForFixedNodeID.htm) — EVERY in-process tile is rgb(69,139,0) green regardless of
+  // its pie fill (15%–100%); only On-Hold/Cancelled are red and only Will-Call pre-pour is
+  // yellow. D3's JOBS HELP mentions poured-speed yellow/red bands, but they don't fire in
+  // practice, and computing them off our lagging ticket data produced false yellows
+  // (e.g. 2000, 2007 showed yellow while D3 showed green). Match D3.
+  return TILE_GREEN;
 }
 
 // Concrete is ordered in half-yard increments, so D3 shows CY to the nearest 0.50
@@ -199,40 +198,19 @@ export async function buildOrdersHtml(): Promise<string> {
   // resolve, so the same file is live either way.
   html = html.split("./JobsForFixedNodeID_files/").join(ASSET + "/");
 
-  // Reflect the SELECTED tenant in the header (the shell hardcodes "Dolese Orders")
-  // so the board title always matches the tenant whose data is shown.
-  const title = await getTenantBoardTitle();
-  html = html.replace(/<strong>\s*Dolese\s+Orders\s*<\/strong>/g, `<strong>${title}</strong>`);
+  // D3's JobsForFixedNodeID board is titled "JOBS" (verified against the live Sunrise
+  // export). The shell hardcodes "Dolese Orders"; match D3.
+  html = html.replace(/<strong>\s*Dolese\s+Orders\s*<\/strong>/g, `<strong>JOBS</strong>`);
 
-  // The shell also hardcodes a single "DOLESE" plant option. Render one option per
-  // tenant instead, defaulting to the settings-selected tenant; only the selected
-  // option carries the live-total span (other tenants' totals would need a query
-  // per DB on every load). Switching is wired in orders-live.js (wirePlant), which
-  // POSTs /api/settings/tenant — same flow as the settings page — and reloads.
-  const [tenants, selectedDisplay] = await Promise.all([
-    getTenants().catch(() => []),
-    getSelectedTenantDisplayName(),
-  ]);
-  if (tenants.length) {
-    let selIdx = tenants.findIndex(
-      (t) => (t.d3_tenant_name || t.name).toUpperCase() === selectedDisplay,
-    );
-    if (selIdx < 0)
-      selIdx = tenants.findIndex((t) => (t.d3_tenant_name || t.name).toUpperCase() === "DOLESE");
-    if (selIdx < 0) selIdx = 0;
-    const options = tenants
-      .map((t, i) => {
-        const label = esc((t.d3_tenant_name || t.name).toUpperCase());
-        return i === selIdx
-          ? `<option value="${esc(t.name)}" selected="selected">${label} (<span id="d3PlantTotal">…</span> CY)</option>`
-          : `<option value="${esc(t.name)}">${label}</option>`;
-      })
-      .join("\n                    ");
-    html = html.replace(
-      /<select id="planturl"[\s\S]*?<\/select>/,
-      `<select id="planturl" name="planturl" style="width: 100%; margin-bottom: 0; display: block;">\n                    ${options}\n                </select>`,
-    );
-  }
+  // The shell hardcodes a single "DOLESE" plant option. Replace it with an empty
+  // select that orders-live.js populates from /api/market-summary — D3's plant/market
+  // list: the company roll-up ("SUNRISE REDI MIX (used CY OF total CY)") followed by
+  // one option per plant ("1 - NEW FAIRVIEW (used CY OF total CY)"). Picking a plant
+  // filters the board to that plant. (Tenant switching lives on the settings page.)
+  html = html.replace(
+    /<select id="planturl"[\s\S]*?<\/select>/,
+    `<select id="planturl" name="planturl" style="width: 100%; margin-bottom: 0; display: block;">\n                    <option value="">Loading…</option>\n                </select>`,
+  );
 
   return html;
 }
