@@ -1,5 +1,6 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { isMarketViewTenant, applyHerculesNav } from "@/lib/tenant-view";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,14 @@ export async function GET() {
 
     // Fix relative asset paths to absolute paths
     html = html.split("./OrderByProject_files/").join(ASSET_PATH + "/");
+
+    // Hercules renders this board differently (blue project tiles + red prompt). This is
+    // the route the MARKETS "ORDER CONCRETE" tile links to; /order-request/order-by-project
+    // serves the same shell and needs the identical flag.
+    if (await isMarketViewTenant()) {
+      html = html.replace("</head>", "<script>window.__MARKET_VIEW__=true;</script>\n</head>");
+      html = applyHerculesNav(html);
+    }
 
     return new Response(html, {
       headers: {

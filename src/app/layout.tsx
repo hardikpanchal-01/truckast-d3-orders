@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { AppChrome } from "@/components/app-chrome";
+import { getSelectedTenant } from "@/actions/tenantActions";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,15 +15,17 @@ export const metadata: Metadata = {
   description: "D3 order tracking — Market Summary, Orders, Order Detail",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const tenant = await getSelectedTenant();
+
   return (
     <html lang="en" className={`${geistSans.variable} antialiased`}>
       <body className="bg-white">
         {/* AppChrome adds the nav + content wrapper on app pages, and renders the
             login screen standalone (no nav). */}
-        <AppChrome>{children}</AppChrome>
+        <AppChrome tenant={tenant}>{children}</AppChrome>
       </body>
     </html>
   );

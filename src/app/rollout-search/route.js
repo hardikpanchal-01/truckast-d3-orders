@@ -1,5 +1,6 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { isMarketViewTenant } from "@/lib/tenant-view";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,12 @@ export async function GET() {
 
     // Fix relative asset paths to absolute paths
     html = html.split("./JobsForFixedNodeID_files/").join(ASSET_PATH + "/");
+
+    // Hercules renders the search-result tiles amber instead of D3 green; the flag lets
+    // createCustomerTile() pick the colour. No other tenant sees it.
+    if (await isMarketViewTenant()) {
+      html = html.replace("</head>", "<script>window.__MARKET_VIEW__=true;</script>\n</head>");
+    }
 
     return new Response(html, {
       headers: {

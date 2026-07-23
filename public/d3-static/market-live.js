@@ -208,6 +208,8 @@
   }
 
   // Company roll-up tile + one card per plant/market ("1 - NEW FAIRVIEW", …), D3 order.
+  // Upstream's market-landing renderer for tenants that break down by plant (Sunrise);
+  // Dolese stays company-only. Uses the 3-arg marketTile() defined above.
   function summaryTiles(s) {
     var dateHref = "/orders?date=" + encodeURIComponent(D);
     var html = marketTile((s.name || "DOLESE").toString().toUpperCase(), s, dateHref);
@@ -222,6 +224,50 @@
       html += marketTile(label, p, plantHref);
     }
     return html;
+  }
+
+  // ---- MARKETS view (Hercules): one tile per market row from /api/market-summary/markets.
+  // Named herculesMarketTile so it doesn't collide with upstream's 3-arg marketTile() above.
+  // Full-word counts ("Total 116, Active 91, Cancelled 25") vs the company tile's Tot/Act/Can.
+  function herculesMarketTile(m) {
+    var used = Number(m.usedCY || 0);
+    var total = Number(m.totalCY || 0);
+    var usedPct = total > 0 ? Math.max(0, Math.min(100, Math.round((used / total) * 100))) : 0;
+    var href = "/orders?date=" + encodeURIComponent(D) + (m.key ? "&market=" + encodeURIComponent(m.key) : "");
+    return (
+      '<div class="tile" style="position: relative; background-color: ' + GREEN + '; cursor: pointer; display: block;" ' +
+      "onclick=\"window.top.location.href='" + href + "'\">" +
+      '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px;">' +
+      '<div class="tileContainer">' +
+      '<div class="mkt-pie" data-pct="' + usedPct + '" style="width:72px; height:80px; margin-right:5px; float:left"></div>' +
+      '<div class="tileInfoSection"><div class="tileCell">' +
+      '<div class="tileSuperTitle">' + esc(String(m.name || "").toUpperCase()) + "</div>" +
+      '<div class="tileTitle">' + comma(used) + " OF " + comma(total) + " CY</div>" +
+      '<div class="tileSubTitle">Total ' + (m.totalOrders || 0) + ", Active " + (m.activeOrders || 0) + ", Cancelled " + (m.cancelledOrders || 0) + "</div>" +
+      "</div></div></div></div>"
+    );
+  }
+
+  // The MARKETS view carries a third promo tile ("Review / ORDER REQUEST / Dashboard")
+  // alongside the two static ones. Appended once, only under the MARKETS view.
+  function addOrderRequestTile() {
+    var host = document.getElementById("invitetilevis-tiles");
+    if (!host || host.getAttribute("data-order-request")) return;
+    host.setAttribute("data-order-request", "1");
+    var el = document.createElement("div");
+    el.className = "tile";
+    el.setAttribute("style", "position: relative; background-color: rgb(47, 126, 216); cursor: pointer; display: block;");
+    el.onclick = function () { window.top.location.href = "/order-request"; };
+    el.innerHTML =
+      '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px;">' +
+      '<div class="tileContainer">' +
+      '<div class="tileIcon"><img src="' + ASSET + '/fill_form64.png"></div>' +
+      '<div class="tileInfoSection"><div class="tileCell">' +
+      '<div class="tileSuperTitle">Review</div>' +
+      '<div class="tileTitle">ORDER REQUEST</div>' +
+      '<div class="tileSubTitle">Dashboard</div>' +
+      "</div></div></div>";
+    host.appendChild(el);
   }
 
   // ---- Highcharts used/remaining pie (D3's tileInitPie config verbatim) ----
@@ -274,6 +320,23 @@
 
     // Load announcements first, then market summary
     loadAnnouncements(function() {
+      // MARKETS view (Hercules): company roll-up + per-plant tiles.
+      if (window.__MARKET_VIEW__) {
+        $.ajax({
+          url: "/api/market-summary/markets?" + qs,
+          type: 'GET',
+          success: function(r) {
+            if (!r || r.error || !r.markets) return;
+            var html = announcementTiles();
+            for (var i = 0; i < r.markets.length; i++) html += herculesMarketTile(r.markets[i]);
+            if (html === lastHtml) return;
+            lastHtml = html;
+            t.innerHTML = html;
+            renderPies();
+          }
+        });
+        return;
+      }
       $.ajax({
         url: "/api/market-summary?" + qs,
         type: 'GET',
@@ -293,6 +356,7 @@
 
   function init() {
     wireDates();
+    if (window.__MARKET_VIEW__) addOrderRequestTile();
     load();
   }
   if (document.readyState !== "loading") init();
