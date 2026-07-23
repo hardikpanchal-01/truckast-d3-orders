@@ -33,6 +33,10 @@
     if (DT) return mdy(new Date(D + "T00:00:00")) + " - " + mdy(new Date(DT + "T00:00:00"));
     var todayISO = iso(new Date());
     var n = Math.round((new Date(D + "T00:00:00") - new Date(todayISO + "T00:00:00")) / 86400000);
+    // The Hercules JOBS board shows the literal date for TODAY ("07/22/2026") but the
+    // preset name for every other day ("Yesterday") — verified against the live board on
+    // both 07/22 and 07/21. Only the today case differs from the Dolese labelling.
+    if (window.__MARKET_VIEW__ && n === 0) return mdy(new Date(D + "T00:00:00"));
     if (n === 0) return "Today";
     if (n === -1) return "Yesterday";
     if (n === 1) return "Tomorrow";
@@ -120,11 +124,11 @@
     };
   }
 
-  // ---- Plant/market dropdown (D3's list): the company roll-up
-  // ("SUNRISE REDI MIX (used CY OF total CY)") followed by one option per plant
-  // ("1 - NEW FAIRVIEW (used CY OF total CY)"). Built from /api/market-summary.
-  // Picking a plant reloads the board filtered to that plant (?plant=<code>);
-  // the company option clears the filter. ----
+  // ---- Plant/market dropdown ----
+  // Hercules (JOBS/MARKETS) -> fillMarkets(): the MARKETS list (company roll-up first, then
+  // each plant) from /api/market-summary/markets; picking one filters by ?market=<key>.
+  // Every other tenant (upstream) -> the plant filter: company roll-up + one option per plant
+  // from /api/market-summary; picking one reloads the board filtered to that plant (?plant=<code>).
   function comma(n) {
     return (Math.round(Number(n || 0) * 100) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
@@ -132,9 +136,67 @@
     return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
   function cyOf(s) { return comma(s.usedCY) + " CY OF " + comma(s.totalCY) + " CY"; }
+
+  // Hercules JOBS board: MARKETS dropdown (company roll-up + plants), each with its
+  // used-of-total CY for the selected date, e.g. "HMH (0.00 CY OF 5,790.59 CY)".
+  function fillMarkets() {
+    var sel = document.getElementById("planturl");
+    if (!sel) return;
+    var cur = q.get("market") || "";
+    fetch("/api/market-summary/markets?" + feedQS(), { cache: "no-store" })
+      .then(function (x) { return x.ok ? x.json() : null; })
+      .then(function (j) {
+        if (!j || !j.markets || !j.markets.length) return;
+        var n2 = function (v) {
+          return Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+        sel.innerHTML = j.markets
+          .map(function (m) {
+            var label = m.name + " (" + n2(m.usedCY) + " CY OF " + n2(m.totalCY) + " CY)";
+            var s = String(m.key || "") === cur ? ' selected="selected"' : "";
+            return '<option value="' + String(m.key || "") + '"' + s + ">" + label + "</option>";
+          })
+          .join("");
+        sel.onchange = function () {
+          var v = sel.value;
+          window.top.location.href = BASE + "?" + feedQS() + (v ? "&market=" + encodeURIComponent(v) : "");
+        };
+      })
+      .catch(function () {});
+  }
+
+  // ---- MOBILE TICKET tile (Hercules JOBS board), appended after the green ORDERS tile so
+  //      the row reads ORDERS | MOBILE TICKET. COUNTS ARE HARDCODED — the Hercules DB has no
+  //      mobile-ticket/signature table; replace with a real feed once a source exists. ----
+  var MT_TOTAL = 17, MT_REVIEW = 17, MT_SIGN = 0;
+
+  function addMobileTicketTile() {
+    var host = document.getElementById("a9fa430d-bcc9-4283-bbd5-0b0665bbf8af-tiles");
+    if (!host || host.getAttribute("data-mticket")) return;
+    host.setAttribute("data-mticket", "1");
+    var A = "/d3-static/JobsForFixedNodeID_files";
+    var el = document.createElement("div");
+    el.className = "tile";
+    el.setAttribute("style", "position: relative; background-color: rgb(47, 126, 216); cursor: pointer; display: block;");
+    el.onclick = function () {
+      window.top.location.href = "/mobile-tickets?date=" + encodeURIComponent(D);
+    };
+    el.innerHTML =
+      '<img src="' + A + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: block;">' +
+      '<div class="tileContainer"><div class="tileIcon"><img src="' + A + '/MOBILETICKET.PNG"></div>' +
+      '<div class="tileInfoSection"><div class="tileCell">' +
+      '<div class="tileSuperTitle" id="d3MtSigned">' + MT_SIGN + " OF " + MT_SIGN + ' SIGNED</div>' +
+      '<div class="tileTitle">MOBILE TICKET</div>' +
+      '<div class="tileSubTitle" id="d3MtCounts">Total:' + MT_TOTAL + " Review:" + MT_REVIEW + " Sign:" + MT_SIGN + "</div>" +
+      "</div></div></div>";
+    host.appendChild(el);
+  }
+
   function wirePlant() {
     var sel = document.getElementById("planturl");
     if (!sel) return;
+    if (window.__MARKET_VIEW__) return fillMarkets(); // Hercules -> MARKETS dropdown
+    // Every other tenant (upstream): the plant filter dropdown.
     fetch("/api/market-summary?" + feedQS(), { cache: "no-store" })
       .then(function (x) { return x.ok ? x.json() : null; })
       .then(function (m) {
@@ -323,6 +385,7 @@
   function init() {
     wireDates();
     wirePlant();
+    if (window.__MARKET_VIEW__) addMobileTicketTile();
     wireSort();
     refresh();
   }

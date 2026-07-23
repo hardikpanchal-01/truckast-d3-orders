@@ -146,7 +146,19 @@
 
 <script type="text/javascript">
     $(document).ready(function () {
-        // Load tenants from API
+        // The selected tenant must come from the SERVER. `selected_tenant` is an httpOnly
+        // cookie, so getCookie() can never read it — it always returned '' and the dropdown
+        // fell back to "index 0", showing CANADA BUILDING no matter which tenant was active.
+        // /api/settings/tenant reads the cookie server-side and returns it.
+        $.ajax({
+            url: '/api/settings/tenant',
+            type: 'GET',
+            dataType: 'json',
+            success: function(sel) { loadTenants((sel && sel.tenant) || ''); },
+            error: function() { loadTenants(''); }
+        });
+
+        function loadTenants(selectedTenant) {
         $.ajax({
             url: '/api/tenants',
             type: 'GET',
@@ -155,9 +167,6 @@
                 if (response.success && response.tenants) {
                     var $select = $('#tenantswitch');
                     $select.empty();
-
-                    // Get selected tenant from cookie or default to first
-                    var selectedTenant = getCookie('selected_tenant') || '';
 
                     $.each(response.tenants, function(index, tenant) {
                         // Use d3_tenant_name for display (short name like "DOLESE")
@@ -177,6 +186,7 @@
                 $('#tenantswitch').html('<option value="">Failed to load tenants</option>');
             }
         });
+        }
 
         // Handle tenant switch
         $('#tenantswitch').change(function () {

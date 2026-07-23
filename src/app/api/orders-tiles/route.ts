@@ -1,5 +1,6 @@
 import { getDoleseOrders, getActiveAnnouncement } from "@/actions/orderActions";
 import { renderTiles } from "@/lib/d3-orders-html";
+import { isMarketViewTenant } from "@/lib/tenant-view";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +16,14 @@ export async function GET(request: Request): Promise<Response> {
   const dateToStr = searchParams.get("dateTo") || undefined; // range end (Last 7 / month / Future / …)
   const plant = searchParams.get("plant") || undefined; // plant/market code (D3 dropdown); empty = all
 
-  const [orders, announcement] = await Promise.all([getDoleseOrders(dateStr, dateToStr, plant), getActiveAnnouncement()]);
-  const html = renderTiles(orders, announcement);
+  // Merged: upstream's `plant` filter passed to getDoleseOrders PLUS our Hercules
+  // amber ON HOLD tiles (holdYellow when the tenant is on the MARKETS view).
+  const [orders, announcement, marketView] = await Promise.all([
+    getDoleseOrders(dateStr, dateToStr, plant),
+    getActiveAnnouncement(),
+    isMarketViewTenant(),
+  ]);
+  const html = renderTiles(orders, announcement, { holdYellow: marketView });
 
   return new Response(html, {
     headers: {

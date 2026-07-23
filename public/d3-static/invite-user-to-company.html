@@ -214,6 +214,24 @@
                 <select id="brandfixednodeid" name="brandfixednodeid" style="width: 100%; margin-bottom: 0; display: block;">
                     <option value="DOLESE" selected="selected">DOLESE</option>
                 </select>
+                <script>
+                    // "Invite From" is the tenant's own brand. The shell hardcodes DOLESE;
+                    // on the MARKETS tenants (Hercules) it is the company roll-up name —
+                    // "HMH" — which is the first row of the markets feed.
+                    if (window.__MARKET_VIEW__) {
+                        (function () {
+                            var sel = document.getElementById('brandfixednodeid');
+                            if (!sel) return;
+                            fetch('/api/market-summary/markets', { cache: 'no-store' })
+                                .then(function (r) { return r.ok ? r.json() : null; })
+                                .then(function (j) {
+                                    var n = j && j.markets && j.markets[0] && j.markets[0].name;
+                                    if (n) sel.innerHTML = '<option value="' + n + '" selected="selected">' + n + '</option>';
+                                })
+                                .catch(function () {});
+                        })();
+                    }
+                </script>
             </td>
         </tr>
         <tr>

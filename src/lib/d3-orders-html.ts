@@ -1,6 +1,7 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
 import type { DoleseOrderListItem, OrderStatus, DoleseAnnouncement } from "@/actions/orderActions";
+import { isMarketViewTenant } from "@/lib/tenant-view";
 
 /* ------------------------------------------------------------------ */
 /*  Hybrid renderer: takes the EXACT D3 export (public/d3-static/       */
@@ -34,8 +35,14 @@ const TILE_GREEN = "rgb(69, 139, 0)";
 const TILE_YELLOW = "rgb(247, 187, 0)";
 const TILE_RED = "rgb(196, 57, 38)";
 
-function tileColor(o: DoleseOrderListItem): string {
+/**
+ * `holdYellow` — the live Hercules JOBS board renders ON HOLD tiles amber
+ * (rgb(247,187,0), pixel-sampled from the live board) where the Dolese JOBS HELP spec
+ * calls for red. Opt-in per tenant so Dolese keeps the documented spec exactly.
+ */
+function tileColor(o: DoleseOrderListItem, holdYellow = false): string {
   const ds = o.dispatch_status;
+  if (holdYellow && ds === "Hold" && o.status !== "CANCELED") return TILE_YELLOW;
   // D3 JOBS HELP colour spec:
   //   Red    — a Cancelled order, or one On Hold.
   //   Green  — a Firm order while Pre-Pour; OR ≥90% of planned poured-speed In Process/Complete.
@@ -102,7 +109,7 @@ function pieMount(pct: number): string {
  *      HELP spec: Pre-Pour → calendar, In-Process → pie (poured÷ordered),
  *      Complete → check, Cancelled → circle-with-slash. Only Pre-Pour (not yet
  *      started) shows the scheduled start time in the title. ---- */
-function orderTile(o: DoleseOrderListItem): string {
+function orderTile(o: DoleseOrderListItem, holdYellow = false): string {
   const isCancelled = o.status === "CANCELED";
   const isPie = o.status === "IN_PROCESS";
   const isComplete = o.status === "COMPLETED";
@@ -136,7 +143,7 @@ function orderTile(o: DoleseOrderListItem): string {
         ? `<div class="tileIcon">${pieMount(pourFrac)}</div>`
         : `<div class="tileIcon"><img src="${ASSET}/Scheduled.png"></div>`;
   return (
-    `<div class="tile" style="position: relative; background-color: ${tileColor(o)}; cursor: pointer; display: block;" ` +
+    `<div class="tile" style="position: relative; background-color: ${tileColor(o, holdYellow)}; cursor: pointer; display: block;" ` +
     `onclick="window.top.location.href='/orders/${esc(o.order_id)}'">` +
     `<img src="${ASSET}/dogear.png" style="position: absolute; right: 0px; bottom: 0px; ">` +
     `<div class="tileContainer">${icon}<div class="tileInfoSection"><div class="tileCell">` +
@@ -169,8 +176,13 @@ function fuelTile(ann?: DoleseAnnouncement | null): string {
 
 /** The order-tiles markup (fuel promo + one tile per order) — also served
  *  on its own from /api/orders-tiles so the client can re-render it live. */
-export function renderTiles(orders: DoleseOrderListItem[], announcement?: DoleseAnnouncement | null): string {
-  return fuelTile(announcement) + orders.map(orderTile).join("");
+export function renderTiles(
+  orders: DoleseOrderListItem[],
+  announcement?: DoleseAnnouncement | null,
+  opts?: { holdYellow?: boolean },
+): string {
+  const holdYellow = opts?.holdYellow === true;
+  return fuelTile(announcement) + orders.map((o) => orderTile(o, holdYellow)).join("");
 }
 
 const SEARCH_TEMPLATE_PATH = join(process.cwd(), "public", "d3-static", "order-search.html");
@@ -198,15 +210,29 @@ export async function buildOrdersHtml(): Promise<string> {
   // resolve, so the same file is live either way.
   html = html.split("./JobsForFixedNodeID_files/").join(ASSET + "/");
 
-  // D3's JobsForFixedNodeID board is titled "JOBS" (verified against the live Sunrise
-  // export). The shell hardcodes "Dolese Orders"; match D3.
+  // D3's JobsForFixedNodeID board is titled "JOBS" (verified against the live Sunrise +
+  // Hercules exports). The shell hardcodes "Dolese Orders"; match D3.
   html = html.replace(/<strong>\s*Dolese\s+Orders\s*<\/strong>/g, `<strong>JOBS</strong>`);
 
-  // The shell hardcodes a single "DOLESE" plant option. Replace it with an empty
-  // select that orders-live.js populates from /api/market-summary — D3's plant/market
-  // list: the company roll-up ("SUNRISE REDI MIX (used CY OF total CY)") followed by
-  // one option per plant ("1 - NEW FAIRVIEW (used CY OF total CY)"). Picking a plant
-  // filters the board to that plant. (Tenant switching lives on the settings page.)
+  const marketView = await isMarketViewTenant();
+
+  // Hercules variant: inject the flag so orders-live.js fills the plant dropdown from
+  // /api/market-summary/markets and appends the MOBILE TICKET tile, and strip the
+  // hardcoded "DOLESE" option so the wrong tenant never flashes before the client fills it.
+  if (marketView) {
+    html = html.replace("</head>", `<script>window.__MARKET_VIEW__=true;</script>\n</head>`);
+    html = html.replace(
+      /<select id="planturl"[\s\S]*?<\/select>/,
+      `<select id="planturl" name="planturl" style="width: 100%; margin-bottom: 0; display: block;">\n` +
+        `                    <option value="">…</option>\n                </select>`,
+    );
+    return html;
+  }
+
+  // Every other tenant (upstream): an empty plant/market dropdown that orders-live.js
+  // populates from /api/market-summary — the company roll-up ("SUNRISE REDI MIX (…)")
+  // followed by one option per plant ("1 - NEW FAIRVIEW (…)"), which filters the board
+  // (?plant=<code>). Tenant switching lives on the settings page.
   html = html.replace(
     /<select id="planturl"[\s\S]*?<\/select>/,
     `<select id="planturl" name="planturl" style="width: 100%; margin-bottom: 0; display: block;">\n                    <option value="">Loading…</option>\n                </select>`,

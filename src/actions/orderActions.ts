@@ -18,6 +18,7 @@ import { getExcludedPatterns } from "@/actions/exclusionActions";
 import { filterExcludedOrders } from "@/lib/order-filters";
 import { getTenantSupabaseClient, getSelectedTenant, getSelectedTenantDisplayName } from "@/actions/tenantActions";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { isMarketViewTenant } from "@/lib/tenant-view";
 
 // Helper to get the appropriate Supabase client for the SELECTED tenant.
 // getTenantSupabaseClient() resolves the selected tenant's Postgres cluster
@@ -46,6 +47,8 @@ export interface DoleseOrderListItem {
   customer_name: string | null;
   delivery_addr1: string | null;
   project_name: string | null;
+  /** `orders.pricing_plant_code` — the market/plant, for the Hercules JOBS board filter. */
+  plant_code?: string | null;
   start_time: string | null;
   ordered_cy: number;
   ticketed_cy: number;
@@ -980,7 +983,9 @@ export async function getDoleseOrders(dateStr: string, dateToStr?: string, plant
     supabase
       .from("orders")
       .select(
-        "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, current_status, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix, item_code, order_product_schedules(start_time, delivery_rate_per_hour, plant_id))",
+        // Merged: upstream's `plant_id` on schedules (plant/market dropdown filter) PLUS
+        // our `pricing_plant_code` on the order (Hercules JOBS board plant tag).
+        "order_id, order_code, order_date, customer_name, delivery_addr1, project_name, pricing_plant_code, current_status, removed, remove_reason_code, order_products!inner(order_qty, order_qty_unit, delv_qty, is_mix, item_code, order_product_schedules(start_time, delivery_rate_per_hour, plant_id))",
       )
       .gte("order_date", from)
       .lt("order_date", to)
@@ -1002,10 +1007,18 @@ export async function getDoleseOrders(dateStr: string, dateToStr?: string, plant
     return [];
   }
 
-  // Filter to only CY/YDQ orders (different tenants use different unit codes)
-  const cyOrders = (data || []).filter((o) =>
-    ((o.order_products || []) as OrderProductRow[]).some((p) => isCubicYardUnit(p.order_qty_unit)),
-  );
+  // Filter to only CY/YDQ orders (different tenants use different unit codes).
+  //
+  // EXCEPT on the MARKETS/JOBS tenants (Hercules): its live D3 board counts non-CY orders
+  // — the plant-1 "/h" Truck Rental orders — so gating on CY there made the board show 113
+  // cards where its own market tile said 116. Dolese and every other tenant keep the gate
+  // exactly as before.
+  const skipCyGate = await isMarketViewTenant();
+  const cyOrders = skipCyGate
+    ? data || []
+    : (data || []).filter((o) =>
+        ((o.order_products || []) as OrderProductRow[]).some((p) => isCubicYardUnit(p.order_qty_unit)),
+      );
 
   // Apply exclusion patterns filtering (matches D3 production)
   const filteredOrders = filterExcludedOrders(
@@ -1055,6 +1068,9 @@ export async function getDoleseOrders(dateStr: string, dateToStr?: string, plant
         customer_name: o.customer_name,
         delivery_addr1: o.delivery_addr1,
         project_name: o.project_name,
+        // Market/plant this order prices against — used by the Hercules JOBS board to
+        // filter by market. Unused (and harmless) for every other tenant.
+        plant_code: (o as { pricing_plant_code?: string | null }).pricing_plant_code ?? null,
         start_time: earliestStart(products),
         ordered_cy: Math.round(ordered * 100) / 100,
         ticketed_cy: Math.round(ticketed * 100) / 100,

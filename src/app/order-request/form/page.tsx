@@ -1,7 +1,10 @@
 import { getRolloutCustomer, getProjectBasic, getReferencedOrders } from "@/actions/orderActions";
 import JobAddressField from "./JobAddressField";
+import DateOfPourField from "./DateOfPourField";
 import { CARD, INP, LBL, REQ } from "./styles";
 import css from "./form.module.css";
+import { isMarketViewTenant } from "@/lib/tenant-view";
+import { getConcreteMixes, getDeliveryAddress } from "@/actions/marketActions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +15,14 @@ function Field({
   label,
   required,
   extraGap,
+  badge,
   children,
 }: {
   n: number;
   label: string;
   required?: boolean;
+  /** Badge colour classes — Dolese's yellow circle, or Hercules' maroon one. */
+  badge?: string;
   /** D3 trails the Admixture and Other Products rows with a stray `<br>` after their
    *  hidden inputs, which renders a 20px line box on top of the row's own 20px margin. */
   extraGap?: boolean;
@@ -24,7 +30,11 @@ function Field({
 }) {
   return (
     <li className={`relative pl-[25px] ${extraGap ? "mb-10" : "mb-5"}`}>
-      <span className="absolute left-[-30px] top-[-1px] flex h-[25px] w-[25px] items-center justify-center rounded-full bg-[#ffcb05] text-[14px] font-bold text-black">
+      <span
+        className={`absolute left-[-30px] top-[-1px] flex h-[25px] w-[25px] items-center justify-center rounded-full text-[14px] font-bold ${
+          badge || "bg-[#ffcb05] text-black"
+        }`}
+      >
         {n}
       </span>
       {/* D3 keeps the space OUTSIDE span.require ("Label <span>*</span>"), so the span box
@@ -62,9 +72,9 @@ function YesNo({ name, defaultChecked }: { name: string; defaultChecked?: "yes" 
 export default async function OrderRequestFormPage({
   searchParams,
 }: {
-  searchParams: Promise<{ customer?: string; project?: string }>;
+  searchParams: Promise<{ customer?: string; project?: string; pname?: string; paddr?: string }>;
 }) {
-  const { customer, project } = await searchParams;
+  const { customer, project, pname, paddr } = await searchParams;
 
   let companyName = "";
   let jobName = "";
@@ -99,6 +109,109 @@ export default async function OrderRequestFormPage({
     for (let m = 0; m < 60; m += 15) {
       timeOptions.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     }
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Hercules order form — a different form entirely from Dolese's: nine
+   * fields instead of twenty-two, a maroon #A32835 theme (banner, number
+   * badges, Submit — all pixel-sampled from the live board) and the
+   * Hercules logo. Dolese and every other tenant fall through to the
+   * original 22-field yellow form below, untouched.
+   * ------------------------------------------------------------------ */
+  if (await isMarketViewTenant()) {
+    const BADGE = "bg-[#A32835] text-white";
+    // INP's focus ring is Dolese yellow; swap it to the Hercules maroon. Derived from the
+    // shared constant so any other INP change flows through automatically.
+    const INP_H = INP.replace(/#ffcb05/g, "#A32835");
+    const [mixes, deliveryAddress] = await Promise.all([
+      getConcreteMixes(),
+      getDeliveryAddress({
+        projectId: project ? Number(project) : undefined,
+        customerId: customer ? Number(customer) : undefined,
+      }),
+    ]);
+    return (
+      <div className="space-y-5">
+        {/* Slate top border, same as Dolese's — sampled #44525D directly above live's
+            maroon band. The band itself measures 60px tall. */}
+        {/* 60px maroon band, measured on live (ours rendered 46px). */}
+        <div className={`${CARD} relative border-t-[5px] border-[#44525d] bg-[#A32835] px-5 py-[20px]`}>
+          <span className={`${css.bannerTitle} !text-white`} style={{ textAlign: "center", display: "block" }}>
+            Order Request Form
+          </span>
+          {/* NOT css.bannerLogo: that class forces width:270px below 980px, which stretched
+              this JPG right across the title. Fixed height, natural width, pinned right. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://d3.truckast.com/images/logos/HerculesLogoWhite.jpg"
+            alt="HERCULES"
+            className="absolute right-[10px] top-1/2 h-[52px] w-auto -translate-y-1/2"
+          />
+        </div>
+
+        <form className={`${CARD} rounded-[10px] bg-white p-10 shadow-[0_0_12px_2px_rgba(0,0,0,0.16)]`}>
+          <ol className={css.contentBox}>
+            {/* `pname`/`paddr` come from the tiles that have no project row behind them —
+                they carry their prefill values on the link. A real project always wins. */}
+            <Field n={1} label="Project Name" required badge={BADGE}>
+              <input className={INP_H} defaultValue={jobName || pname || ""} placeholder="Enter Project Name" />
+            </Field>
+            <Field n={2} label="Delivery Street Address" required badge={BADGE}>
+              <input
+                className={INP_H}
+                defaultValue={deliveryAddress || paddr || ""}
+                placeholder="Enter Delivery Street Address"
+              />
+            </Field>
+            <Field n={3} label="Concrete product" required badge={BADGE}>
+              <select className={INP_H} defaultValue="">
+                <option value="">Select Mix</option>
+                {mixes.map((m) => (
+                  <option key={m.code} value={m.code}>
+                    {m.description}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field n={4} label="Cubic Yards" required badge={BADGE}>
+              <input className={INP_H} placeholder="Enter Quantity" />
+            </Field>
+            <Field n={5} label="Spacing (Cubic Yards/Hour)" required badge={BADGE}>
+              <input className={INP_H} placeholder="Enter delivered Cubic Yards/Hour" />
+            </Field>
+            <Field n={6} label="Admixture" required badge={BADGE}>
+              <YesNo name="admixture" />
+            </Field>
+            <Field n={7} label="Date of pour" required badge={BADGE}>
+              <DateOfPourField className={INP_H} />
+            </Field>
+            <Field n={8} label="Delivery time" required badge={BADGE}>
+              <select className={INP_H} defaultValue="06:00">
+                {timeOptions.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field n={9} label="Notes &amp; Comments" badge={BADGE}>
+              <textarea
+                className={`${INP_H} !h-[100px] resize-none leading-[130%]`}
+                placeholder="Enter Notes, Comments, Delivery Instructions, etc."
+              />
+            </Field>
+          </ol>
+          <div className="flex justify-center">
+            <button
+              type="submit"
+              className="mt-5 rounded-[5px] border-0 bg-[#A32835] px-[3em] py-[0.7em] text-sm font-normal text-white"
+            >
+              Submit
+            </button>
+          </div>
+        </form>
+      </div>
+    );
   }
 
   return (
