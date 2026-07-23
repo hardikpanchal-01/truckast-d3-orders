@@ -18,9 +18,14 @@
   }
   if (!D) D = iso(new Date());
   var DT = q.get("dateTo"); // range end (present for Last 7 / month / Future / etc.)
+  var PLANT = q.get("plant") || ""; // selected plant/market code ("" = all plants)
   var BASE = location.pathname;
-  // Query string for the tile + summary feeds — carries the range end when present.
-  function feedQS() { return "date=" + encodeURIComponent(D) + (DT ? "&dateTo=" + encodeURIComponent(DT) : ""); }
+  // Query string for the tile + summary feeds — carries the range end + plant filter when present.
+  function feedQS() {
+    return "date=" + encodeURIComponent(D) +
+      (DT ? "&dateTo=" + encodeURIComponent(DT) : "") +
+      (PLANT ? "&plant=" + encodeURIComponent(PLANT) : "");
+  }
   // Friendly label for the download tile — the preset NAME D3 shows ("Yesterday"), the date,
   // or the range span. Mirrors the date dropdown's own relative-day logic (mdy/iso defined
   // below are hoisted). D3 shows "Yesterday", not "07/17/2026", on the ORDERS download tile.
@@ -115,32 +120,40 @@
     };
   }
 
-  // ---- Plant dropdown: one option per tenant (server-rendered, selected tenant
-  // defaulted). Picking another tenant sets the selected_tenant cookie via the
-  // same API the settings page uses, then reloads so the board re-renders from
-  // that tenant's database. On failure the selection snaps back. ----
+  // ---- Plant/market dropdown (D3's list): the company roll-up
+  // ("SUNRISE REDI MIX (used CY OF total CY)") followed by one option per plant
+  // ("1 - NEW FAIRVIEW (used CY OF total CY)"). Built from /api/market-summary.
+  // Picking a plant reloads the board filtered to that plant (?plant=<code>);
+  // the company option clears the filter. ----
+  function comma(n) {
+    return (Math.round(Number(n || 0) * 100) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function cyOf(s) { return comma(s.usedCY) + " CY OF " + comma(s.totalCY) + " CY"; }
   function wirePlant() {
     var sel = document.getElementById("planturl");
     if (!sel) return;
-    var initialIdx = sel.selectedIndex;
-    sel.onchange = function () {
-      var val = sel.value;
-      if (!val || sel.selectedIndex === initialIdx) return;
-      fetch("/api/settings/tenant", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tenant: val }),
-      })
-        .then(function (x) {
-          return x.ok ? x.json() : null;
-        })
-        .then(function (j) {
-          if (j && j.success) window.top.location.reload();
-          else sel.selectedIndex = initialIdx;
-        })
-        .catch(function () {
-          sel.selectedIndex = initialIdx;
+    fetch("/api/market-summary?" + feedQS(), { cache: "no-store" })
+      .then(function (x) { return x.ok ? x.json() : null; })
+      .then(function (m) {
+        if (!m) return;
+        var html = '<option value="">' + esc((m.name || "").toUpperCase()) + " (" + cyOf(m) + ")</option>";
+        (m.plants || []).forEach(function (p) {
+          var label = (p.code ? p.code + " - " : "") + String(p.name || "").toUpperCase();
+          html += '<option value="' + esc(p.code) + '">' + esc(label) + " (" + cyOf(p) + ")</option>";
         });
+        sel.innerHTML = html;
+        sel.value = PLANT || "";
+      })
+      .catch(function () {});
+    sel.onchange = function () {
+      var code = sel.value || "";
+      var url = BASE + "?date=" + encodeURIComponent(D) +
+        (DT ? "&dateTo=" + encodeURIComponent(DT) : "") +
+        (code ? "&plant=" + encodeURIComponent(code) : "");
+      window.top.location.href = url;
     };
   }
 

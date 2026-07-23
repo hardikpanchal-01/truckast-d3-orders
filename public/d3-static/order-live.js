@@ -41,7 +41,7 @@
     return { v: String(s), sub: "" };
   }
 
-  function tile1x1(tagline, title, subtitle, onclick, bg) {
+  function tile1x1(tagline, title, subtitle, onclick, bg, tagSub) {
     var click = onclick ? ' onclick="' + onclick + '"' : "";
     var cur = onclick ? "pointer" : "default";
     var dog = onclick ? '<img src="' + ASSET + '/dogear.png" style="position:absolute;right:0;bottom:0">' : "";
@@ -49,11 +49,15 @@
     // fits INSIDE the 88px tile instead of spilling over its edge; numbers/times stay 24px.
     var ttl = String(title == null ? "" : title);
     var fs = ttl.length <= 6 ? 24 : ttl.length <= 8 ? 18 : ttl.length <= 10 ? 15 : 13;
+    // Optional small caption under the tagline (D3's TRUCKS tile shows "Loaded" beneath).
+    var tag = tagSub
+      ? esc(tagline) + '<span style="display:block;color:black;font-size:9px;line-height:10px">' + esc(tagSub) + "</span>"
+      : esc(tagline);
     return (
       '<div class="tile" style="position: relative; width: 88px; height: 90px; margin-right:5px; margin-bottom: 5px; background-color: ' +
       (bg || BLUE) + "; float: left; color:white; cursor:" + cur + '; display:block"' + click + ">" + dog +
       '<div style="padding:5px">' +
-      '<div style="text-align:center;font-size:12px;font-weight:bold">' + esc(tagline) + "</div>" +
+      '<div style="text-align:center;font-size:12px;font-weight:bold">' + tag + "</div>" +
       '<div style="width:100%;height:40px;line-height:40px;text-align:center;font-weight:bold;overflow:hidden;white-space:nowrap;font-size:' + fs + 'px">' + esc(ttl) + "</div>" +
       '<div style="text-align:center;font-size:12px">' + esc(subtitle || "") + "</div>" +
       "</div></div>"
@@ -74,7 +78,7 @@
       '<div class="tile" style="position: relative; background-color: ' + BLUE + '; cursor: default; display: block;">' +
       '<div class="tileContainer"><div class="tileIcon"><img src="' + icon + '" onerror="this.src=\'' + ASSET + '/04n.png\'"></div>' +
       '<div class="tileInfoSection"><div class="tileCell">' +
-      '<div class="tileSuperTitle"><span style="font-size:11px;font-weight:bold">' + esc(String(w.place || "").toUpperCase().replace(/^CEMCO\s+/, "")) + "</span></div>" +
+      '<div class="tileSuperTitle"><span style="font-size:11px;font-weight:bold">' + esc((String(w.place || "").toUpperCase().replace(/^CEMCO\s+/, "").replace(/\s+PLANT$/, "") + " Plant").trim()) + "</span></div>" +
       '<div class="tileTitle"><span style="font-size:14px;font-weight:bold">' + esc(((w.temp || "") + " " + (w.description || "")).trim()) + "</span></div>" +
       '<div class="tileSubTitle">H: ' + esc(w.humidity || "") + "   P: " + esc(w.pressure || "") + "   W: " + esc(w.wind || "") + " " + esc(w.direction || "") +
       (w.updated ? "<br>" + (finalLabel ? "Final Update: " : "Last Update: ") + esc(w.updated) : "") + "</div>" +
@@ -418,10 +422,42 @@
     );
   }
 
+  // D3's Review button + MOBILE TICKET tile, shown once an order has ticket activity
+  // (loads > 0). We don't store e-signature counts, so total = signed = loads.
+  function reviewMobileHtml(d) {
+    var loads = Number(d.loads || 0);
+    if (loads <= 0) return "";
+    // D3's Sign/Review bootstrap-toggle, rendered in its "off" (Review) state. The
+    // toggle CSS/JS ship in order.html, so this static markup styles exactly like D3.
+    var tickHref = "window.top.location.href='/orders/" + ID + "/tickets'";
+    return (
+      '<table class="table table-hover" style="margin-bottom:10px"><tbody><tr><td style="vertical-align: middle; width: 95%">' +
+      '<div class="toggle btn btn-default off" data-toggle="toggle" style="width: 59px; height: 20px;">' +
+      '<input type="checkbox" data-on="Sign" data-off="Review">' +
+      '<div class="toggle-group">' +
+      '<label class="btn btn-primary toggle-on">Sign</label>' +
+      '<label class="btn btn-default active toggle-off">Review</label>' +
+      '<span class="toggle-handle btn btn-default"></span></div></div>' +
+      "</td></tr></tbody></table>" +
+      '<div style="display:inline-block">' +
+      '<div class="tile" style="position: relative; background-color: ' + BLUE + '; cursor: pointer; display: block;" onclick="' + tickHref + '">' +
+      '<img src="' + ASSET + '/dogear.png" style="position: absolute; right: 0px; bottom: 0px;">' +
+      '<div class="tileContainer"><div class="tileIcon"><img src="' + ASSET + '/MOBILETICKET.PNG"></div>' +
+      '<div class="tileInfoSection"><div class="tileCell">' +
+      '<div class="tileSuperTitle">' + loads + ' OF 0 SIGNED</div>' +
+      '<div class="tileTitle">MOBILE TICKET</div>' +
+      '<div class="tileSubTitle">Tot:' + loads + ' Sign:' + loads + '</div>' +
+      "</div></div></div></div>" +
+      '<div style="width: 100%; height: 1px; clear: both"></div></div>'
+    );
+  }
+
   function render(d) {
     setText("d3-title", "ORDER " + d.order_code + "-" + mdShort(d.order_date));
     setText("d3-subtitle", (d.delivery_addr1 || d.project_name || "").toUpperCase());
-    setText("d3-status", (STATUS[d.status] || d.status) + " - " + shortCustomer(d.customer_name));
+    setText("d3-status", (STATUS[d.status] || d.status) + " - " + String(d.customer_name || "").toUpperCase());
+    var rm = document.getElementById("d3-review-mobile");
+    if (rm) rm.innerHTML = reviewMobileHtml(d);
 
     var hdr = document.getElementById("d3-header-tiles");
     var det = document.getElementById("d3-detail-tiles");
@@ -493,7 +529,7 @@
         hdr.innerHTML =
           tile1x1("NEXT TRUCK", nt.v, nt.sub, taHref) +
           tile1x1("POUR FINISH", pf.v, pf.sub) +
-          tile1x1("TRUCKS", String(d.trucks || 0), "MAP", mapHref);
+          tile1x1("TRUCKS", String(d.trucks || 0), "MAP", mapHref, null, "Loaded");
       }
       if (det) {
         det.innerHTML =

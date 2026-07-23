@@ -1,5 +1,6 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { applyTenantToUrl } from "@/lib/tenant-url";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,10 @@ export const dynamic = "force-dynamic";
  */
 const TEMPLATE_PATH = join(process.cwd(), "public", "d3-static", "order.html");
 
-export async function GET(): Promise<Response> {
+export async function GET(request: Request): Promise<Response> {
+  const redirect = await applyTenantToUrl(request);
+  if (redirect) return redirect;
+
   let html = await readFile(TEMPLATE_PATH, "utf8");
   html = html.split("./Order_files/").join("/d3-static/Order_files/");
   return new Response(html, {
