@@ -86,7 +86,13 @@
     var rows = (list || []).slice().sort(function (a, b) {
       return (ORDER[a.status] || 0) - (ORDER[b.status] || 0);
     });
-    var html = rows.map(requestTile).join("");
+    // Empty board -> D3's red "No Requests" panel (rgb(196,57,38), 274x90, pixel-sampled
+    // from the live Hercules dashboard) instead of a blank area.
+    var html = rows.length
+      ? rows.map(requestTile).join("")
+      : '<div style="width:274px; height:90px; background-color:rgb(196,57,38); color:#fff;' +
+        ' font-weight:bold; font-size:16px; display:flex; align-items:center;' +
+        ' justify-content:center;">No Requests</div>';
     if (html === lastHtml) return; // avoid needless repaint on the 30s tick
     lastHtml = html;
     box.innerHTML = html;

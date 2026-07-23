@@ -1,0 +1,191 @@
+<script src="/d3-static/JobsForFixedNodeID_files/d3_complete_nohc.js"></script>
+<link href="/d3-static/JobsForFixedNodeID_files/d3_complete.css" rel="stylesheet" type="text/css">
+<link href="/d3-static/JobsForFixedNodeID_files/bootstrap2-toggle.min.css" rel="stylesheet">
+<script src="/d3-static/JobsForFixedNodeID_files/bootstrap2-toggle.min.js"></script>
+
+<div class="d3-page">
+
+    <div class="navbar navbar-fixed-top navbar-inverse">
+        <div class="navbar-inner">
+            <div class="container">
+                <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </a>
+
+                <a id="header-bar-title" class="brand">Mobile Ticket</a>
+
+                <div class="nav-collapse collapse">
+                    <ul class="nav">
+                        <li><a href="/">MARKETS</a></li>
+                        <li><a href="/settings">SETTINGS</a></li>
+                        <li><a href="/publish">PUBLISH</a></li>
+                        <li><a href="/admin">ADMIN</a></li>
+                        <li><a href="/order-request">ORDER</a></li>
+                        <li><a href="/rollout-search">ROLLOUT</a></li>
+                        <li><a href="/projects">PROJECTS</a></li>
+                        <li><a href="/logout">LOGOUT</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <div class="navbar">
+            <div class="navbar-inner">
+                <div class="container">
+                    <table style="width:100%">
+                        <tbody>
+                            <tr>
+                                <td style="width:38px">
+                                    <a onclick="history.back();">
+                                        <img id="titlebar-left-image" width="32" height="32"
+                                            style="margin-top:5px; margin-bottom:5px"
+                                            src="/d3-static/JobsForFixedNodeID_files/arrow-big-01@2x.png">
+                                    </a>
+                                </td>
+                                <td>
+                                    <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                                        <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                                            <span style="font-size: 16px"><strong>MOBILE TICKETS VIEW BY ORDER</strong></span><br>
+                                            <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="width:38px">
+                                    <a style="cursor:pointer" onclick="if(window.d3Refresh)d3Refresh();return false;">
+                                        <img id="titlebar-right-image" width="32" height="32"
+                                            style="margin-top:5px; margin-bottom:5px"
+                                            src="/d3-static/JobsForFixedNodeID_files/arrow-small-27@2x.png">
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            /* The #f5f5f5 band is a HOVER state on the live board, not permanent shading.
+               Rows are white at rest and light up as the pointer passes over them. */
+            /* Shading spans the FULL row width. */
+            #mt-form tr:hover > td { background-color: #f5f5f5; }
+
+            /* NO font-size override here. Live's body computes to 14px (d3_complete.css), the
+               same stylesheet this page loads, so the labels already match by inheritance.
+               A 12px override was tried after screenshot glyphs measured 87% of ours — that
+               ratio was a browser-ZOOM difference between the two windows, not a font-size
+               difference, and the override made our labels genuinely too small. */
+
+            /* Kendo DatePicker: fill the cell, and turn the button green ON HOVER — white at
+               rest, rgb(142,188,0) under the pointer, matching the live board. */
+            /* Kendo's wrapper was painting over the cell's bottom rule, leaving a 6px break in
+               it next to the button. Transparent background + no margin keeps the rule solid. */
+            #mt-form .k-datepicker { width: 100%; background: transparent; margin: 0; vertical-align: top; }
+            /* NO fixed height on the wrapper. Forcing 30px with box-sizing:border-box clipped
+               the wrapper's own bottom border (the inner input is 30px, +2px of border needs
+               32px), so the field rendered with its bottom edge missing. Size the INNER input
+               to 28px instead and let the wrapper total 30px naturally, as live does. */
+            #mt-form .k-picker-wrap { background: transparent; margin: 0; }
+            #mt-form .k-picker-wrap .k-input { height: 28px; box-sizing: border-box; }
+            /* Green ONLY on the button itself, never on the field or the row.
+               The 28px height matters: at its natural height the button overhangs the
+               wrapper's inner box and paints over the bottom border, so the field rendered
+               with its bottom edge missing under the button (top border reached x=711,
+               bottom border stopped at x=688). */
+            /* Constrain the button AND its inner .k-link/.k-icon. Setting height on .k-select
+               alone was not enough — the inner elements kept it 31px against a 28px inner box,
+               so the green overhung the field's bottom border by 2px. Live's button is exactly
+               28px, flush inside the 30px field. */
+            /* TRANSPARENT at rest, not #fff — a white fill here painted over the wrapper's
+               bottom border, which is why the field's bottom edge kept disappearing under the
+               button (top border reached x=733, bottom stopped at x=710). */
+            /* 23px wide, measured on live (ours rendered 17px). */
+            #mt-form .k-picker-wrap .k-select {
+                width: 23px; height: 28px; box-sizing: border-box; background: transparent;
+                cursor: pointer; padding: 0; margin: 0; line-height: 28px; overflow: hidden;
+                display: block;
+            }
+            #mt-form .k-picker-wrap .k-select .k-link,
+            #mt-form .k-picker-wrap .k-select .k-icon {
+                height: 28px; box-sizing: border-box; line-height: 28px; margin: 0; padding: 0;
+            }
+            /* Green whenever the ROW is hovered — not only when the pointer is on the button
+               itself. On live the grey row band and the green box appear together. */
+            #mt-form tr:hover .k-picker-wrap .k-select,
+            #mt-form .k-picker-wrap .k-select:hover { background: rgb(142, 188, 0); }
+        </style>
+
+        <!-- Producer / View-By / date form, matching the D3 Mobile Ticket page.
+             Row pitch is 67px on live (ours was 51px), and live carries a rule ABOVE the
+             Producer row as well as below each row. The control cells are TOP-weighted —
+             the select sits high in the row with the spare space below it, not centred. -->
+        <table id="mt-form" style="width:100%; border-collapse:separate; border-spacing:0">
+            <tbody>
+                <tr>
+                    <!-- Label aligns with the SELECT, not the row centre: on live the label's
+                         centre (86) sits on the select's centre (86.5), 10px above where a
+                         row-centred label lands. -->
+                    <td style="width:32%; padding:17px 10px 26px 10px; vertical-align:top; border-top:1px solid #e5e5e5; border-bottom:1px solid #e5e5e5">Producer</td>
+                    <td style="padding:10px 8px 26px 0; border-top:1px solid #e5e5e5; border-bottom:1px solid #e5e5e5">
+                        <select id="mt-producer" style="width:100%; margin-bottom:0; display:block"></select>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:17px 10px 26px 10px; vertical-align:top; border-bottom:1px solid #e5e5e5">View Mobile Ticket By</td>
+                    <td style="padding:10px 8px 26px 0; border-bottom:1px solid #e5e5e5">
+                        <select id="mt-viewby" style="width:100%; margin-bottom:0; display:block">
+                            <option value="order" selected="selected">Order</option>
+                            <option value="ticket">Ticket</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <!-- Inset left+right, and tight vertically: measured on live, 9px between
+                         the row's top rule and the field, and 9px from the field to the bottom
+                         rule (ours was 17px / 15px). -->
+                    <!-- 36px right inset, matching live (measured: its picker box ends 36px short
+                         of the rule, ours was 8px). -->
+                    <td colspan="2" style="padding:9px 36px 9px 8px; border-bottom:1px solid #e5e5e5">
+                        <!-- Kendo UI DatePicker — the same widget the live board uses (the bundled
+                             d3_complete_nohc.js ships Kendo; the calendar's "Wednesday, July 22,
+                             2026" footer is Kendo's). Kendo wraps this input and supplies the
+                             button + popup, so the calendar anchors under the field's left edge
+                             exactly as it does on live. NOT `readonly` — d3_complete.css greys
+                             readonly inputs to #eee, which made the field look disabled. -->
+                        <input id="mt-date" type="text" autocomplete="off"
+                            style="width:100%; margin-bottom:0; height:28px; background-color:#fff">
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 9px from the date row's bottom rule to the button, measured on live (ours was 19px).
+             8px left inset so the button aligns with the date field above it, not the container
+             edge — on live both sit at the same x. -->
+        <div style="padding:9px 0 0 8px">
+            <button id="mt-submit" type="button" class="btn btn-success"
+                style="min-width:125px; height:34px; font-size:14px">Submit</button>
+        </div>
+
+        <!-- D3 leaves a wide gap between Submit and the results search box. Measured on the
+             live board: 99px from the button's bottom edge to the search box's top edge. -->
+        <div style="height:98px"></div>
+
+        <div id="mt-wrap" style="width:100%; display:block">
+            <!-- 30px tall, measured on the live board (ours rendered 20px). box-sizing keeps
+                 the border inside that 30px so the box matches exactly. -->
+            <input id="mt-search" type="text" placeholder="Search"
+                style="width: 274px; height: 30px; box-sizing: border-box; display: block">
+            <div style="width: 100%; height: 1px; clear: both"></div>
+            <div id="mt-tiles" style="display: inline-block;"></div>
+        </div>
+
+    </div>
+</div>
+
+<script src="/d3-static/mobile-tickets-live.js?v=25"></script>

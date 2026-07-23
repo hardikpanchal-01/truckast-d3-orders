@@ -1,5 +1,6 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { isMarketViewTenant, applyHerculesNav } from "@/lib/tenant-view";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ const TEMPLATE_PATH = join(process.cwd(), "public", "d3-static", "order-request.
 export async function GET(): Promise<Response> {
   let html = await readFile(TEMPLATE_PATH, "utf8");
   html = html.split("./JobsForFixedNodeID_files/").join("/d3-static/JobsForFixedNodeID_files/");
+
+  if (await isMarketViewTenant()) html = applyHerculesNav(html);
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
   });

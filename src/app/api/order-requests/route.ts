@@ -1,4 +1,5 @@
 import { getOrderRequests } from "@/actions/orderActions";
+import { isMarketViewTenant } from "@/lib/tenant-view";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,14 @@ export const dynamic = "force-dynamic";
  * (The previous static snapshot lived in src/data/order-requests.json.)
  */
 export async function GET(): Promise<Response> {
+  // Hercules' live dashboard shows "No Requests" — it has no D3BUY queue entries. Serving
+  // the orders-derived approximation here would invent a board that live doesn't show, so
+  // return an empty list and let the client render D3's red "No Requests" panel. Remove
+  // this branch once a real order_requests table exists to read from.
+  if (await isMarketViewTenant()) {
+    return Response.json({ orders: [] }, { headers: { "cache-control": "no-store" } });
+  }
+
   const orders = await getOrderRequests();
   return Response.json({ orders }, { headers: { "cache-control": "no-store" } });
 }

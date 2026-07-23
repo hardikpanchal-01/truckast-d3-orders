@@ -168,10 +168,22 @@
     // Create a tile for a customer
     function createCustomerTile(customer) {
         var userCount = customer.user_count || 0;
-        var bgColor = '#458b00'; // D3 green - same as production
-        var code = customer.code || '';
-        var name = customer.name || '';
-        var href = '/rollout-customer-details?id=' + customer.id;
+        // Hercules' live ROLLOUT board paints these tiles amber (rgb(247,187,0),
+        // pixel-sampled from the live page) where Dolese uses D3 green. Every other
+        // tenant keeps the green.
+        var bgColor = window.__MARKET_VIEW__ ? 'rgb(247, 187, 0)' : '#458b00';
+        // The live board renders these tiles in UPPERCASE.
+        var code = (customer.code || '').toUpperCase();
+        var name = (customer.name || '').toUpperCase();
+        // Hercules' live board opens the INVITE form straight from the search tile, rather
+        // than the customer-details page with its own Invite button. The customer is passed
+        // through so the form can preselect it. Other tenants keep customer-details.
+        // The invite shell reads `customerId` + `companyName` (not id/code/name), and D3
+        // labels the company checkbox "NAME (CODE)".
+        var href = window.__MARKET_VIEW__
+            ? '/rollout-invite?customerId=' + encodeURIComponent(customer.id) +
+              '&companyName=' + encodeURIComponent(name + ' (' + code + ')')
+            : '/rollout-customer-details?id=' + customer.id;
 
         var tile = '<a href="' + href + '" style="text-decoration: none;">' +
             '<div class="tile" style="position: relative; background-color: ' + bgColor + '; cursor: pointer; display: block;">' +

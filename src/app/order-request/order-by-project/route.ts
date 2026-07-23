@@ -1,5 +1,6 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { isMarketViewTenant, applyHerculesNav } from "@/lib/tenant-view";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,13 @@ const TEMPLATE_PATH = join(process.cwd(), "public", "d3-static", "order-by-proje
 export async function GET(): Promise<Response> {
   let html = await readFile(TEMPLATE_PATH, "utf8");
   html = html.split("./OrderByProject_files/").join("/d3-static/OrderByProject_files/");
+
+  // Hercules renders this board differently — one blue tile per PROJECT, no "NEW ORDER /
+  // W/O PROJECT" tiles, and a red prompt under SEARCH. The flag lets the client branch.
+  if (await isMarketViewTenant()) {
+    html = html.replace("</head>", "<script>window.__MARKET_VIEW__=true;</script>\n</head>");
+    html = applyHerculesNav(html);
+  }
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
   });
