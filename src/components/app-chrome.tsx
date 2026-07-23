@@ -8,7 +8,7 @@ import chrome from "@/components/d3-chrome.module.css";
  * Renders the app chrome (dark TRUCKAST nav + centered content wrapper) around
  * every page — except the login screen, which is a standalone full-page layout.
  */
-export function AppChrome({ children }: { children: React.ReactNode }) {
+export function AppChrome({ children, tenant }: { children: React.ReactNode; tenant?: string | null }) {
   const pathname = usePathname();
 
   // Login is a standalone full-page layout; the /orders route renders the D3
@@ -20,7 +20,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <TopNav />
+      <TopNav tenant={tenant} />
       {/* Below 980: full-width with a 20px gutter so the content fills the viewport and
           aligns with the full-width header (no empty strip on the right). Desktop: centered 1170px. */}
       <main className={chrome.main}>{children}</main>

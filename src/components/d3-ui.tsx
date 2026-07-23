@@ -46,6 +46,21 @@ const MARKETS_TABS = [
   "LOGOUT",
 ] as const;
 
+// Concrete Supply uses a different tab set matching the D3 site exactly:
+// CSR and ANALYTICS appear between ADMIN and ORDER; no ROLLOUT.
+const CONCRETE_SUPPLY_TABS = [
+  "MARKETS",
+  "SETTINGS",
+  "PUBLISH",
+  "ADMIN",
+  "CSR",
+  "ANALYTICS",
+  "ORDER",
+  "LOGOUT",
+  "PROJECTS",
+  "HELP",
+] as const;
+
 // The Rollout (customer-invite) section uses its own brand + tab set.
 const ROLLOUT_TABS = [
   "DASHBOARD",
@@ -118,6 +133,9 @@ const TAB_HREF: Record<string, string> = {
   PLANTS: "/admin/plants",
   QC: "/admin/qc",
   CUSTOMER: "/d3-static/customer-search.html",
+  // Concrete Supply specific routes
+  CSR: "/csr",
+  ANALYTICS: "/d3-static/analytics-dashboard.html",
 };
 
 // Context-aware HELP routes — each section has its own help page.
@@ -137,15 +155,18 @@ const DASHBOARD_HREF: Record<string, string | undefined> = {
   order: "/order-request",
 };
 
-export function TopNav() {
+export function TopNav({ tenant }: { tenant?: string | null }) {
   const pathname = usePathname();
   const isRollout = pathname?.startsWith("/rollout") ?? false;
   const isOrder = pathname?.startsWith("/order-request") ?? false;
   const isProjects = pathname?.startsWith("/projects") ?? false;
   const isSettings = pathname?.startsWith("/settings") ?? false;
   const isAdmin = pathname?.startsWith("/admin") ?? false;
+  // Use Concrete Supply tabs when that tenant is selected
+  const isConcreteSupply = tenant?.toLowerCase().includes("concrete") ?? false;
+  const defaultTabs = isConcreteSupply ? CONCRETE_SUPPLY_TABS : MARKETS_TABS;
   const brand = isAdmin ? "ADMIN" : isRollout ? "ROLLOUT" : isOrder ? "ORDER REQUEST" : isProjects ? "PROJECTS" : "TRUCKAST";
-  const tabs: readonly string[] = isAdmin ? ADMIN_TABS : isRollout ? ROLLOUT_TABS : isOrder ? ORDER_TABS : isProjects ? PROJECTS_TABS : MARKETS_TABS;
+  const tabs: readonly string[] = isAdmin ? ADMIN_TABS : isRollout ? ROLLOUT_TABS : isOrder ? ORDER_TABS : isProjects ? PROJECTS_TABS : defaultTabs;
   // First tab is the active/highlighted tab in the markets nav; the others have none.
   const active = isAdmin || isRollout || isOrder || isProjects ? "" : MARKETS_TABS[0];
   const [open, setOpen] = React.useState(false);
