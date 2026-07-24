@@ -35,10 +35,20 @@
 
     <style>
         /* DataTables styling */
+        body { font-weight: normal; font-size: 14px; font-style: normal; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+        .container { font-weight: normal; font-size: 14px; font-style: normal; }
         .dataTables_filter label { float: right }
         .dataTables_paginate ul { float: right }
         .pagination { margin: 0px 0; }
-        .table { margin-bottom: 8px; }
+        .table { margin-bottom: 8px; font-weight: normal; font-size: 14px; font-style: normal; }
+        .table th, .table td { font-weight: normal; font-size: 14px; font-style: normal; }
+        .table th { font-weight: bold; }
+        .d3-label { font-weight: normal; font-size: 14px; font-style: normal; }
+        .dataTables_wrapper { font-weight: normal; font-size: 14px; font-style: normal; }
+        .dataTables_length, .dataTables_filter, .dataTables_info, .dataTables_paginate { font-weight: normal; font-size: 14px; font-style: normal; }
+        .d3-label h4 { font-size: 18px; margin: 5px 0; }
+        select, input[type="text"] { font-weight: normal; font-size: 14px; font-style: normal; }
+        a { font-weight: normal; font-size: 14px; font-style: normal; }
     </style>
 </head>
 
@@ -108,9 +118,9 @@
                             <li class="dropdown">
                                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">Users <b class="caret"></b></a>
                                 <ul class="dropdown-menu">
-                                    <li><a href="/d3-static/user-notifications.html">User Notifications</a></li>
-                                    <li><a href="/d3-static/user-search.html">User Search</a></li>
-                                    <li><a href="/d3-static/analytics.html">User Dashboard</a></li>
+                                    <li><a href="/d3-static/analytics-usernotifications.html">User Notifications</a></li>
+                                    <li><a href="/d3-static/analytics-usersearch.html">User Search</a></li>
+                                    <li><a href="/d3-static/analytics-userdashboard.html">User Dashboard</a></li>
                                     <li><a href="/d3-static/analytics-contractorviewed.html">Analytics Contractor Viewed Volume</a></li>
                                     <li><a href="/d3-static/analytics-producerviewed.html">Analytics Producer Viewed Volume</a></li>
                                     <li><a href="/d3-static/analytics-usersessions.html">Analytics User Sessions</a></li>
@@ -253,7 +263,7 @@
                             </tr>
                             <tr>
                                 <td style="vertical-align: middle; width: 50%">
-                                    <div class="d3-label" style="width: 100%;"></div>
+                                    <div class="d3-label" style="width: 100%;">Business unit:</div>
                                 </td>
                                 <td style="vertical-align: middle; width: 50%">
                                     <div id="user-region" class="d3-label" style="width: 100%;"></div>

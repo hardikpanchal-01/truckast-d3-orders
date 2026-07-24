@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="format-detection" content="telephone=no" />
+        <title>User Notifications</title>
+
+        <!-- Required javascript and css all rolled up in one -->
+        <script src="./MarketSummary_files/d3_complete_nohc.js"></script>
+
+        <link href="./MarketSummary_files/d3_complete.css" rel="stylesheet" type="text/css" />
+
+        <!-- Highcharts -->
+        <script src="./MarketSummary_files/highcharts.js"></script>
+        <script src="./MarketSummary_files/highcharts-more.js"></script>
+        <script src="./MarketSummary_files/data.js"></script>
+
+        <style media="print" type="text/css">
+            a:after { content:''; }
+            a[href]:after { content: none !important; }
+        </style>
+    </head>
+    <body>
+        <script>
+            // document load initialization
+            $(document).ready(function () {
+                hideLoadingIndicator();
+                loadLogin();
+            });
+            $(window).unload(function () {
+                hideLoadingIndicator();
+                saveLogin();
+            });
+        </script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        var errormsg = getParameterByName("pageerror");
+        if (errormsg != null && errormsg.length > 0) {
+            displayError('ERROR', trimString(errormsg));
+        }
+        Highcharts.setOptions({
+            colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+        });
+    });
+</script>
+<div class="d3-page">
+
+<div class="navbar navbar-fixed-top navbar-inverse">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+
+            <a class="brand" href="#">ANALYTICS</a>
+
+            <div class="nav-collapse collapse">
+                <ul class="nav">
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dashboard <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="analytics-dashboard.html">Dashboard</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Producer <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">Same Day Cancellations</a></li>
+                            <li><a href="#">Analytics Daily Cancelled Orders</a></li>
+                            <li><a href="#">Analytics Total Cancelled Orders</a></li>
+                            <li><a href="#">Overall Scheduled Pour Rate Performance</a></li>
+                            <li><a href="#">Plus Loads By Market</a></li>
+                            <li><a href="analytics-communication.html">Communications</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contractor <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="analytics-customersearch.html">Contractor Search</a></li>
+                            <li><a href="analytics-customerperformance.html">Top Customer Performance</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Users <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="analytics-usernotifications.html">User Notifications</a></li>
+                            <li><a href="analytics-usersearch.html">User Search</a></li>
+                            <li><a href="analytics-userdashboard.html">User Dashboard</a></li>
+                            <li><a href="#">Analytics Contractor Viewed Volume</a></li>
+                            <li><a href="#">Analytics Producer Viewed Volume</a></li>
+                            <li><a href="#">Analytics User Sessions</a></li>
+                            <li><a href="#">Analytics Business Unit User Activity</a></li>
+                            <li><a href="#">Analytics Users Orders</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Invite <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">Invite Dashboard</a></li>
+                            <li><a href="#">Pipeline Dashboard</a></li>
+                            <li><a href="#">Needs Truckast</a></li>
+                            <li><a href="#">Invite Status</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Logistics <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">First Truck Late</a></li>
+                            <li><a href="#">First Truck Late By Customer</a></li>
+                            <li><a href="#">Truck - Incorrect Statuses</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Apps <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">Analytics</a></li>
+                            <li><a href="MarketSummary.html">Truckast</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Help <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">Help</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Logout <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+                <div class="container">
+                    <div id="error-box" class="alert alert-error" style="display: none">
+                        <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                        <p id="error-text"></p>
+                    </div>
+                    <div id="warning-box" class="alert alert-block" style="display: none">
+                        <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                        <p id="warning-text"></p>
+                    </div>
+                    <div id="success-box" class="alert alert-success" style="display: none">
+                        <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                        <p id="success-text"></p>
+                    </div>
+                    <div id="information-box" class="alert alert-info" style="display: none">
+                        <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                        <p id="information-text"></p>
+                    </div>
+
+<form id="salesrepnotifications" method="POST">
+
+<div class="navbar">
+    <div class="navbar-inner">
+        <div class="container">
+            <table style="width:100%">
+                <tr>
+                    <td style="width:38px">
+                        <a onclick="history.back();hideLoadingIndicator();">
+                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./MarketSummary_files/arrow-big-01@2x.png" >
+
+                        </a>
+                    </td>
+                    <td>
+                    <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                        <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                            <span style="font-size: 16px"><strong>User Notifications</strong></span><br />
+                            <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                        </div>
+                    </div>
+                    </td>
+                    <td style="width:38px">
+                        <a href="analytics-usernotifications.html">
+                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./MarketSummary_files/arrow-small-27@2x.png" >
+
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<div id="75aaffc4-86c0-4f55-b4ef-9b9ffd723060" style="display: block; width:100%">
+<table class="table table-hover">
+    <tbody>
+        <tr>
+            <td style="vertical-align: middle; width: 15%">
+            <div id="f769b40d-a843-4c73-9d19-909f87399aec" class="d3-label" style="width: 100%;">USER:</div>
+
+            </td>
+            <td style="vertical-align: middle; width: 15%">
+            <div id="7a49f6a9-caa2-4327-9e5b-fb87f303f7fb" class="d3-label" style="width: 100%;">START DATE:</div>
+
+            </td>
+            <td style="vertical-align: middle; width: 15%">
+            <div id="0cfd95e4-2544-401c-993d-f4ff18ee2c9f" class="d3-label" style="width: 100%;">END DATE:</div>
+
+            </td>
+            <td style="vertical-align: middle; width: 10%">
+            <div id="f836dec9-7e71-4422-9ab3-f0bb46a255cf" class="d3-label" style="width: 100%;"></div>
+
+            </td>
+        </tr>
+        <tr>
+            <td style="vertical-align: middle; width: 15%">
+        <select id="salesrepid" name="salesrepid" style="width: 100%; margin-bottom: 0; display: block;" >
+                    <option value="B392BCBA-859D-E411-94EA-DC3C617F4084">ADAM HARRIS</option>
+                    <option value="8A159082-06C5-E511-80F7-22000B772084">ANDY WESTBURY</option>
+                    <option value="7620B034-4BCD-EC11-82C9-22000A29EF36">AUSTIN PETRATOS</option>
+                    <option value="85742B88-4768-E811-80F9-22000B772084">BART JONES</option>
+                    <option value="CC96FF2F-5268-E811-80F9-22000B772084">BART JONES</option>
+                    <option value="0A659BB2-7CBF-E311-8466-A7697EBE67DC">BILL CATALANI</option>
+                    <option value="59780577-EE57-E611-80F7-22000B772084">BILLY BUCHANAN</option>
+                    <option value="369CC89A-6408-E411-8466-A7697EBE67DC">BUBBA METTS</option>
+                    <option value="DFEB1073-92CB-EC11-82C9-22000A29EF36">CAMERON PARKER</option>
+                    <option value="174B3BEC-E762-E311-8466-A7697EBE67DC">CHRIS WOOD</option>
+                    <option value="6F0B734C-5970-EB11-82C8-22000AA7BA04">CHRISTIAN ROGERS</option>
+                    <option value="6F4D46A8-74A3-E511-80F6-22000B39E0BB">CHRISTOPHER SUGGS</option>
+                    <option value="3047DA8C-54C9-EB11-82C9-22000A29EF36">CJ WESTERMAN</option>
+                    <option value="E28EC09D-2DE1-E811-80F9-22000B772084">CRAIG HAMMOND</option>
+                    <option value="E659103C-5828-E511-80F2-22000B39E0BB">CSCDEMO USER</option>
+                    <option value="EADBBA9E-E662-E311-8466-A7697EBE67DC">DAMIAN DIFILIPPO</option>
+                    <option value="2A96454C-EB82-E311-8466-A7697EBE67DC">DANIEL RIVERS</option>
+                    <option value="DDAA0A50-393A-E611-80F7-22000B772084">DAVID WOFFORD</option>
+                    <option value="292494A6-E1ED-EF11-82CB-DB25CFADDFDF">DAWSON ELDER</option>
+                    <option value="8FE46F81-E1ED-EF11-82CB-DB25CFADDFDF">DEVON MERRIMAN</option>
+                    <option value="717ADB26-06C5-E511-80F7-22000B772084">DONNIE WESTBURY</option>
+                    <option value="17D52D22-EB82-E311-8466-A7697EBE67DC">DOYLE ROGERS</option>
+                    <option value="00735615-BCB0-EF11-82CB-DB25CFADDFDF">DREW DAVIS</option>
+                    <option value="214F54D2-E1ED-EF11-82CB-DB25CFADDFDF">DREW STANKWYTCH</option>
+                    <option value="142EB821-EDC7-EC11-82C9-22000A29EF36">DUSTIN MYERS</option>
+                    <option value="67CAA39F-E862-E311-8466-A7697EBE67DC">GARY STEWART</option>
+                    <option value="DA4F7200-EC82-E311-8466-A7697EBE67DC">GENE WESTON</option>
+                    <option value="0D46D663-1501-F111-82CC-9F6F49760254">GILLIAM THARPE</option>
+                    <option value="75137DF3-EEEE-EF11-82CB-DB25CFADDFDF">HENRY CORE</option>
+                    <option value="6D4F7A6C-5C9B-ED11-82CA-F365D7555AC1">JACOB CLARY</option>
+                    <option value="0E2E843A-C683-E311-8466-A7697EBE67DC">JAMES DAY</option>
+                    <option value="7B6117DE-2DEF-ED11-82CA-F365D7555AC1">JAMIE BOULWARE</option>
+                    <option value="3778D4C3-E862-E311-8466-A7697EBE67DC">JIM TSUMAS</option>
+                    <option value="8C3E314F-E2ED-EF11-82CB-DB25CFADDFDF">JOHN FOWLER</option>
+                    <option value="F7F56620-C846-E711-80F8-22000B772084">JONATHAN PARRIS</option>
+                    <option value="C1155CE7-EBCB-E311-8466-A7697EBE67DC">KEVIN GARRICK</option>
+                    <option value="8FA7D553-F8A2-E311-8466-A7697EBE67DC">KYLE BROWN</option>
+                    <option value="5F3DB084-5713-ED11-82C9-22000A29EF36">LANDON TAYLOR</option>
+                    <option value="3DE43F74-3739-EA11-82C8-22000AA7BA04">LAUREN CLODFELTER</option>
+                    <option value="DF98C30A-8099-E311-8466-A7697EBE67DC">LEE FREDERICK</option>
+                    <option value="1073A3F1-521E-E911-80F9-22000B772084">MARLIN POSTON</option>
+                    <option value="5EF7FBE2-4668-E811-80F9-22000B772084">MARTY REINFELD</option>
+                    <option value="DABDEB5B-E1ED-EF11-82CB-DB25CFADDFDF">MELISSA SWANSON</option>
+                    <option value="48B04FF1-E862-E311-8466-A7697EBE67DC">MIKE TYSINGER</option>
+                    <option value="51C5D915-C871-E911-80F9-22000B772084">NICK NICHOLSON</option>
+                    <option value="A1E225DC-E7F4-4A0C-A8A2-4EEF2D71C8CC">NICK NICHOLSON</option>
+                    <option value="49A15485-27CD-EF11-82CB-DB25CFADDFDF">RACHEL NICHOLSON</option>
+                    <option value="E8DD2AA5-9641-E311-8466-A7697EBE67DC">RANDY MCCURRY</option>
+                    <option value="C7590A18-E862-E311-8466-A7697EBE67DC">REID HARRIS</option>
+                    <option value="736DB30F-69C6-E411-AA96-A5FF04920485">RHETT SMITH</option>
+                    <option value="7781C20D-92CB-EC11-82C9-22000A29EF36">RICHARD HUSSEY</option>
+                    <option value="D175C27A-3343-EC11-82C9-22000A29EF36">SCOTT YOUMANS</option>
+                    <option value="FE8F5F65-78EF-EF11-82CB-DB25CFADDFDF">SHERRI TILLEY</option>
+                    <option value="2E53F385-3268-E811-80F9-22000B772084">STEVE BRUNELLE</option>
+                    <option value="773144D5-E662-E311-8466-A7697EBE67DC">STEVE PODRAZA</option>
+                    <option value="210FC06B-EB82-E311-8466-A7697EBE67DC">TODD WADE</option>
+                    <option value="970C8C17-E962-E311-8466-A7697EBE67DC">WESTON BAILEY</option>
+                    <option value="DCDF005D-6B04-EE11-82CA-F365D7555AC1">WESTON BAILEY</option>
+        </select>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#salesrepid').change(function () {
+            var value = $('#salesrepid').val();
+            if (value != null && value.length > 4) {
+                var uvalue = value.toUpperCase();
+                if (uvalue.substring(0, 4) == "HTTP") {
+                    window.location.href = value;
+                }
+            }
+        });
+    });
+</script>            </td>
+            <td style="vertical-align: middle; width: 15%">
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#startdatepick-input").kendoDatePicker();
+    });
+</script>
+<div id="startdatepick" style="width: 150px; padding-right: 10px; float: left;">
+    <input id="startdatepick-input" name="startdatepick" value="07/24/2026" style="width: 150px" />
+</div>
+            </td>
+            <td style="vertical-align: middle; width: 15%">
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#enddatepick-input").kendoDatePicker();
+    });
+</script>
+<div id="enddatepick" style="width: 150px; padding-right: 10px; float: left;">
+    <input id="enddatepick-input" name="enddatepick" value="07/25/2026" style="width: 150px" />
+</div>
+            </td>
+            <td style="vertical-align: middle; width: 10%">
+        <button id="submit-button" class="btn btn-success " type="button" onclick="onSubmit_salesrepnotifications()" style="width: 125px" >Submit</button>
+
+            </td>
+        </tr>
+
+    </tbody>
+</table>
+</div>        <br/>
+        <br/>
+
+
+
+            <div id="e83c16e1-8efc-4e4f-ab49-e7a204ef0483" class="d3-label" style="width: 100%;">USER SETTINGS</div>
+
+        <br/>
+
+
+
+
+        <div style="display: block; width: 100%">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="topicname" style="width: 100%; ">
+            <thead><tr>
+            <th>NOTIFICATION</th>
+            <th>EMAIL</th>
+            <th>SMS</th>
+        </tr></thead>
+        <tbody>
+                <tr class="even gradeA">
+                <td style="">New Order</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_53FE7F06-2651-E111-84F4-0022190823E9" value="53FE7F06-2651-E111-84F4-0022190823E9"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Plus Load</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_0AF6693E-0C56-E311-9433-22000A98AC24" value="0AF6693E-0C56-E311-9433-22000A98AC24"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">PSI >= 5000</td>
+                <td style=""><input type="checkbox" name="email_58A16075-B461-E611-80F7-22000B772084" value="58A16075-B461-E611-80F7-22000B772084"></td>
+                <td style=""></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Late Truck</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_5679777F-058B-E111-9378-9EF3ACB14DA6" value="5679777F-058B-E111-9378-9EF3ACB14DA6"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">First Truck</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_941CCCD8-5D8E-E111-9378-9EF3ACB14DA6" value="941CCCD8-5D8E-E111-9378-9EF3ACB14DA6"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Last Truck</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_8BA22422-678E-E111-9378-9EF3ACB14DA6" value="8BA22422-678E-E111-9378-9EF3ACB14DA6"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">Updated Order</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_4983F9BB-2F8F-E111-9378-9EF3ACB14DA6" value="4983F9BB-2F8F-E111-9378-9EF3ACB14DA6"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Will Call Order Reminder</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_41CED1C7-308F-E111-9378-9EF3ACB14DA6" value="41CED1C7-308F-E111-9378-9EF3ACB14DA6"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">Order Request Accepted\Rejected</td>
+                <td style=""><input type="checkbox" name="email_F378E6DE-8146-E311-8466-A7697EBE67DC" value="F378E6DE-8146-E311-8466-A7697EBE67DC"></td>
+                <td style=""></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">New Post</td>
+                <td style=""><input type="checkbox" name="email_CBF6A0E0-3301-E311-9962-B5F293CD4A97" value="CBF6A0E0-3301-E311-9962-B5F293CD4A97"></td>
+                <td style=""><input type="checkbox" name="sms_CBF6A0E0-3301-E311-9962-B5F293CD4A97" value="CBF6A0E0-3301-E311-9962-B5F293CD4A97"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">New Comment</td>
+                <td style=""><input type="checkbox" name="email_86A9BBF2-3301-E311-9962-B5F293CD4A97" value="86A9BBF2-3301-E311-9962-B5F293CD4A97"></td>
+                <td style=""><input type="checkbox" name="sms_86A9BBF2-3301-E311-9962-B5F293CD4A97" value="86A9BBF2-3301-E311-9962-B5F293CD4A97"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">First Truck Is Late</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_2DE2DCC5-C685-E811-80B5-D4BED9EDBE7F" value="2DE2DCC5-C685-E811-80B5-D4BED9EDBE7F"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">Next day Order</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_A8CB697E-DC47-EA11-80C7-D4BED9EDBE7F" value="A8CB697E-DC47-EA11-80C7-D4BED9EDBE7F"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Mobile Ticket - Rejected</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_CC8D287F-1D89-EA11-80C8-D4BED9EDBE7F" value="CC8D287F-1D89-EA11-80C8-D4BED9EDBE7F"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">Mobile Ticket - Accepted</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_D0995800-7D96-EA11-80CA-D4BED9EDBE7F" value="D0995800-7D96-EA11-80CA-D4BED9EDBE7F"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">Mobile Ticket Summary</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_53E6C914-7D96-EA11-80CA-D4BED9EDBE7F" value="53E6C914-7D96-EA11-80CA-D4BED9EDBE7F"></td>
+            </tr>
+                <tr class="even gradeA">
+                <td style="">Mobile Ticket - Feedback</td>
+                <td style=""></td>
+                <td style=""><input type="checkbox" name="sms_60CD5C21-499F-EA11-80CA-D4BED9EDBE7F" value="60CD5C21-499F-EA11-80CA-D4BED9EDBE7F"></td>
+            </tr>
+                <tr class="odd gradeA">
+                <td style="">New Order Request</td>
+                <td style=""><input type="checkbox" name="email_28CC89D8-0885-E211-9178-F31FE83B2753" value="28CC89D8-0885-E211-9178-F31FE83B2753"></td>
+                <td style=""></td>
+            </tr>
+        </tbody>
+        </table>
+        </div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table {  margin-bottom: 8px; }
+</style>
+<script>
+            $(document).ready(function () {
+                $('#topicname').dataTable({
+                    "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'><'span6'p>>",
+                    "sPaginationType": "bootstrap",
+                    "bPaginate": false,
+                    "bFilter": false,
+                    "bSort": false,
+                    "oLanguage": {
+                        "sLengthMenu": "_MENU_ records per page"
+                    }
+                });
+            });
+
+</script>
+        <br/>
+        <br/>
+
+
+
+            <div id="14f943ad-adc2-4452-9afe-fcefce9f6be9" class="d3-label" style="width: 100%;">ASSIGNED CUSTOMERS</div>
+
+        <br/>
+
+
+
+
+        <div style="display: block; width: 100%">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="af25a4ea-fd55-4510-ae6e-f0078cdc6d74" style="width: 100%; ">
+            <thead><tr>
+            <th></th>
+            <th>Account#</th>
+        </tr></thead>
+        <tbody>
+        </tbody>
+        </table>
+        </div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table {  margin-bottom: 8px; }
+</style>
+<script>
+            $(document).ready(function () {
+                $('#af25a4ea-fd55-4510-ae6e-f0078cdc6d74').dataTable({
+                    "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+                    "sPaginationType": "bootstrap",
+                    "bPaginate": true,
+                    "bFilter": true,
+                    "bSort": true,
+                    "oLanguage": {
+                        "sLengthMenu": "_MENU_ records per page"
+                    }
+                });
+            });
+
+</script>
+        <br/>
+        <br/>
+
+
+
+            <div id="778926d1-072f-4ea5-a6f1-36fc91b7b42b" class="d3-label" style="width: 100%;">CUSTOMER NOTIFICATION</div>
+
+        <br/>
+
+
+
+
+        <div style="display: block; width: 100%">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="1c75fc2d-bdaf-4602-8827-e45f733127a2" style="width: 100%; ">
+            <thead><tr>
+            <th>Date</th>
+            <th>ORDER#</th>
+            <th>Customer</th>
+            <th>Topic</th>
+            <th>SMS</th>
+            <th>SUBJECT</th>
+            <th>EMAIL</th>
+            <th>SENT</th>
+        </tr></thead>
+        <tbody>
+        </tbody>
+        </table>
+        </div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table {  margin-bottom: 8px; }
+</style>
+<script>
+            $(document).ready(function () {
+                $('#1c75fc2d-bdaf-4602-8827-e45f733127a2').dataTable({
+                    "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+                    "sPaginationType": "bootstrap",
+                    "bPaginate": true,
+                    "bFilter": true,
+                    "bSort": true,
+                    "oLanguage": {
+                        "sLengthMenu": "_MENU_ records per page"
+                    }
+                });
+            });
+
+</script>
+        <br/>
+        <br/>
+
+
+
+            <div id="05df3f01-c4d8-4589-889b-e2954a916e6e" class="d3-label" style="width: 100%;">QUEUED NOTIFICATIONS TO SALES REP</div>
+
+        <br/>
+
+
+
+
+        <div style="display: block; width: 100%">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="e83b44a6-46dc-4ea6-ad7b-ba7c79836617" style="width: 100%; ">
+            <thead><tr>
+            <th>DateAndTime</th>
+            <th>Date</th>
+            <th>ORDER#</th>
+            <th>Customer</th>
+            <th>Topic</th>
+            <th>SMS</th>
+            <th>SUBJECT</th>
+            <th>EMAIL</th>
+            <th>IsSent</th>
+            <th>RetryCount</th>
+            <th>SENT</th>
+        </tr></thead>
+        <tbody>
+        </tbody>
+        </table>
+        </div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table {  margin-bottom: 8px; }
+</style>
+<script>
+            $(document).ready(function () {
+                $('#e83b44a6-46dc-4ea6-ad7b-ba7c79836617').dataTable({
+                    "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+                    "sPaginationType": "bootstrap",
+                    "bPaginate": true,
+                    "bFilter": true,
+                    "bSort": true,
+                    "oLanguage": {
+                        "sLengthMenu": "_MENU_ records per page"
+                    }
+                });
+            });
+
+</script>
+        <br/>
+        <br/>
+
+
+
+            <div id="c9d45d70-1996-443f-8788-e79b14703038" class="d3-label" style="width: 100%;">SERVER SENT NOTIFICATIONS TO SALES REP</div>
+
+        <br/>
+
+
+
+
+        <div style="display: block; width: 100%">
+        <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="444a458a-8fd1-4ae5-9a1f-2f5ccd50b7a3" style="width: 100%; ">
+            <thead><tr>
+            <th>recipients</th>
+            <th>copy_recipients</th>
+            <th>blind_copy_recipients</th>
+            <th>subject</th>
+            <th>sent_date</th>
+        </tr></thead>
+        <tbody>
+        </tbody>
+        </table>
+        </div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table {  margin-bottom: 8px; }
+</style>
+<script>
+            $(document).ready(function () {
+                $('#444a458a-8fd1-4ae5-9a1f-2f5ccd50b7a3').dataTable({
+                    "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+                    "sPaginationType": "bootstrap",
+                    "bPaginate": true,
+                    "bFilter": true,
+                    "bSort": true,
+                    "oLanguage": {
+                        "sLengthMenu": "_MENU_ records per page"
+                    }
+                });
+            });
+
+</script>
+
+</form>
+
+<script>
+    // DataTable instances
+    var assignedCustomersTable = null;
+    var customerNotificationTable = null;
+    var queuedNotificationsTable = null;
+    var serverSentTable = null;
+
+    function onValidate__salesrepnotifications() {
+        var message = "";
+        var userId = $('#salesrepid').val();
+        if (!userId || userId.length === 0) {
+            message = "Please select a user.";
+        }
+        return message;
+    }
+
+    function onSubmit_salesrepnotifications() {
+        // validate the form content
+        var validationMessage = onValidate__salesrepnotifications();
+        if (validationMessage != null && validationMessage.length > 0) {
+            $('#error-box').css('display', 'block');
+            $('#error-title').html('Error');
+            $('#error-text').html(validationMessage);
+            return;
+        }
+
+        // Hide error box
+        $('#error-box').css('display', 'none');
+
+        // Get form values
+        var userId = $('#salesrepid').val();
+        var startDate = $('#startdatepick-input').val();
+        var endDate = $('#enddatepick-input').val();
+
+        // Show loading indicator
+        showLoadingIndicator();
+
+        // Call API
+        var apiUrl = '/api/analytics/user-notifications?userId=' + encodeURIComponent(userId) +
+            '&startDate=' + encodeURIComponent(startDate) +
+            '&endDate=' + encodeURIComponent(endDate);
+
+        $.ajax({
+            url: apiUrl,
+            method: 'GET',
+            success: function(response) {
+                hideLoadingIndicator();
+                if (response.success && response.data) {
+                    updateUserSettings(response.data.userSettings);
+                    updateAssignedCustomers(response.data.assignedCustomers);
+                    updateCustomerNotifications(response.data.customerNotifications);
+                    updateQueuedNotifications(response.data.queuedNotifications);
+                    updateServerSentNotifications(response.data.serverSentNotifications);
+
+                    $('#success-box').css('display', 'block');
+                    $('#success-title').html('Success');
+                    $('#success-text').html('Data loaded successfully.');
+                    setTimeout(function() {
+                        $('#success-box').css('display', 'none');
+                    }, 3000);
+                } else {
+                    $('#error-box').css('display', 'block');
+                    $('#error-title').html('Error');
+                    $('#error-text').html(response.error || 'Failed to load data');
+                }
+            },
+            error: function(xhr, status, error) {
+                hideLoadingIndicator();
+                $('#error-box').css('display', 'block');
+                $('#error-title').html('Error');
+                $('#error-text').html('Failed to load data: ' + error);
+            }
+        });
+    }
+
+    function updateUserSettings(settings) {
+        if (!settings) return;
+
+        // Update checkboxes based on settings
+        settings.forEach(function(setting) {
+            var emailCheckbox = $('input[name="email_' + setting.id + '"]');
+            var smsCheckbox = $('input[name="sms_' + setting.id + '"]');
+
+            if (emailCheckbox.length > 0) {
+                emailCheckbox.prop('checked', setting.email);
+            }
+            if (smsCheckbox.length > 0) {
+                smsCheckbox.prop('checked', setting.sms);
+            }
+        });
+    }
+
+    function updateAssignedCustomers(customers) {
+        // Destroy existing DataTable
+        if (assignedCustomersTable) {
+            assignedCustomersTable.destroy();
+        }
+
+        var tbody = $('#af25a4ea-fd55-4510-ae6e-f0078cdc6d74 tbody');
+        tbody.empty();
+
+        if (customers && customers.length > 0) {
+            customers.forEach(function(customer, index) {
+                var row = '<tr class="' + (index % 2 === 0 ? 'even' : 'odd') + '">' +
+                    '<td>' + customer.name + '</td>' +
+                    '<td>' + customer.accountNumber + '</td>' +
+                    '</tr>';
+                tbody.append(row);
+            });
+        }
+
+        // Reinitialize DataTable
+        assignedCustomersTable = $('#af25a4ea-fd55-4510-ae6e-f0078cdc6d74').dataTable({
+            "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+            "sPaginationType": "bootstrap",
+            "bPaginate": true,
+            "bFilter": true,
+            "bSort": true,
+            "bDestroy": true,
+            "oLanguage": {
+                "sLengthMenu": "_MENU_ records per page"
+            }
+        });
+    }
+
+    function updateCustomerNotifications(notifications) {
+        // Destroy existing DataTable
+        if (customerNotificationTable) {
+            customerNotificationTable.destroy();
+        }
+
+        var tbody = $('#1c75fc2d-bdaf-4602-8827-e45f733127a2 tbody');
+        tbody.empty();
+
+        if (notifications && notifications.length > 0) {
+            notifications.forEach(function(notif, index) {
+                var row = '<tr class="' + (index % 2 === 0 ? 'even' : 'odd') + '">' +
+                    '<td>' + notif.date + '</td>' +
+                    '<td>' + notif.orderNumber + '</td>' +
+                    '<td>' + notif.customer + '</td>' +
+                    '<td>' + notif.topic + '</td>' +
+                    '<td>' + notif.sms + '</td>' +
+                    '<td>' + notif.subject + '</td>' +
+                    '<td>' + notif.email + '</td>' +
+                    '<td>' + notif.sent + '</td>' +
+                    '</tr>';
+                tbody.append(row);
+            });
+        }
+
+        // Reinitialize DataTable
+        customerNotificationTable = $('#1c75fc2d-bdaf-4602-8827-e45f733127a2').dataTable({
+            "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+            "sPaginationType": "bootstrap",
+            "bPaginate": true,
+            "bFilter": true,
+            "bSort": true,
+            "bDestroy": true,
+            "oLanguage": {
+                "sLengthMenu": "_MENU_ records per page"
+            }
+        });
+    }
+
+    function updateQueuedNotifications(notifications) {
+        // Destroy existing DataTable
+        if (queuedNotificationsTable) {
+            queuedNotificationsTable.destroy();
+        }
+
+        var tbody = $('#e83b44a6-46dc-4ea6-ad7b-ba7c79836617 tbody');
+        tbody.empty();
+
+        if (notifications && notifications.length > 0) {
+            notifications.forEach(function(notif, index) {
+                var row = '<tr class="' + (index % 2 === 0 ? 'even' : 'odd') + '">' +
+                    '<td>' + notif.dateAndTime + '</td>' +
+                    '<td>' + notif.date + '</td>' +
+                    '<td>' + notif.orderNumber + '</td>' +
+                    '<td>' + notif.customer + '</td>' +
+                    '<td>' + notif.topic + '</td>' +
+                    '<td>' + notif.sms + '</td>' +
+                    '<td>' + notif.subject + '</td>' +
+                    '<td>' + notif.email + '</td>' +
+                    '<td>' + notif.isSent + '</td>' +
+                    '<td>' + notif.retryCount + '</td>' +
+                    '<td>' + notif.sent + '</td>' +
+                    '</tr>';
+                tbody.append(row);
+            });
+        }
+
+        // Reinitialize DataTable
+        queuedNotificationsTable = $('#e83b44a6-46dc-4ea6-ad7b-ba7c79836617').dataTable({
+            "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+            "sPaginationType": "bootstrap",
+            "bPaginate": true,
+            "bFilter": true,
+            "bSort": true,
+            "bDestroy": true,
+            "oLanguage": {
+                "sLengthMenu": "_MENU_ records per page"
+            }
+        });
+    }
+
+    function updateServerSentNotifications(notifications) {
+        // Destroy existing DataTable
+        if (serverSentTable) {
+            serverSentTable.destroy();
+        }
+
+        var tbody = $('#444a458a-8fd1-4ae5-9a1f-2f5ccd50b7a3 tbody');
+        tbody.empty();
+
+        if (notifications && notifications.length > 0) {
+            notifications.forEach(function(notif, index) {
+                var row = '<tr class="' + (index % 2 === 0 ? 'even' : 'odd') + '">' +
+                    '<td>' + notif.recipients + '</td>' +
+                    '<td>' + notif.copyRecipients + '</td>' +
+                    '<td>' + notif.blindCopyRecipients + '</td>' +
+                    '<td>' + notif.subject + '</td>' +
+                    '<td>' + notif.sentDate + '</td>' +
+                    '</tr>';
+                tbody.append(row);
+            });
+        }
+
+        // Reinitialize DataTable
+        serverSentTable = $('#444a458a-8fd1-4ae5-9a1f-2f5ccd50b7a3').dataTable({
+            "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+            "sPaginationType": "bootstrap",
+            "bPaginate": true,
+            "bFilter": true,
+            "bSort": true,
+            "bDestroy": true,
+            "oLanguage": {
+                "sLengthMenu": "_MENU_ records per page"
+            }
+        });
+    }
+</script>                </div>
+
+</div>
+
+    </body>
+</html>

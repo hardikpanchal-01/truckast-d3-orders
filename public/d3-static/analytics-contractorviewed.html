@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no">
+    <title>Analytics Contractor Viewed Volume</title>
+
+    <!-- Required javascript and css -->
+    <script src="./MarketSummary_files/d3_complete_nohc.js"></script>
+    <link href="./MarketSummary_files/d3_complete.css" rel="stylesheet" type="text/css">
+
+    <!-- Highcharts -->
+    <script src="./MarketSummary_files/highcharts.js"></script>
+    <script src="./MarketSummary_files/highcharts-more.js"></script>
+    <script src="./MarketSummary_files/data.js"></script>
+
+    <style media="print" type="text/css">
+        a:after { content:''; }
+        a[href]:after { content: none !important; }
+    </style>
+    <style>
+        body { font-weight: normal; font-size: 14px; font-style: normal; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+        .container { font-weight: normal; font-size: 14px; font-style: normal; }
+        .table { margin-bottom: 8px; font-weight: normal; font-size: 14px; font-style: normal; }
+        .table th, .table td { font-weight: normal; font-size: 14px; font-style: normal; }
+        .table th { font-weight: bold; }
+        .d3-label { font-weight: normal; font-size: 14px; font-style: normal; }
+        .d3-label h4 { font-size: 18px; margin: 5px 0; }
+        select, input[type="text"] { font-weight: normal; font-size: 14px; font-style: normal; }
+        a { font-weight: normal; font-size: 14px; font-style: normal; color: #08c; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .dataTables_filter label { float: right }
+        .dataTables_paginate ul { float: right }
+        .pagination { margin: 0px 0; }
+    </style>
+</head>
+<body>
+    <script>
+        $(document).ready(function () {
+            hideLoadingIndicator();
+            loadLogin();
+        });
+        $(window).unload(function () {
+            hideLoadingIndicator();
+            saveLogin();
+        });
+    </script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        var errormsg = getParameterByName("pageerror");
+        if (errormsg != null && errormsg.length > 0) {
+            displayError('ERROR', trimString(errormsg));
+        }
+        Highcharts.setOptions({
+            colors: ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1']
+        });
+    });
+</script>
+<div class="d3-page">
+
+<div class="navbar navbar-fixed-top navbar-inverse">
+    <div class="navbar-inner">
+        <div class="container">
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+
+            <a class="brand" href="#">ANALYTICS</a>
+
+            <div class="nav-collapse collapse">
+                <ul class="nav">
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Dashboard <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="analytics-dashboard.html">Dashboard</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Producer <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">Same Day Cancellations</a></li>
+                            <li><a href="#">Analytics Daily Cancelled Orders</a></li>
+                            <li><a href="analytics-totalcancelledorders.html">Analytics Total Cancelled Orders</a></li>
+                            <li><a href="#">Overall Scheduled Pour Rate Performance</a></li>
+                            <li><a href="#">Plus Loads By Market</a></li>
+                            <li><a href="analytics-communication.html">Communications</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contractor <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="analytics-customersearch.html">Contractor Search</a></li>
+                            <li><a href="analytics-customerperformance.html">Top Customer Performance</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Users <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="analytics-usernotifications.html">User Notifications</a></li>
+                            <li><a href="analytics-usersearch.html">User Search</a></li>
+                            <li><a href="analytics-userdashboard.html">User Dashboard</a></li>
+                            <li><a href="analytics-contractorviewed.html">Analytics Contractor Viewed Volume</a></li>
+                            <li><a href="analytics-producerviewed.html">Analytics Producer Viewed Volume</a></li>
+                            <li><a href="#">Analytics User Sessions</a></li>
+                            <li><a href="#">Analytics Business Unit User Activity</a></li>
+                            <li><a href="#">Analytics Users Orders</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Invite <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">Invite Dashboard</a></li>
+                            <li><a href="#">Pipeline Dashboard</a></li>
+                            <li><a href="#">Needs Truckast</a></li>
+                            <li><a href="#">Invite Status</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Logistics <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">First Truck Late</a></li>
+                            <li><a href="#">First Truck Late By Customer</a></li>
+                            <li><a href="#">Truck - Incorrect Statuses</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Apps <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">Analytics</a></li>
+                            <li><a href="MarketSummary.html">Truckast</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Help <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">Help</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">Logout <b class="caret"></b></a>
+                        <ul class="dropdown-menu">
+                            <li><a href="#">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+                <div class="container">
+                    <div id="error-box" class="alert alert-error" style="display: none">
+                        <h4 id="error-title" style="margin-bottom: 5px">Error!</h4>
+                        <p id="error-text"></p>
+                    </div>
+                    <div id="warning-box" class="alert alert-block" style="display: none">
+                        <h4 id="warning-title" style="margin-bottom: 5px">Warning!</h4>
+                        <p id="warning-text"></p>
+                    </div>
+                    <div id="success-box" class="alert alert-success" style="display: none">
+                        <h4 id="success-title" style="margin-bottom: 5px">Success!</h4>
+                        <p id="success-text"></p>
+                    </div>
+                    <div id="information-box" class="alert alert-info" style="display: none">
+                        <h4 id="information-title" style="margin-bottom: 5px">Additional Information:</h4>
+                        <p id="information-text"></p>
+                    </div>
+
+<form id="userdashboard" method="POST">
+
+<div class="navbar">
+    <div class="navbar-inner">
+        <div class="container">
+            <table style="width:100%">
+                <tbody><tr>
+                    <td style="width:38px">
+                        <a onclick="history.back();hideLoadingIndicator();">
+                            <img id="titlebar-left-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./MarketSummary_files/arrow-big-01@2x.png">
+                        </a>
+                    </td>
+                    <td>
+                    <div style="width: 100%; float: left; text-align: center; vertical-align: central">
+                        <div id="titlebar-caption" style="display: inline-block; margin:5px">
+                            <span style="font-size: 16px"><strong>CONCRETE SUPPLY CONTRACTOR VIEWED</strong></span><br>
+                            <span style="font-size: 11px; padding: 0"><strong></strong></span>
+                        </div>
+                    </div>
+                    </td>
+                    <td style="width:38px">
+                        <a href="analytics-contractorviewed.html">
+                            <img id="titlebar-right-image" width="32" height="32" style="margin-top:5px; margin-bottom:5px" src="./MarketSummary_files/arrow-small-27@2x.png">
+                        </a>
+                    </td>
+                </tr>
+            </tbody></table>
+        </div>
+    </div>
+</div>
+        <br>
+        <br>
+
+<!-- Organization Select -->
+<div style="display: block; width:100%">
+    <table class="table table-hover">
+        <tbody>
+            <tr>
+                <td style="vertical-align: middle; width: 30%">
+                    <div class="d3-label" style="width: 100%;">SELECT</div>
+                </td>
+                <td style="vertical-align: middle; width: 70%">
+                    <select id="organization" name="organization" style="width: 100%; margin-bottom: 0; display: block;">
+                        <option value="22B7F5E2-0F3C-E311-8466-A7697EBE67DC" selected="selected">CONCRETE SUPPLY</option>
+                        <option value="0A8070BA-1840-E311-8466-A7697EBE67DC">CHARLOTTE</option>
+                        <option value="93E2962E-1A40-E311-8466-A7697EBE67DC">CENTRAL CAROLINA</option>
+                        <option value="C1B23E2B-AC40-E311-8466-A7697EBE67DC">RALEIGH</option>
+                        <option value="76FE523D-AC40-E311-8466-A7697EBE67DC">SANDHILLS</option>
+                        <option value="60FAC15B-AC40-E311-8466-A7697EBE67DC">UPSTATE</option>
+                        <option value="E4897987-AC40-E311-8466-A7697EBE67DC">COLUMBIA</option>
+                        <option value="9107DCBB-AC40-E311-8466-A7697EBE67DC">COASTAL</option>
+                        <option value="1BA3A4A6-3789-E311-8466-A7697EBE67DC">CENTRAL CAROLINA CONCRETE</option>
+                        <option value="24194019-5A28-E611-80F7-22000B772084">AMERICAN CONCRETE &amp; PRECAST </option>
+                        <option value="12C52F0B-FBE0-E711-80F8-22000B772084">PORTABLE</option>
+                        <option value="B6BC43BD-2168-E811-80F9-22000B772084">CAROLINA READY MIX</option>
+                        <option value="77FBD326-4429-E911-80F9-22000B772084">TRI-CITY CONCRETE</option>
+                        <option value="1E05C48F-4E29-E911-80F9-22000B772084">CHARLESTON</option>
+                        <option value="8CFE3645-1AD6-EB11-82C9-22000A29EF36">DAWKINS</option>
+                        <option value="3B8AB9BE-33E3-EB11-82C9-22000A29EF36">CENTURY CONCRETE</option>
+                        <option value="88B39105-24C7-EC11-82C9-22000A29EF36">SOUTHERN READY MIX</option>
+                    </select>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#organization').change(function () {
+            var value = $('#organization').val();
+            if (value != null && value.length > 4) {
+                var uvalue = value.toUpperCase();
+                if (uvalue.substring(0, 4) == "HTTP") {
+                    window.location.href = value;
+                }
+            }
+        });
+    });
+</script>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Date Range Selection -->
+<div style="display: block; width:100%">
+    <table class="table table-hover">
+        <tbody>
+            <tr>
+                <td style="vertical-align: middle; width: 25%">
+                    <div class="d3-label" style="width: 100%;">START DATE</div>
+                </td>
+                <td style="vertical-align: middle; width: 25%">
+                    <div class="d3-label" style="width: 100%;">END DATE</div>
+                </td>
+                <td style="vertical-align: middle; width: 25%">
+                    <div class="d3-label" style="width: 100%;"></div>
+                </td>
+                <td style="vertical-align: middle; width: 25%">
+                    <div class="d3-label" style="width: 100%;"></div>
+                </td>
+            </tr>
+            <tr>
+                <td style="vertical-align: middle; width: 25%">
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#startdate-input").kendoDatePicker();
+    });
+</script>
+<div id="startdate" style="width: 125px; padding-right: 10px; float: left;">
+    <input id="startdate-input" name="startdate" value="" style="width: 125px" />
+</div>
+                </td>
+                <td style="vertical-align: middle; width: 25%">
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#enddate-input").kendoDatePicker();
+    });
+</script>
+<div id="enddate" style="width: 125px; padding-right: 10px; float: left;">
+    <input id="enddate-input" name="enddate" value="" style="width: 125px" />
+</div>
+                </td>
+                <td style="vertical-align: middle; width: 25%">
+                    <button id="submit-button" class="btn btn-success" type="button" onclick="onSubmit_userdashboard()" style="width: 150px">SUBMIT</button>
+                </td>
+                <td style="vertical-align: middle; width: 25%">
+                    <div class="d3-label" style="width: 100%;"></div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Summary Tiles -->
+<div id="summary-tiles" style="width: 100%; display: block">
+    <input id="summary-tiles-search" type="text" placeholder="Search" style="width: 260px; display: none" />
+    <div style="width: 100%; height: 1px; clear: both"></div>
+
+    <div id="summary-tiles-container" style="display: inline-block;">
+                <div class="tile" style="position: relative; background-color: #86C543; cursor: default">
+                    <img src="./MarketSummary_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: none;" />
+                    <div class="tileContainer">
+                        <div class="tileIcon"><img src="./MarketSummary_files/TRUCKAST_512.PNG" /></div>
+                        <div class="tileInfoSection">
+                            <div class="tileCell">
+                                <div class="tileSuperTitle">NUMBER: <span id="orders-count">6310</span></div>
+                                <div class="tileTitle">ORDERS</div>
+                                <div class="tileSubTitle">VOLUME: <span id="orders-volume">207845.12</span> CY</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tile" style="position: relative; background-color: #86C543; cursor: default">
+                    <img src="./MarketSummary_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: none;" />
+                    <div class="tileContainer">
+                        <div class="tileIcon"><img src="./MarketSummary_files/TRUCKAST_512.PNG" /></div>
+                        <div class="tileInfoSection">
+                            <div class="tileCell">
+                                <div class="tileSuperTitle">ORDERS: <span id="contractor-orders-count">895</span></div>
+                                <div class="tileTitle">CONTRACTOR VIEWED</div>
+                                <div class="tileSubTitle">VOLUME: <span id="contractor-orders-volume">38293.17</span> CY</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tile" style="position: relative; background-color: #86C543; cursor: default">
+                    <img src="./MarketSummary_files/dogear.png" style="position: absolute; right: 0px; bottom: 0px; display: none;" />
+                    <div class="tileContainer">
+                        <div class="tileIcon"><img src="./MarketSummary_files/TRUCKAST_512.PNG" /></div>
+                        <div class="tileInfoSection">
+                            <div class="tileCell">
+                                <div class="tileSuperTitle">TICKETS: <span id="contractor-tickets-count">171</span></div>
+                                <div class="tileTitle">CONTRACTOR VIEWED</div>
+                                <div class="tileSubTitle">VOLUME: <span id="contractor-tickets-volume">1477.00</span> CY</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+    </div>
+</div>
+        <br>
+
+<!-- Viewed Volume Section -->
+<div style="display: block; width:100%">
+    <table class="table table-hover">
+        <tbody>
+            <tr>
+                <td style="vertical-align: middle; width: 80%">
+                    <div class="d3-label" style="width: 100%;"><h4>Viewed Volume</h4></div>
+                </td>
+                <td style="vertical-align: middle; width: 20%">
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Chart: Contractor Viewed Volume -->
+<div id="contractorviewedvolume" style="width: 100%; height: 350px; margin: 0 auto; display: block; float:left; padding-top:5px; padding-bottom:5px"></div>
+        <br>
+        <br>
+
+<!-- Contractor Order View Table -->
+<div style="display: block; width:100%">
+    <table class="table table-hover">
+        <tbody>
+            <tr>
+                <td style="vertical-align: middle; width: 80%">
+                    <div class="d3-label" style="width: 100%;"><h4>Contractor Order View</h4></div>
+                </td>
+                <td style="vertical-align: middle; width: 20%">
+                    <div style="float:right;padding:5px;visibility:show">
+                        <a href="#" onclick="downloadContractorViewedExcel(); return false;">
+                            <img alt="Download" src="./MarketSummary_files/excel-xls-icon.48x48pixel.png" style="width:48px;height:48px">
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div style="display: block; width: 100%">
+    <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="contractor-order-view-table" style="width: 100%;">
+        <thead>
+            <tr>
+                <th>Scheduled Order Date</th>
+                <th>Order Number</th>
+                <th>Viewed CY</th>
+                <th>Status</th>
+                <th>First User To view</th>
+                <th>View Date</th>
+                <th>Other Viewers</th>
+                <th>Project</th>
+                <th>Contractor Companies</th>
+                <th>Business Unit</th>
+            </tr>
+        </thead>
+        <tbody id="contractor-order-view-tbody">
+            <!-- Populated via AJAX -->
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table { margin-bottom: 8px; }
+</style>
+<script>
+    var contractorOrderTable = null;
+
+    function initOrderDataTable() {
+        if (contractorOrderTable) {
+            contractorOrderTable.destroy();
+        }
+        contractorOrderTable = $('#contractor-order-view-table').dataTable({
+            "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+            "sPaginationType": "bootstrap",
+            "bPaginate": true,
+            "bFilter": true,
+            "bSort": true,
+            "oLanguage": {
+                "sLengthMenu": "_MENU_ records per page"
+            }
+        });
+    }
+</script>
+        <br>
+
+<!-- Ticketed Volume Section -->
+<div style="display: block; width:100%">
+    <table class="table table-hover">
+        <tbody>
+            <tr>
+                <td style="vertical-align: middle; width: 80%">
+                    <div class="d3-label" style="width: 100%;"><h4>Ticketed Volume</h4></div>
+                </td>
+                <td style="vertical-align: middle; width: 20%">
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Chart: Ticketed Volume -->
+<div id="ticketedvolume" style="width: 100%; height: 350px; margin: 0 auto; display: block; float:left; padding-top:5px; padding-bottom:5px"></div>
+        <br>
+
+<!-- Contractor Ticket View Table -->
+<div style="display: block; width:100%">
+    <table class="table table-hover">
+        <tbody>
+            <tr>
+                <td style="vertical-align: middle; width: 80%">
+                    <div class="d3-label" style="width: 100%;"><h4>Contractor Ticket View</h4></div>
+                </td>
+                <td style="vertical-align: middle; width: 20%">
+                    <div style="float:right;padding:5px;visibility:show">
+                        <a href="#" onclick="downloadContractorTicketsExcel(); return false;">
+                            <img alt="Download" src="./MarketSummary_files/excel-xls-icon.48x48pixel.png" style="width:48px;height:48px">
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<div style="display: block; width: 100%">
+    <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="contractor-ticket-view-table" style="width: 100%;">
+        <thead>
+            <tr>
+                <th>Scheduled Order Date</th>
+                <th>Order Number</th>
+                <th>Ticket Number</th>
+                <th>Viewed CY</th>
+                <th>Status</th>
+                <th>First User To view</th>
+                <th>View Date</th>
+                <th>Other Viewers</th>
+                <th>Project</th>
+                <th>Contractor Companies</th>
+                <th>Business Unit</th>
+            </tr>
+        </thead>
+        <tbody id="contractor-ticket-view-tbody">
+            <!-- Populated via AJAX -->
+        </tbody>
+    </table>
+</div>
+
+<style>
+    .dataTables_filter label { float: right }
+    .dataTables_paginate ul { float: right }
+    .pagination { margin: 0px 0; }
+    .table { margin-bottom: 8px; }
+</style>
+<script>
+    var contractorTicketTable = null;
+
+    function initTicketDataTable() {
+        if (contractorTicketTable) {
+            contractorTicketTable.destroy();
+        }
+        contractorTicketTable = $('#contractor-ticket-view-table').dataTable({
+            "sDom": "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>",
+            "sPaginationType": "bootstrap",
+            "bPaginate": true,
+            "bFilter": true,
+            "bSort": true,
+            "oLanguage": {
+                "sLengthMenu": "_MENU_ records per page"
+            }
+        });
+    }
+</script>
+        <br>
+        <br>
+        <br>
+
+</form>
+                </div>
+
+</div>
+
+<script>
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function formatNumber(num) {
+        if (num === null || num === undefined) return '0';
+        return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function createOrderViewRow(order, index) {
+        var rowClass = index % 2 === 0 ? 'even gradeA' : 'odd gradeA';
+        return '<tr class="' + rowClass + '">' +
+            '<td style="">' + escapeHtml(order.scheduledDate) + '</td>' +
+            '<td style="">' + escapeHtml(order.orderNumber) + '</td>' +
+            '<td style="">' + escapeHtml(order.viewedCY) + '</td>' +
+            '<td style="">' + escapeHtml(order.status) + '</td>' +
+            '<td style="">' + escapeHtml(order.firstUserToView) + '</td>' +
+            '<td style="">' + escapeHtml(order.viewDate) + '</td>' +
+            '<td style="">' + escapeHtml(order.otherViewers) + '</td>' +
+            '<td style="">' + escapeHtml(order.project) + '</td>' +
+            '<td style="">' + escapeHtml(order.contractorCompanies) + '</td>' +
+            '<td style="">' + escapeHtml(order.businessUnit) + '</td>' +
+        '</tr>';
+    }
+
+    function createTicketViewRow(ticket, index) {
+        var rowClass = index % 2 === 0 ? 'even gradeA' : 'odd gradeA';
+        return '<tr class="' + rowClass + '">' +
+            '<td style="">' + escapeHtml(ticket.scheduledDate) + '</td>' +
+            '<td style="">' + escapeHtml(ticket.orderNumber) + '</td>' +
+            '<td style="">' + escapeHtml(ticket.ticketNumber) + '</td>' +
+            '<td style="">' + escapeHtml(ticket.viewedCY) + '</td>' +
+            '<td style="">' + escapeHtml(ticket.status) + '</td>' +
+            '<td style="">' + escapeHtml(ticket.firstUserToView) + '</td>' +
+            '<td style="">' + escapeHtml(ticket.viewDate) + '</td>' +
+            '<td style="">' + escapeHtml(ticket.otherViewers) + '</td>' +
+            '<td style="">' + escapeHtml(ticket.project) + '</td>' +
+            '<td style="">' + escapeHtml(ticket.contractorCompanies) + '</td>' +
+            '<td style="">' + escapeHtml(ticket.businessUnit) + '</td>' +
+        '</tr>';
+    }
+
+    function initChart(chartData) {
+        Highcharts.setOptions({
+            global: {
+                useUTC: true,
+                timezoneOffset: 0
+            }
+        });
+
+        $('#contractorviewedvolume').highcharts({
+            chart: {
+                type: 'area',
+                zoomType: 'x',
+                spacingRight: 10,
+                spacingLeft: 10,
+                spacingTop: 10,
+                spacingBottom: 10
+            },
+            colors: ['#434348', '#90ed7d', '#7cb5ec', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1'],
+            title: {
+                text: 'Ordered Volume(CY) vs Contractor Viewed Order Volume(CY)'
+            },
+            subtitle: {
+                text: document.ontouchstart === undefined ? 'Click and drag in the plot area to zoom in' : 'Drag your finger over the plot to zoom in'
+            },
+            xAxis: {
+                type: 'datetime',
+                minRange: 345600000,
+                title: {
+                    text: null
+                }
+            },
+            yAxis: {
+                min: 0,
+                title: {
+                    text: ''
+                }
+            },
+            tooltip: {
+                shared: false
+            },
+            legend: {
+                enabled: true
+            },
+            credits: {
+                enabled: false
+            },
+            plotOptions: {
+                spline: {
+                    marker: {
+                        enabled: true
+                    }
+                },
+                area: {
+                    lineWidth: 1,
+                    marker: {
+                        enabled: false
+                    },
+                    shadow: false,
+                    states: {
+                        hover: {
+                            lineWidth: 1
+                        }
+                    },
+                    threshold: null
+                }
+            },
+            series: chartData.series || []
+        });
+    }
+
+    function initTicketedVolumeChart(chartData) {
+        Highcharts.setOptions({
+            global: {
+                useUTC: true,
+                timezoneOffset: 0
+            }
+        });
+
+        $('#ticketedvolume').highcharts({
+            chart: {
+                type: 'area',
+                zoomType: 'x',
+                spacingRight: 10,
+                spacingLeft: 10,
+                spacingTop: 10,
+                spacingBottom: 10
+            },
+            colors: ['#434348', '#90ed7d', '#7cb5ec', '#f7a35c', '#8085e9', '#f15c80', '#e4d354', '#8085e8', '#8d4653', '#91e8e1'],
+            title: {
+                text: 'Ticketed Volume(CY) vs Contractor Viewed Ticketed Volume(CY)'
+            },
+            subtitle: {
+                text: document.ontouchstart === undefined ? 'Click and drag in the plot area to zoom in' : 'Drag your finger over the plot to zoom in'
+            },
+            xAxis: {
+                type: 'datetime',
+                minRange: 345600000,
+                title: {
+                    text: null
+                }
+            },
+            yAxis: {
+                min: 0,
+                title: {
+                    text: ''
+                }
+            },
+            tooltip: {
+                shared: false
+            },
+            legend: {
+                enabled: true
+            },
+            credits: {
+                enabled: false
+            },
+            plotOptions: {
+                spline: {
+                    marker: {
+                        enabled: true
+                    }
+                },
+                area: {
+                    lineWidth: 1,
+                    marker: {
+                        enabled: false
+                    },
+                    shadow: false,
+                    states: {
+                        hover: {
+                            lineWidth: 1
+                        }
+                    },
+                    threshold: null
+                }
+            },
+            series: chartData.series || []
+        });
+    }
+
+    function onSubmit_userdashboard() {
+        var startDatePicker = $("#startdate-input").data("kendoDatePicker");
+        var endDatePicker = $("#enddate-input").data("kendoDatePicker");
+
+        var startDate = startDatePicker ? kendo.toString(startDatePicker.value(), "yyyy-MM-dd") : '';
+        var endDate = endDatePicker ? kendo.toString(endDatePicker.value(), "yyyy-MM-dd") : '';
+        var organization = $('#organization').val();
+
+        showLoadingIndicator();
+
+        $.ajax({
+            url: '/api/analytics/contractor-viewed',
+            type: 'GET',
+            data: {
+                startDate: startDate,
+                endDate: endDate,
+                organization: organization
+            },
+            dataType: 'json'
+        }).done(function(response) {
+            hideLoadingIndicator();
+
+            if (!response.success) {
+                displayError('Error', response.error || 'Failed to load data');
+                return;
+            }
+
+            var data = response.data;
+
+            // Update summary tiles
+            $('#orders-count').text(data.summary.ordersCount || 0);
+            $('#orders-volume').text(formatNumber(data.summary.ordersVolume));
+            $('#contractor-orders-count').text(data.summary.contractorOrdersCount || 0);
+            $('#contractor-orders-volume').text(formatNumber(data.summary.contractorOrdersVolume));
+            $('#contractor-tickets-count').text(data.summary.contractorTicketsCount || 0);
+            $('#contractor-tickets-volume').text(formatNumber(data.summary.contractorTicketsVolume));
+
+            // Update charts
+            initChart(data.chartData);
+            if (data.ticketedChartData) {
+                initTicketedVolumeChart(data.ticketedChartData);
+            }
+
+            // Destroy existing Order DataTable if it exists
+            if (contractorOrderTable) {
+                contractorOrderTable.destroy();
+                contractorOrderTable = null;
+            }
+
+            // Update Order View table
+            if (data.orderViews && data.orderViews.length > 0) {
+                var html = '';
+                for (var i = 0; i < data.orderViews.length; i++) {
+                    html += createOrderViewRow(data.orderViews[i], i);
+                }
+                $('#contractor-order-view-tbody').html(html);
+            } else {
+                $('#contractor-order-view-tbody').html('');
+            }
+
+            // Initialize Order DataTable
+            initOrderDataTable();
+
+            // Destroy existing Ticket DataTable if it exists
+            if (contractorTicketTable) {
+                contractorTicketTable.destroy();
+                contractorTicketTable = null;
+            }
+
+            // Update Ticket View table
+            if (data.ticketViews && data.ticketViews.length > 0) {
+                var html = '';
+                for (var i = 0; i < data.ticketViews.length; i++) {
+                    html += createTicketViewRow(data.ticketViews[i], i);
+                }
+                $('#contractor-ticket-view-tbody').html(html);
+            } else {
+                $('#contractor-ticket-view-tbody').html('');
+            }
+
+            // Initialize Ticket DataTable
+            initTicketDataTable();
+
+        }).fail(function(xhr, status, error) {
+            hideLoadingIndicator();
+            displayError('Error', 'Failed to load data: ' + error);
+        });
+    }
+
+    function viewOrder(orderNumber) {
+        window.location.href = '/d3-static/order-detail.html?orderNumber=' + encodeURIComponent(orderNumber);
+    }
+
+    function downloadContractorViewedExcel() {
+        var organization = $('#organization').val();
+        var startDatePicker = $("#startdate-input").data("kendoDatePicker");
+        var endDatePicker = $("#enddate-input").data("kendoDatePicker");
+        var startDate = startDatePicker ? kendo.toString(startDatePicker.value(), "yyyy-MM-dd") : '';
+        var endDate = endDatePicker ? kendo.toString(endDatePicker.value(), "yyyy-MM-dd") : '';
+        alert('Excel download coming soon.');
+    }
+
+    function downloadContractorTicketsExcel() {
+        var organization = $('#organization').val();
+        var startDatePicker = $("#startdate-input").data("kendoDatePicker");
+        var endDatePicker = $("#enddate-input").data("kendoDatePicker");
+        var startDate = startDatePicker ? kendo.toString(startDatePicker.value(), "yyyy-MM-dd") : '';
+        var endDate = endDatePicker ? kendo.toString(endDatePicker.value(), "yyyy-MM-dd") : '';
+        alert('Excel download coming soon.');
+    }
+
+    // Set default dates and initialize
+    $(document).ready(function() {
+        var today = new Date();
+        var lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        // Wait for Kendo to initialize, then set values
+        setTimeout(function() {
+            var startDatePicker = $("#startdate-input").data("kendoDatePicker");
+            var endDatePicker = $("#enddate-input").data("kendoDatePicker");
+
+            if (startDatePicker) {
+                startDatePicker.value(lastWeek);
+            }
+            if (endDatePicker) {
+                endDatePicker.value(today);
+            }
+
+            onSubmit_userdashboard();
+        }, 100);
+    });
+</script>
+
+</body>
+</html>
