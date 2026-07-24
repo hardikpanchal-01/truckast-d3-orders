@@ -29,9 +29,10 @@
     // Create orders viewed row
     function createOrderRow(order, index) {
         var rowClass = index % 2 === 0 ? 'even gradeA' : 'odd gradeA';
+        var orderLink = '<a href="#" onclick="viewOrder(\'' + escapeHtml(order.orderNumber) + '\'); return false;" style="color: #08c; text-decoration: none;">' + escapeHtml(order.orderNumber) + '</a>';
         return '<tr class="' + rowClass + '">' +
             '<td style="border-top:0">' + escapeHtml(order.scheduledDate) + '</td>' +
-            '<td style="border-top:0">' + escapeHtml(order.orderNumber) + '</td>' +
+            '<td style="border-top:0">' + orderLink + '</td>' +
             '<td style="border-top:0">' + escapeHtml(order.viewedCY) + '</td>' +
             '<td style="border-top:0">' + escapeHtml(order.status) + '</td>' +
             '<td style="border-top:0">' + escapeHtml(order.viewDate) + '</td>' +
@@ -45,10 +46,12 @@
     // Create tickets viewed row
     function createTicketRow(ticket, index) {
         var rowClass = index % 2 === 0 ? 'even gradeA' : 'odd gradeA';
+        var orderLink = '<a href="#" onclick="viewOrder(\'' + escapeHtml(ticket.orderNumber) + '\'); return false;" style="color: #08c; text-decoration: none;">' + escapeHtml(ticket.orderNumber) + '</a>';
+        var ticketLink = '<a href="#" onclick="viewTicket(\'' + escapeHtml(ticket.ticketNumber) + '\'); return false;" style="color: #08c; text-decoration: none;">' + escapeHtml(ticket.ticketNumber) + '</a>';
         return '<tr class="' + rowClass + '">' +
             '<td style="border-top:0">' + escapeHtml(ticket.scheduledDate) + '</td>' +
-            '<td style="border-top:0">' + escapeHtml(ticket.orderNumber) + '</td>' +
-            '<td style="border-top:0">' + escapeHtml(ticket.ticketNumber) + '</td>' +
+            '<td style="border-top:0">' + orderLink + '</td>' +
+            '<td style="border-top:0">' + ticketLink + '</td>' +
             '<td style="border-top:0">' + escapeHtml(ticket.viewedCY) + '</td>' +
             '<td style="border-top:0">' + escapeHtml(ticket.status) + '</td>' +
             '<td style="border-top:0">' + escapeHtml(ticket.viewDate) + '</td>' +
@@ -180,7 +183,7 @@
 
     // Load user data
     function loadUserData() {
-        var userId = getUrlParameter('SUserID');
+        var userId = getUrlParameter('suserid') || getUrlParameter('SUserID');
         if (!userId) {
             displayError('Error', 'No user ID specified');
             return;
@@ -303,14 +306,26 @@
         });
     }
 
+    // View order function
+    window.viewOrder = function(orderNumber) {
+        // Navigate to order detail page
+        window.location.href = '/d3-static/order-detail.html?orderNumber=' + encodeURIComponent(orderNumber);
+    };
+
+    // View ticket function
+    window.viewTicket = function(ticketNumber) {
+        // Navigate to ticket detail page
+        window.location.href = '/d3-static/ticket-detail.html?ticketNumber=' + encodeURIComponent(ticketNumber);
+    };
+
     // Excel download functions
     window.downloadOrdersExcel = function() {
-        var userId = getUrlParameter('SUserID');
+        var userId = getUrlParameter('suserid') || getUrlParameter('SUserID');
         alert('Excel download for orders viewed coming soon. User ID: ' + userId);
     };
 
     window.downloadTicketsExcel = function() {
-        var userId = getUrlParameter('SUserID');
+        var userId = getUrlParameter('suserid') || getUrlParameter('SUserID');
         alert('Excel download for tickets viewed coming soon. User ID: ' + userId);
     };
 
